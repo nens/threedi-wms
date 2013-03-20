@@ -13,6 +13,7 @@ import importlib
 
 blueprints = []
 
+
 def get_blueprints():
     """
     Return blueprint classes.
@@ -24,6 +25,7 @@ def get_blueprints():
     for module in config.BLUEPRINTS:
         importlib.import_module(module)
     return blueprints
+
 
 class Blueprint(flask.Blueprint):
     """ This version of the flask Blueprint tracks all blueprint instances. """

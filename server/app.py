@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
 
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -17,6 +18,7 @@ app = flask.Flask(__name__)
 for blueprint in blueprints.get_blueprints():
     url_prefix = '/' + blueprint.name
     app.register_blueprint(blueprint, url_prefix=url_prefix)
+
 
 # Main
 def run():

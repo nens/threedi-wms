@@ -7,15 +7,10 @@ from __future__ import absolute_import
 from __future__ import division
 
 import os
-import sys
 
 import celery
 
 from server import config
-from server import blueprints
-
-# vvv Fix for celery forking problem
-os.environ['PYTHONPATH'] = ':'.join(sys.path)
 
 # Autocreate celery db dir
 try:
@@ -29,5 +24,9 @@ app.conf.update(
     BROKER_URL='sqla+sqlite:///{}'.format(config.CELERY_DB),
 )
 
-# Import the blueprints, any tasks in them get registered with celery.
-blueprints.get_blueprints()
+
+# Temporary test task here.
+@app.task
+def build_pyramid():
+    """ Build a pyramid. """
+    print("I'm going to build the pyramids.")
