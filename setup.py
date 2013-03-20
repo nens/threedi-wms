@@ -9,13 +9,14 @@ long_description = '\n\n'.join([
     ])
 
 install_requires = [
-    'setuptools',
-    'Flask',
-    'netCDF4',
-    'requests',
-    'SQLAlchemy',
     'celery',
+    'Flask',
     'gislib',
+    'netCDF4',
+    'Pillow',
+    'requests',
+    'setuptools',
+    'SQLAlchemy',
     ],
 
 tests_require = [

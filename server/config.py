@@ -21,6 +21,9 @@ BLUEPRINTS = {
     'threedi',
 }
 
+# Celery
+CELERY_DB = os.path.join(CELERY_DIR, 'celerydb.sqlite')
+
 # Import local settings
 try:
     from threedi_server.localconfig import *

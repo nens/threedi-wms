@@ -51,5 +51,7 @@ def wms():
 
 @blueprint.route('/demo')
 def demo():
+    from server import tasks
+    tasks.build_pyramid.delay()
     return flask.render_template('3di/demo.html', 
                                  datasets=get_dataset_list())
