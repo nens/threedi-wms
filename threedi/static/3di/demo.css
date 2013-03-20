@@ -1,0 +1,8 @@
+#map {
+    height: 600px;
+    /*width: 800px;*/
+}
+
+#map img {
+    max-width: none;
+}

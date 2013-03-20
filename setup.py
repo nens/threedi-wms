@@ -10,6 +10,12 @@ long_description = '\n\n'.join([
 
 install_requires = [
     'setuptools',
+    'Flask',
+    'netCDF4',
+    'requests',
+    'SQLAlchemy',
+    'celery',
+    'gislib',
     ],
 
 tests_require = [
@@ -36,5 +42,6 @@ setup(name='threedi-wms',
       extras_require={'test': tests_require},
       entry_points={
           'console_scripts': [
+              'flask=server.app:run',
           ]},
       )

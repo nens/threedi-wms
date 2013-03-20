@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>3Di viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/jquery/jquery-ui-1.10.0.custom.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('3di.static', filename='3di/demo.css') }}" />
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="row">
+        <div class="span8">
+          <div id="map"></div>
+        </div>
+        <div class="span4">
+          <!--<form>-->
+            <label>Prepare objects for performance boost:</label>
+            <button class="btn" id="prepare-height-pyramid" type="button">
+              Height Pyramid *
+            </button><br />
+            <button class="btn" id="prepare-quad-monolith" type="button">
+              Quad Monolith *
+            </button><br />
+            <button class="btn" id="prepare-quad-pyramid" type="button">
+              Quad Pyramid
+            </button><br />
+            <button class="btn" id="prepare-height-monolith" type="button">
+              Height Monolith
+            </button><br />
+            <fieldset>
+              <label>Geoserver for hillshade:</label>
+              <select id="geoserver">
+                <option value="http://nens-3di-task-01:8080/geoserver/nl/wms">
+                  nens-3di
+                </option>
+                <option value="http://localhost:8080/geoserver/nl/wms">
+                  localhost
+                </option>
+              </select>
+              <label>Dataset:</label>
+              <select id="dataset">
+                {% for dataset in datasets %}
+                <option value="{{dataset.filepath}}">
+                  {{ dataset.filename }}
+                </option>
+                {% endfor %}
+              </select>
+              <label>Timestep: <span id="time">1</span></label>
+              <div id="slider"></div><br />
+              <label>Toggle layers:</label>
+              <label class="checkbox">
+                <input type="checkbox" id="depth" checked>Depth
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" id="hillshade">Hillshade
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" id="osm" checked>Osm
+              </label>
+            </fieldset>
+          <!--</form>-->
+        </div>
+      </div>
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/static/jquery/jquery-1.9.0.min.js"></script>
+    <script src="/static/jquery/jquery-ui-1.10.0.custom.min.js"></script>
+    <script src="/static/openlayers/OpenLayers.js"></script>
+    <script src="{{ url_for('3di.static', filename='3di/demo.js') }}"></script>
+
+  </body>
+</html>
