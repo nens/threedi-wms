@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 
+import logging
 import os
 
 import flask
@@ -16,7 +17,6 @@ from server import utils
 from threedi import responses
 from threedi import config
 from threedi import tasks
-
 
 blueprint = blueprints.Blueprint(name=config.BLUEPRINT_NAME,
                                  import_name=__name__,
@@ -58,3 +58,10 @@ def demo():
     tasks.build_pyramid.delay()
     return flask.render_template('3di/demo.html',
                                  datasets=get_dataset_list())
+
+
+@blueprint.route('/test')
+def test():
+    tasks.build_pyramid.delay()
+    logging.info('Logging by the server')
+    return 'test'

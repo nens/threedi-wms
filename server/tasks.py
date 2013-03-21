@@ -11,8 +11,15 @@ import sys
 
 import celery
 
-from server import config
 from server import blueprints
+from server import config
+
+"""
+This module is only used by the celery worker, and not by the
+server. Every blueprint can have it's own celery app, which must connect
+to the same broker as this worker module for it's tasks to be executed
+by the servers worker.
+"""
 
 # vvv Fix for celery forking problem
 os.environ['PYTHONPATH'] = ':'.join(sys.path)
@@ -27,6 +34,7 @@ except OSError:
 app = celery.Celery()
 app.conf.update(
     BROKER_URL='sqla+sqlite:///{}'.format(config.CELERY_DB),
+    #CELERYD_HIJACK_ROOT_LOGGER=False,
 )
 
 # Import the blueprints, any tasks in them get registered with celery.

@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 from server import blueprints
-#from threedi_server import log
+from server import loghelper
 
 import flask
 
@@ -18,6 +18,9 @@ app = flask.Flask(__name__)
 for blueprint in blueprints.get_blueprints():
     url_prefix = '/' + blueprint.name
     app.register_blueprint(blueprint, url_prefix=url_prefix)
+
+# Setup logging
+loghelper.setup_logging(logfile_name='server.log')
 
 
 # Main

@@ -6,11 +6,13 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 
+import logging
 import os
 
 import celery
 
 from server import config
+from server import loghelper
 
 # Autocreate celery db dir
 try:
@@ -24,9 +26,12 @@ app.conf.update(
     BROKER_URL='sqla+sqlite:///{}'.format(config.CELERY_DB),
 )
 
+# Setup logging
+loghelper.setup_logging(logfile_name='tasks.log')
+
 
 # Temporary test task here.
 @app.task
 def build_pyramid():
     """ Build a pyramid. """
-    print("I'm going to build the pyramids.")
+    logging.info("I'm going to build the pyramids.")

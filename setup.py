@@ -12,6 +12,7 @@ install_requires = [
     'celery',
     'Flask',
     'gislib',
+    'gunicorn',
     'matplotlib',
     'netCDF4',
     'Pillow',
