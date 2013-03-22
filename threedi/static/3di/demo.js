@@ -22,6 +22,9 @@ map.addLayer(osm);
 
 // Functions
 function updateLayer(){
+  updateGrid();
+  updateBathymetry();
+
   var layer = $('select#layer option:selected').val()
   grid.setUrl("/3di/wms?layer=" + layer + ":grid" + "&time=" + time);
   grid.redraw()
@@ -43,19 +46,55 @@ function updateLayer(){
 
 function updateLayerFromData(data) {
   $("#slider").slider("option", "max", data['timesteps'] - 1);
-  var time = $("#slider").slider("value");
-  updateTime(time);
+  updateDepth();
   var bounds = data['bounds'];
   map.zoomToExtent(
     new OpenLayers.Bounds(bounds[0], bounds[1], bounds[2], bounds[3])
   )
 }
 
-function updateTime(time){
-  $("#time").text(time)
-  var layer = $('select#layer option:selected').val()
-  depth.setUrl("/3di/wms?layer=" + layer + ":depth" + "&time=" + time);
-  depth.redraw()
+function updateDepth(){
+  // Get variables from dom
+  var layer = $('select#layer option:selected').val();
+  var time = $('#slider').slider("option", "value")
+  if ($("input#antialias").is(":checked")) {
+    var antialias = '2'
+  } else {
+    var antialias = '1'
+  }
+  // Update label
+  $("#time").text(time);
+  // Set and redraw layer
+  var url = "/3di/wms?layer=" + layer + ":depth";
+  url += "&time=" + time + "&antialias=" + antialias;
+  depth.setUrl(url);
+  depth.redraw();
+}
+
+function updateBathymetry(){
+  var layer = $('select#layer option:selected').val();
+  if ($("input#antialias").is(":checked")) {
+    var antialias = '2'
+  } else {
+    var antialias = '1'
+  }
+  var url = "/3di/wms?layer=" + layer + ":bathymetry";
+  url += "&antialias=" + antialias;
+  bathymetry.setUrl(url);
+  bathymetry.redraw()
+}
+
+function updateGrid(){
+  var layer = $('select#layer option:selected').val();
+  if ($("input#antialias").is(":checked")) {
+    var antialias = '2'
+  } else {
+    var antialias = '1'
+  }
+  var url = "/3di/wms?layer=" + layer + ":grid";
+  url += "&antialias=" + antialias;
+  grid.setUrl(url);
+  grid.redraw();
 }
 
 function toggleGrid(){
@@ -74,10 +113,16 @@ function toggleOsm(){
   var state = $("input#osm").is(":checked");
   osm.setVisibility(state);
 }
+function toggleAntialias(){
+  updateBathymetry();
+  updateDepth();
+  updateGrid();
+}
+  
 
 // Slider
 function slide(ui, slider){
-  updateTime(slider.value);
+  updateDepth();
 }
 
 $("#slider").slider({
@@ -93,6 +138,7 @@ $("input#grid").on("change", toggleGrid);
 $("input#depth").on("change", toggleDepth);
 $("input#bathymetry").on("change", toggleBathymetry);
 $("input#osm").on("change", toggleOsm);
+$("input#antialias").on("change", toggleAntialias);
 
 toggleGrid()
 toggleBathymetry()

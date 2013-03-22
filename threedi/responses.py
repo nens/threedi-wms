@@ -29,15 +29,17 @@ import os
 cache = {}
 
 
-def rgba2image(rgba):
+def rgba2image(rgba, antialias=1):
     """ return imagedata. """
-    image = Image.fromarray(rgba)
+    size = [d // antialias for d in rgba.shape[1::-1]]
+    image = Image.fromarray(rgba).resize(size, Image.ANTIALIAS)
+
     buf = io.BytesIO()
     image.save(buf, 'png')
     return buf.getvalue()
 
 
-def get_depth_image(masked_array, waves=None):
+def get_depth_image(masked_array, waves=None, antialias=1):
     """ Return a png image from masked_array. """
     # Hardcode depth limits, until better height data
     normalize = colors.Normalize(vmin=0, vmax=2)
@@ -63,18 +65,18 @@ def get_depth_image(masked_array, waves=None):
     # Make negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0)] = 0
 
-    return rgba2image(rgba)
+    return rgba2image(rgba=rgba, antialias=antialias)
 
 
-def get_bathymetry_image(masked_array):
+def get_bathymetry_image(masked_array, antialias=1):
     """ Return imagedata. """
     normalize = colors.Normalize(vmin=-5, vmax=5)
     colormap = cm.gist_earth
     rgba = colormap(normalize(masked_array), bytes=True)
-    return rgba2image(rgba)
+    return rgba2image(rgba=rgba, antialias=antialias)
 
 
-def get_grid_image(masked_array):
+def get_grid_image(masked_array, antialias=1):
     """ Return imagedata. """
     a, b = -1, 8
     kernel = np.array([[a,  a, a],
@@ -85,10 +87,10 @@ def get_grid_image(masked_array):
     print(data.max())
     rgba = np.zeros(data.shape + (4,), dtype=np.uint8)
     rgba[...][np.ma.greater(normalize(data), 0.5)] = (255, 0, 0, 255)
-    return rgba2image(rgba)
+    return rgba2image(rgba=rgba, antialias=antialias)
 
 
-def get_water_waves(masked_array, anim_frame):
+def get_water_waves(masked_array, anim_frame, antialias=1):
     """
     Calculate waves from velocity array
     """
@@ -114,55 +116,40 @@ def get_water_waves(masked_array, anim_frame):
 
     normalize = colors.Normalize(vmin=0, vmax=24)
 
-    return get_depth_image(masked_array, waves=normalize(waves_shade))
+    return get_depth_image(masked_array,
+                           antialias=antialias,
+                           waves=normalize(waves_shade))
 
 
-def get_bathymetry(static_data, get_parameters):
-    """ Return numpy array. """
-    bathymetry_time = datetime.datetime.now()
-    bathymetry = get_array(container=static_data.pyramid,
-                           ma=True,
-                           **get_parameters)
-    logging.debug('Got bathymetry in {} ms.'.format(
-        1000 * (datetime.datetime.now() - bathymetry_time).total_seconds(),
-    ))
-    return bathymetry
-
-
-def get_quads(static_data, get_parameters):
-    """ Return numpy array. """
-    quad_time = datetime.datetime.now()
-    quads = get_array(container=static_data.monolith,
-                      ma=False,
-                      **get_parameters)
-    logging.debug('Got quad in {} ms.'.format(
-        1000 * (datetime.datetime.now() - quad_time).total_seconds(),
-    ))
-    return quads
-
-
-def get_array(container, width, height, bbox, srs, ma=False, **kwargs):
+def get_data(container, ma=False, **get_parameters):
     """
-    Return numpy (masked) array.
-
-    Kwargs are not used, but make it possible to pass a wms get parameterlist.
+    Return numpy (masked) array from container
     """
-    geometry = raster.DatasetGeometry(
-        size=(int(width), int(height)),
-        extent=map(float, bbox.split(',')),
-    )
+    start = datetime.datetime.now()
+    # Derive properties from get_paramaters
+    antialias = int(get_parameters.get('antialias', 1))
+    size = (antialias * int(get_parameters['width']),
+            antialias * int(get_parameters['height']))
+    extent = map(float, get_parameters['bbox'].split(','))
+    srs = get_parameters['srs']
+
+    # Create dataset
+    geometry = raster.DatasetGeometry(size=size, extent=extent)
     dataset = geometry.to_dataset(
         datatype=container.datatype,
         projection=srs,
     )
     container.warpinto(dataset)
-    data = dataset.ReadAsArray()
+    array = dataset.ReadAsArray()
 
+    # Return array or masked array
+    time = 1000 * (datetime.datetime.now() - start).total_seconds()
     if ma:
-        return np.ma.array(data,
-                           mask=np.equal(data, container.nodatavalue))
-    else:  # for readability
-        return data
+        data = np.ma.array(array,
+                           mask=np.equal(array, container.nodatavalue))
+    else:
+        data = array
+    return data, time
 
 
 # Responses for various requests
@@ -183,9 +170,15 @@ def get_response_for_getmap(get_parameters):
         return 'Objects not ready, preparation in progress.'
 
     if mode in ['depth', 'bathymetry']:
-        bathymetry = get_bathymetry(static_data, get_parameters)
+        bathymetry, ms = get_data(container=static_data.pyramid,
+                                  ma=True, **get_parameters)
+        logging.debug('Got bathymetry in {} ms.'.format(ms))
     if mode in ['depth', 'grid']:
-        quads = get_quads(static_data, get_parameters)
+        quads, ms = get_data(container=static_data.monolith,
+                             ma=True, **get_parameters)
+        logging.debug('Got quads in {} ms.'.format(ms))
+
+    antialias = int(get_parameters.get('antialias', 1))
 
     if mode == 'depth':
         time = int(get_parameters['time'])
@@ -198,12 +191,13 @@ def get_response_for_getmap(get_parameters):
             content = get_water_waves(
                 masked_array=depth,
                 anim_frame=int(get_parameters['anim_frame']),
+                antialias=antialias
             )
         else:
             # Direct image
-            content = get_depth_image(depth)
+            content = get_depth_image(masked_array=depth, antialias=antialias)
     elif mode == 'bathymetry':
-        content = get_bathymetry_image(bathymetry)
+        content = get_bathymetry_image(bathymetry, antialias=antialias)
     elif mode == 'grid':
         content = get_grid_image(quads)
 
