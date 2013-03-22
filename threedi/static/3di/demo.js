@@ -20,82 +20,84 @@ map.addLayer(grid);
 var osm = new OpenLayers.Layer.OSM()
 map.addLayer(osm);
 
-// Functions
-function updateLayer(){
-  updateGrid();
-  updateBathymetry();
+var info;
 
-  var layer = $('select#layer option:selected').val()
-  grid.setUrl("/3di/wms?layer=" + layer + ":grid" + "&time=" + time);
-  grid.redraw()
-  bathymetry.setUrl("/3di/wms?layer=" + layer + ":bathymetry" + "&time=" + time);
-  bathymetry.redraw()
+// Dom access functions
+function getAntialias(){
+  if ($("input#antialias").is(":checked")) {
+    return 'yes'
+  } else {
+    return 'no'
+  }
+}
+function getLayer(){
+  return $('select#layer option:selected').val();
+}
+function getTime(){
+  return $('#slider').slider("option", "value")
+}
+  
+// Updaters
+function updateLayer(){
   // Determine bounds
   $.ajax(
     '/3di/wms',
     { 
       data: {
         request: 'getinfo',
-        layer: layer,
+        layer: getLayer(),
         srs: 'epsg:3857'
       },
-      success: updateLayerFromData
+      success: updateInfo
     }
   );
 }
-
-function updateLayerFromData(data) {
-  $("#slider").slider("option", "max", data['timesteps'] - 1);
+function updateInfo(data){
+  // There'
+  info = data;
+  updateSlider();
+  updateGrid();
   updateDepth();
+  updateBathymetry();
   var bounds = data['bounds'];
   map.zoomToExtent(
     new OpenLayers.Bounds(bounds[0], bounds[1], bounds[2], bounds[3])
   )
 }
 
+function updateSlider() {
+  $("#slider").slider("option", "max", info['timesteps'] - 1);
+}
+
+function updateGrid(){
+  var url = "/3di/wms";
+  url += "?layer=" + getLayer() + ":grid";
+  url += "&antialias=" + getAntialias();
+  grid.setUrl(url);
+  grid.redraw();
+}
+
 function updateDepth(){
-  // Get variables from dom
-  var layer = $('select#layer option:selected').val();
-  var time = $('#slider').slider("option", "value")
-  if ($("input#antialias").is(":checked")) {
-    var antialias = '2'
-  } else {
-    var antialias = '1'
-  }
-  // Update label
-  $("#time").text(time);
+  $("#time").text(getTime());
   // Set and redraw layer
-  var url = "/3di/wms?layer=" + layer + ":depth";
-  url += "&time=" + time + "&antialias=" + antialias;
+  var url = "/3di/wms";
+  url += "?layer=" + getLayer() + ":depth";
+  url += "&time=" + getTime();
+  url += "&antialias=" + getAntialias();
   depth.setUrl(url);
   depth.redraw();
 }
 
-function updateBathymetry(){
-  var layer = $('select#layer option:selected').val();
-  if ($("input#antialias").is(":checked")) {
-    var antialias = '2'
-  } else {
-    var antialias = '1'
-  }
-  var url = "/3di/wms?layer=" + layer + ":bathymetry";
-  url += "&antialias=" + antialias;
+function updateBathymetry(data){
+  bathymetry.redraw()
+  var url = "/3di/wms";
+  url += "?layer=" + getLayer() + ":bathymetry";
+  url += "&antialias=" + getAntialias();
+  url += "&limits=" + info['limits'][0] + "," + info['limits'][1];
   bathymetry.setUrl(url);
   bathymetry.redraw()
 }
 
-function updateGrid(){
-  var layer = $('select#layer option:selected').val();
-  if ($("input#antialias").is(":checked")) {
-    var antialias = '2'
-  } else {
-    var antialias = '1'
-  }
-  var url = "/3di/wms?layer=" + layer + ":grid";
-  url += "&antialias=" + antialias;
-  grid.setUrl(url);
-  grid.redraw();
-}
 
 function toggleGrid(){
   var state = $("input#grid").is(":checked");
@@ -114,12 +116,11 @@ function toggleOsm(){
   osm.setVisibility(state);
 }
 function toggleAntialias(){
-  updateBathymetry();
-  updateDepth();
   updateGrid();
+  updateDepth();
+  updateBathymetry();
 }
   
-
 // Slider
 function slide(ui, slider){
   updateDepth();

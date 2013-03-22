@@ -68,9 +68,9 @@ def get_depth_image(masked_array, waves=None, antialias=1):
     return rgba2image(rgba=rgba, antialias=antialias)
 
 
-def get_bathymetry_image(masked_array, antialias=1):
+def get_bathymetry_image(masked_array, limits, antialias=1):
     """ Return imagedata. """
-    normalize = colors.Normalize(vmin=-5, vmax=5)
+    normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
     colormap = cm.gist_earth
     rgba = colormap(normalize(masked_array), bytes=True)
     return rgba2image(rgba=rgba, antialias=antialias)
@@ -128,7 +128,10 @@ def get_data(container, ma=False, **get_parameters):
     """
     start = datetime.datetime.now()
     # Derive properties from get_paramaters
-    antialias = int(get_parameters.get('antialias', 1))
+    if get_parameters.get('antialias', 'no') == 'yes':
+        antialias = 2
+    else:
+        antialias = 1
     size = (antialias * int(get_parameters['width']),
             antialias * int(get_parameters['height']))
     extent = map(float, get_parameters['bbox'].split(','))
@@ -179,7 +182,11 @@ def get_response_for_getmap(get_parameters):
                              ma=True, **get_parameters)
         logging.debug('Got quads in {} ms.'.format(ms))
 
-    antialias = int(get_parameters.get('antialias', 1))
+    if get_parameters.get('antialias', 'no') == 'yes':
+        antialias = 2
+    else:
+        antialias = 1
+
 
     if mode == 'depth':
         time = int(get_parameters['time'])
@@ -199,7 +206,9 @@ def get_response_for_getmap(get_parameters):
             content = get_depth_image(masked_array=depth, 
                                       antialias=antialias)
     elif mode == 'bathymetry':
+        limits = map(float, get_parameters['limits'].split(','))
         content = get_bathymetry_image(masked_array=bathymetry,
+                                       limits=limits,
                                        antialias=antialias)
     elif mode == 'grid':
         content = get_grid_image(masked_array=quads,
@@ -216,6 +225,9 @@ def get_response_for_getinfo(get_parameters):
         v = dataset.variables
         fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
         timesteps = v['s1'].shape[0]
+        bathymetry = v['bath'][:]
+    limits = bathymetry.min(), bathymetry.max()
+    
     netcdf_extent = fex.min(), fey.min(), fex.max(), fey.max()
 
     # Determine transformed extent
@@ -233,6 +245,7 @@ def get_response_for_getinfo(get_parameters):
 
     # Prepare response
     content = json.dumps(dict(bounds=extent,
+                              limits=limits,
                               timesteps=timesteps))
     return content, 200, {'content-type': 'application/json'}
 
