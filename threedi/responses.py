@@ -84,9 +84,10 @@ def get_grid_image(masked_array, antialias=1):
                        [a,  a, a]])
     data = ndimage.filters.convolve(masked_array, kernel)
     normalize = colors.Normalize()
-    print(data.max())
     rgba = np.zeros(data.shape + (4,), dtype=np.uint8)
-    rgba[...][np.ma.greater(normalize(data), 0.5)] = (255, 0, 0, 255)
+    index = np.ma.greater(normalize(data), 0.5)
+    rgba[index] = (255, 0, 0, 255)
+    rgba[~index] = (255, 0, 0, 0)
     return rgba2image(rgba=rgba, antialias=antialias)
 
 
@@ -195,11 +196,14 @@ def get_response_for_getmap(get_parameters):
             )
         else:
             # Direct image
-            content = get_depth_image(masked_array=depth, antialias=antialias)
+            content = get_depth_image(masked_array=depth, 
+                                      antialias=antialias)
     elif mode == 'bathymetry':
-        content = get_bathymetry_image(bathymetry, antialias=antialias)
+        content = get_bathymetry_image(masked_array=bathymetry,
+                                       antialias=antialias)
     elif mode == 'grid':
-        content = get_grid_image(quads)
+        content = get_grid_image(masked_array=quads,
+                                 antialias=antialias)
 
     return content, 200, {'content-type': 'image/png'}
 
