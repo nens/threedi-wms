@@ -14,6 +14,7 @@ from gislib import raster
 from PIL import Image
 from netCDF4 import Dataset
 from scipy import ndimage
+from matplotlib import cm
 from matplotlib import colors
 
 import numpy as np
@@ -28,31 +29,15 @@ import os
 cache = {}
 
 
-def get_array(container, width, height, bbox, srs, ma=False, **kwargs):
-    """
-    Return numpy (masked) array.
-
-    Kwargs are not used, but make it possible to pass a wms get parameterlist.
-    """
-    geometry = raster.DatasetGeometry(
-        size=(int(width), int(height)),
-        extent=map(float, bbox.split(',')),
-    )
-    dataset = geometry.to_dataset(
-        datatype=container.datatype,
-        projection=srs,
-    )
-    container.warpinto(dataset)
-    data = dataset.ReadAsArray()
-
-    if ma:
-        return np.ma.array(data,
-                           mask=np.equal(data, container.nodatavalue))
-    else:  # for readability
-        return data
+def rgba2image(rgba):
+    """ return imagedata. """
+    image = Image.fromarray(rgba)
+    buf = io.BytesIO()
+    image.save(buf, 'png')
+    return buf.getvalue()
 
 
-def get_image(masked_array, waves=None):
+def get_depth_image(masked_array, waves=None):
     """ Return a png image from masked_array. """
     # Hardcode depth limits, until better height data
     normalize = colors.Normalize(vmin=0, vmax=2)
@@ -78,11 +63,29 @@ def get_image(masked_array, waves=None):
     # Make negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0)] = 0
 
-    # Create image
-    image = Image.fromarray(rgba)
-    buf = io.BytesIO()
-    image.save(buf, 'png')
-    return buf.getvalue()
+    return rgba2image(rgba)
+
+
+def get_bathymetry_image(masked_array):
+    """ Return imagedata. """
+    normalize = colors.Normalize(vmin=-5, vmax=5)
+    colormap = cm.gist_earth
+    rgba = colormap(normalize(masked_array), bytes=True)
+    return rgba2image(rgba)
+
+
+def get_grid_image(masked_array):
+    """ Return imagedata. """
+    a, b = -1, 8
+    kernel = np.array([[a,  a, a],
+                       [a,  b, a],
+                       [a,  a, a]])
+    data = ndimage.filters.convolve(masked_array, kernel)
+    normalize = colors.Normalize()
+    print(data.max())
+    rgba = np.zeros(data.shape + (4,), dtype=np.uint8)
+    rgba[...][np.ma.greater(normalize(data), 0.5)] = (255, 0, 0, 255)
+    return rgba2image(rgba)
 
 
 def get_water_waves(masked_array, anim_frame):
@@ -111,35 +114,102 @@ def get_water_waves(masked_array, anim_frame):
 
     normalize = colors.Normalize(vmin=0, vmax=24)
 
-    return get_image(masked_array, waves=normalize(waves_shade))
+    return get_depth_image(masked_array, waves=normalize(waves_shade))
 
 
-def get_waterlevel(quad_data, waterlevel_data, get_parameters):
-    """ Return numpy masked array. """
-    projection = raster.get_wkt(get_parameters['srs'])
+def get_bathymetry(static_data, get_parameters):
+    """ Return numpy array. """
+    bathymetry_time = datetime.datetime.now()
+    bathymetry = get_array(container=static_data.pyramid,
+                           ma=True,
+                           **get_parameters)
+    logging.debug('Got bathymetry in {} ms.'.format(
+        1000 * (datetime.datetime.now() - bathymetry_time).total_seconds(),
+    ))
+    return bathymetry
+
+
+def get_quads(static_data, get_parameters):
+    """ Return numpy array. """
+    quad_time = datetime.datetime.now()
+    quads = get_array(container=static_data.monolith,
+                      ma=False,
+                      **get_parameters)
+    logging.debug('Got quad in {} ms.'.format(
+        1000 * (datetime.datetime.now() - quad_time).total_seconds(),
+    ))
+    return quads
+
+
+def get_array(container, width, height, bbox, srs, ma=False, **kwargs):
+    """
+    Return numpy (masked) array.
+
+    Kwargs are not used, but make it possible to pass a wms get parameterlist.
+    """
     geometry = raster.DatasetGeometry(
-        extent=map(float, get_parameters['bbox'].split(',')),
-        size=(int(get_parameters['width']),
-              int(get_parameters['height'])),
+        size=(int(width), int(height)),
+        extent=map(float, bbox.split(',')),
     )
-    # Get waterlevel from the quad pyramid or monolith
-    if quad_data.quad_pyramid.toplevel is None:
-        quad_datatype = quad_data.quad_monolith.datatype
-        ds_quad = geometry.to_dataset(datatype=quad_datatype)
-        ds_quad.SetProjection(projection)
-        quad_data.quad_monolith.warpinto(ds_quad)
-    else:
-        quad_datatype = quad_data.quad_pyramid.datatype
-        ds_quad = geometry.to_dataset(datatype=quad_datatype)
-        ds_quad.SetProjection(projection)
-        quad_data.quad_pyramid.warpinto(ds_quad)
-    quad = ds_quad.ReadAsArray()
-    waterlevel = waterlevel_data.waterlevel[quad]
+    dataset = geometry.to_dataset(
+        datatype=container.datatype,
+        projection=srs,
+    )
+    container.warpinto(dataset)
+    data = dataset.ReadAsArray()
 
-    return waterlevel
+    if ma:
+        return np.ma.array(data,
+                           mask=np.equal(data, container.nodatavalue))
+    else:  # for readability
+        return data
 
 
 # Responses for various requests
+def get_response_for_getmap(get_parameters):
+    """ Return png image. """
+    # Get the quad and waterlevel data objects
+    layer_parameter = get_parameters['layer']
+    if ':' in get_parameters['layer']:
+        layer, mode = layer_parameter.split(':')
+    else:
+        layer, mode = layer_parameter, 'depth'
+
+    try:
+        static_data = StaticData.get(layer=layer)
+    except ValueError:
+        return 'Objects not ready, starting preparation.'
+    except raster.LockError:
+        return 'Objects not ready, preparation in progress.'
+
+    if mode in ['depth', 'bathymetry']:
+        bathymetry = get_bathymetry(static_data, get_parameters)
+    if mode in ['depth', 'grid']:
+        quads = get_quads(static_data, get_parameters)
+
+    if mode == 'depth':
+        time = int(get_parameters['time'])
+        dynamic_data = DynamicData.get(layer=layer, time=time)
+        waterlevel = dynamic_data.waterlevel[quads]
+        depth = waterlevel - bathymetry
+
+        if 'anim_frame' in get_parameters:
+            # Add wave animation
+            content = get_water_waves(
+                masked_array=depth,
+                anim_frame=int(get_parameters['anim_frame']),
+            )
+        else:
+            # Direct image
+            content = get_depth_image(depth)
+    elif mode == 'bathymetry':
+        content = get_bathymetry_image(bathymetry)
+    elif mode == 'grid':
+        content = get_grid_image(quads)
+
+    return content, 200, {'content-type': 'image/png'}
+
+
 def get_response_for_getinfo(get_parameters):
     """ Return json with bounds and timesteps. """
     # Read netcdf
@@ -167,52 +237,6 @@ def get_response_for_getinfo(get_parameters):
     content = json.dumps(dict(bounds=extent,
                               timesteps=timesteps))
     return content, 200, {'content-type': 'application/json'}
-
-
-def get_response_for_getmap(get_parameters):
-    """ Return png image. """
-    # Get the quad and waterlevel data objects
-    layer = get_parameters['layer']
-    time = int(get_parameters['time'])
-    try:
-        static_data = StaticData.get(layer=layer)
-    except ValueError:
-        return 'Objects not ready, starting preparation.'
-    except raster.LockError:
-        return 'Objects not ready, preparation in progress.'
-    dynamic_data = DynamicData.get(layer=layer, time=time)
-
-    # Get height
-    height_time = datetime.datetime.now()
-    height = get_array(container=static_data.pyramid,
-                       ma=True,
-                       **get_parameters)
-    logging.debug('Got height in {} ms.'.format(
-        1000 * (datetime.datetime.now() - height_time).total_seconds(),
-    ))
-
-    # Get waterlevel
-    quad_time = datetime.datetime.now()
-    quad = get_array(container=static_data.monolith,
-                     ma=False,
-                     **get_parameters)
-    logging.debug('Got quad in {} ms.'.format(
-        1000 * (datetime.datetime.now() - quad_time).total_seconds(),
-    ))
-
-    waterlevel = dynamic_data.waterlevel[quad]
-
-    # Combine and return response
-    depth = waterlevel - height
-
-    if 'anim_frame' in get_parameters:
-        # Add wave animation
-        content = get_water_waves(masked_array=depth,
-                                  anim_frame=int(get_parameters['anim_frame']))
-    else:
-        # Direct image
-        content = get_image(waterlevel - height)
-    return content, 200, {'content-type': 'image/png'}
 
 
 class StaticData(object):
