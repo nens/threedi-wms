@@ -26,52 +26,25 @@
           <div id="map"></div>
         </div>
         <div class="span4">
-          <!--<form>-->
-            <label>Prepare objects for performance boost:</label>
-            <button class="btn" id="prepare-height-pyramid" type="button">
-              Height Pyramid *
-            </button><br />
-            <button class="btn" id="prepare-quad-monolith" type="button">
-              Quad Monolith *
-            </button><br />
-            <button class="btn" id="prepare-quad-pyramid" type="button">
-              Quad Pyramid
-            </button><br />
-            <button class="btn" id="prepare-height-monolith" type="button">
-              Height Monolith
-            </button><br />
-            <fieldset>
-              <label>Geoserver for hillshade:</label>
-              <select id="geoserver">
-                <option value="http://nens-3di-task-01:8080/geoserver/nl/wms">
-                  nens-3di
-                </option>
-                <option value="http://localhost:8080/geoserver/nl/wms">
-                  localhost
-                </option>
-              </select>
-              <label>Dataset:</label>
-              <select id="dataset">
-                {% for dataset in datasets %}
-                <option value="{{dataset.filepath}}">
-                  {{ dataset.filename }}
-                </option>
-                {% endfor %}
-              </select>
-              <label>Timestep: <span id="time">1</span></label>
-              <div id="slider"></div><br />
-              <label>Toggle layers:</label>
-              <label class="checkbox">
-                <input type="checkbox" id="depth" checked>Depth
-              </label>
-              <label class="checkbox">
-                <input type="checkbox" id="hillshade">Hillshade
-              </label>
-              <label class="checkbox">
-                <input type="checkbox" id="osm" checked>Osm
-              </label>
-            </fieldset>
-          <!--</form>-->
+          <fieldset>
+            <label>Layer:</label>
+            <select id="layer">
+              {% for layer in layers %}
+              <option value="{{layer}}">
+                {{ layer }}
+              </option>
+              {% endfor %}
+            </select>
+            <label>Timestep: <span id="time">1</span></label>
+            <div id="slider"></div><br />
+            <label>Toggle layers:</label>
+            <label class="checkbox">
+              <input type="checkbox" id="depth" checked>Depth
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" id="osm" checked>Osm
+            </label>
+          </fieldset>
         </div>
       </div>
     </div> <!-- /container -->

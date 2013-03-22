@@ -9,30 +9,20 @@ var map = new OpenLayers.Map(
 );
 var depth = new OpenLayers.Layer.WMS(
   "Depth",
-  "/3di/wms?dataset=" + dataset + "&time=" + time,
+  "/3di/wms?layers=" + layer + "&time=" + time,
   {
     layers: "basic",
     transparent: "true"
   }
 )
 map.addLayer(depth);
-var hillshade = new OpenLayers.Layer.WMS(
-  "Hillshade",
-  "/",
-  {
-    layers: "nl:hillshade",
-    styles: "hillshade",
-    transparent: "true"
-  }
-);
-map.addLayer(hillshade);
 var osm = new OpenLayers.Layer.OSM()
 map.addLayer(osm);
 
 // Functions
 function prepare(prepare_type){
-  var dataset = $('select#dataset option:selected').val()
-  url = '/3di/wms?dataset=' + dataset + '&request=prepare';
+  var layer = $('select#layer option:selected').val()
+  url = '/3di/wms?layer=' + layer + '&request=prepare';
   url = url + '&type=' + prepare_type;
   window.open(url)
 }
@@ -42,23 +32,23 @@ function prepare_qp() {prepare('quad_pyramid')}
 function prepare_hm() {prepare('height_monolith')}
 function prepare_hp() {prepare('height_pyramid')}
 
-function updateDataset(){
-  var dataset = $('select#dataset option:selected')[0].getAttribute('value');
+function updateLayer(){
+  var layer = $('select#layer option:selected')[0].getAttribute('value');
   // Determine bounds
   $.ajax(
     '/3di/wms',
     { 
       data: {
         request: 'getinfo',
-        dataset: dataset,
+        layer: layer,
         srs: 'epsg:3857'
       },
-      success: updateDatasetFromData
+      success: updateLayerFromData
     }
   );
 }
 
-function updateDatasetFromData(data) {
+function updateLayerFromData(data) {
   $("#slider").slider("option", "max", data['timesteps'] - 1);
   var time = $("#slider").slider("value");
   updateTime(time);
@@ -70,24 +60,14 @@ function updateDatasetFromData(data) {
 
 function updateTime(time){
   $("#time").text(time)
-  var dataset = $('select#dataset option:selected').val()
-  depth.setUrl("/3di/wms?dataset=" + dataset + "&time=" + time);
+  var layer = $('select#layer option:selected').val()
+  depth.setUrl("/3di/wms?layer=" + layer + "&time=" + time);
   depth.redraw()
-}
-
-function updateHillshade(){
-  var geoserver = $('select#geoserver option:selected').val()
-  hillshade.setUrl(geoserver);
-  hillshade.redraw();
 }
 
 function toggleDepth(){
   var state = $("input#depth").is(":checked");
   depth.setVisibility(state);
-}
-function toggleHillshade(){
-  var state = $("input#hillshade").is(":checked");
-  hillshade.setVisibility(state);
 }
 function toggleOsm(){
   var state = $("input#osm").is(":checked");
@@ -110,14 +90,8 @@ $("button#prepare-quad-monolith").on("click", prepare_qm);
 $("button#prepare-quad-pyramid").on("click", prepare_qp);
 $("button#prepare-height-monolith").on("click", prepare_hm);
 $("button#prepare-height-pyramid").on("click", prepare_hp);
-$("select#geoserver").on("change", updateHillshade);
-$("select#dataset").on("change", updateDataset);
+$("select#layer").on("change", updateLayer);
 $("input#depth").on("change", toggleDepth);
-$("input#hillshade").on("change", toggleHillshade);
 $("input#osm").on("change", toggleOsm);
 
-updateDataset();
-toggleHillshade();
-updateHillshade();
-
-
+updateLayer();

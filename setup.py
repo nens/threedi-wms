@@ -47,5 +47,6 @@ setup(name='threedi-wms',
       entry_points={
           'console_scripts': [
               'flask=server.app:run',
+              'sandbox=sandbox.sandbox:main',
           ]},
       )
