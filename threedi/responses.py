@@ -71,7 +71,7 @@ def get_depth_image(masked_array, waves=None, antialias=1):
 def get_bathymetry_image(masked_array, limits, antialias=1):
     """ Return imagedata. """
     normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
-    colormap = cm.gist_earth
+    colormap = cm.summer
     rgba = colormap(normalize(masked_array), bytes=True)
     return rgba2image(rgba=rgba, antialias=antialias)
 

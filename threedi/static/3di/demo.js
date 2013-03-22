@@ -36,6 +36,10 @@ function getLayer(){
 function getTime(){
   return $('#slider').slider("option", "value")
 }
+function setTime(time){
+  $('#slider').slider("option", "value", time);
+  $("#time").text(getTime());
+}
   
 // Updaters
 function updateLayer(){
@@ -66,7 +70,9 @@ function updateInfo(data){
 }
 
 function updateSlider() {
-  $("#slider").slider("option", "max", info['timesteps'] - 1);
+  var sliderMax = info['timesteps'] - 1;
+  $("#slider").slider("option", "max", sliderMax);
+  if (getTime() > sliderMax) {setTime(sliderMax)}
 }
 
 function updateGrid(){
@@ -78,8 +84,6 @@ function updateGrid(){
 }
 
 function updateDepth(){
-  $("#time").text(getTime());
-  // Set and redraw layer
   var url = "/3di/wms";
   url += "?layer=" + getLayer() + ":depth";
   url += "&time=" + getTime();
@@ -97,7 +101,6 @@ function updateBathymetry(data){
   bathymetry.setUrl(url);
   bathymetry.redraw()
 }
-
 
 function toggleGrid(){
   var state = $("input#grid").is(":checked");
@@ -123,6 +126,7 @@ function toggleAntialias(){
   
 // Slider
 function slide(ui, slider){
+  $("#time").text(slider.value);
   updateDepth();
 }
 
