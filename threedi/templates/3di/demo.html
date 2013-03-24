@@ -1,71 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>3Di viewer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-    <!-- Le styles -->
-    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/jquery/jquery-ui-1.10.0.custom.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('3di.static', filename='3di/demo.css') }}" />
-
-    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
-    <!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-
-  </head>
-  <body>
-
-    <div class="container">
-      <div class="row">
-        <div class="span8">
-          <div id="map"></div>
-        </div>
-        <div class="span4">
-          <fieldset>
-            <label>Layer:</label>
-            <select id="layer">
-              {% for layer in layers %}
-              <option value="{{layer}}">
-                {{ layer }}
-              </option>
-              {% endfor %}
-            </select>
-            <label>Timestep: <span id="time">0</span></label>
-            <div id="slider"></div><br />
-            <label>Toggle layers:</label>
-            <label class="checkbox">
-              <input type="checkbox" id="grid" >Grid
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" id="depth" checked>Depth
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" id="bathymetry" >Bathymetry
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" id="osm" checked>Osm
-            </label>
-            <label>Toggle options:</label>
-            <label class="checkbox">
-              <input type="checkbox" id="antialias" >Antialias
-            </label>
-          </fieldset>
-        </div>
-      </div>
-    </div> <!-- /container -->
-
-    <!-- Le javascript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="/static/jquery/jquery-1.9.0.min.js"></script>
-    <script src="/static/jquery/jquery-ui-1.10.0.custom.min.js"></script>
-    <script src="/static/openlayers/OpenLayers.js"></script>
-    <script src="{{ url_for('3di.static', filename='3di/demo.js') }}"></script>
-
-  </body>
-</html>
+{% extends "base.html" %}
+{% block css %}
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='jquery/jquery-ui-1.10.0.custom.min.css') }}" />
+  <link rel="stylesheet"
+        href="{{ url_for('3di.static', filename='3di/demo.css') }}" />
+{% endblock %}
+{% block content %}
+  <div class="row">
+    <div class="span8">
+      <div id="map"></div>
+    </div>
+    <div class="span4">
+      <fieldset>
+        <label>Layer:</label>
+        <select id="layer">
+          {% for layer in layers %}
+          <option value="{{layer}}">
+            {{ layer }}
+          </option>
+          {% endfor %}
+        </select>
+        <label>Timestep: <span id="time">0</span></label>
+        <div id="slider"></div><br />
+        <label>Toggle layers:</label>
+        <label class="checkbox">
+          <input type="checkbox" id="grid" >Grid
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="depth" checked>Depth
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="bathymetry" >Bathymetry
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="osm" checked>Osm
+        </label>
+        <label>Toggle options:</label>
+        <label class="checkbox">
+          <input type="checkbox" id="antialias" >Antialias
+        </label>
+      </fieldset>
+    </div>
+  </div>
+{% endblock %}
+{% block javascript %}
+  <script src="{{ url_for('static', filename='jquery/jquery-1.9.0.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='jquery/jquery-ui-1.10.0.custom.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='openlayers/OpenLayers.js') }}"></script>
+  <script src="{{ url_for('3di.static', filename='3di/demo.js') }}"></script>
+{% endblock %}
