@@ -33,13 +33,6 @@ function getAntialias(){
 function getLayer(){
   return $('select#layer option:selected').val();
 }
-function getTime(){
-  return $('#slider').slider("option", "value")
-}
-function setTime(time){
-  $('#slider').slider("option", "value", time);
-  $("#time").text(getTime());
-}
   
 // Updaters
 function updateLayer(){
@@ -67,12 +60,6 @@ function updateInfo(data){
   map.zoomToExtent(
     new OpenLayers.Bounds(bounds[0], bounds[1], bounds[2], bounds[3])
   )
-}
-
-function updateSlider() {
-  var sliderMax = info['timesteps'] - 1;
-  $("#slider").slider("option", "max", sliderMax);
-  if (getTime() > sliderMax) {setTime(sliderMax)}
 }
 
 function updateGrid(){
@@ -129,7 +116,18 @@ function slide(ui, slider){
   $("#time").text(slider.value);
   updateDepth();
 }
-
+function getTime(){
+  return $("#time").text();
+}
+function setTime(time){
+  $('#slider').slider("option", "value", time);
+  $("#time").text(time);
+}
+function updateSlider() {
+  var sliderMax = info['timesteps'] - 1;
+  $("#slider").slider("option", "max", sliderMax);
+  if (getTime() > sliderMax) {setTime(sliderMax)}
+}
 $("#slider").slider({
   min: 0,
   max: 143,
@@ -138,7 +136,6 @@ $("#slider").slider({
 
 // Bind controls
 $("select#layer").on("change", updateLayer);
-$("select#mode").on("change", updateLayer);
 $("input#grid").on("change", toggleGrid);
 $("input#depth").on("change", toggleDepth);
 $("input#bathymetry").on("change", toggleBathymetry);

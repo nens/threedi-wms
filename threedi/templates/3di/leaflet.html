@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='leaflet/leaflet.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='jquery/jquery-ui-1.10.0.custom.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('3di.static', filename='3di/leaflet-demo.css') }}" />
+{% endblock %}
+{% block content %}
+  <div class="row">
+    <div class="span8">
+      <div id="map"></div>
+    </div>
+    <div class="span4">
+      <fieldset>
+        <label>Layer:</label>
+        <select id="layer">
+          {% for layer in layers %}
+          <option value="{{layer}}">
+            {{ layer }}
+          </option>
+          {% endfor %}
+        </select>
+        <label>Timestep: <span id="time">0</span></label>
+        <div id="slider"></div><br />
+        <label>Toggle layers:</label>
+        <label class="checkbox">
+          <input type="checkbox" id="grid" >Grid
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="depth" checked>Depth
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="bathymetry" >Bathymetry
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="osm" checked>Osm
+        </label>
+        <label>Toggle options:</label>
+        <label class="checkbox">
+          <input type="checkbox" id="antialias" >Antialias
+        </label>
+      </fieldset>
+    </div>
+  </div>
+{% endblock %}
+{% block javascript %}
+  <script src="{{ url_for('static', filename='jquery/jquery-1.9.0.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='jquery/jquery-ui-1.10.0.custom.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='leaflet/leaflet.js') }}"></script>
+  <script src="{{ url_for('3di.static', filename='3di/leaflet-demo.js') }}" ></script>
+{% endblock %}
