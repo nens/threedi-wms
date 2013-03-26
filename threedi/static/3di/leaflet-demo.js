@@ -75,7 +75,7 @@ function updateInfo(data){
   bathymetry.redraw();
   depth.redraw();
   grid.redraw();
-  var bounds = data['bounds'];
+  var bounds = info['bounds'];
   map.fitBounds([[bounds[1], bounds[0]],
                  [bounds[3], bounds[2]]])
 }

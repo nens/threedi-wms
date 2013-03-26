@@ -225,9 +225,9 @@ def get_response_for_getinfo(get_parameters):
         v = dataset.variables
         fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
         timesteps = v['s1'].shape[0]
-        bathymetry = v['bath'][:]
+        bathymetry = v['bath'][0, :]
+
     limits = bathymetry.min(), bathymetry.max()
-    
     netcdf_extent = fex.min(), fey.min(), fex.max(), fey.max()
 
     # Determine transformed extent
