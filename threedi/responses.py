@@ -160,8 +160,8 @@ def get_data(container, ma=False, **get_parameters):
 def get_response_for_getmap(get_parameters):
     """ Return png image. """
     # Get the quad and waterlevel data objects
-    layer_parameter = get_parameters['layer']
-    if ':' in get_parameters['layer']:
+    layer_parameter = get_parameters['layers']
+    if ':' in layer_parameter:
         layer, mode = layer_parameter.split(':')
     else:
         layer, mode = layer_parameter, 'depth'
@@ -220,7 +220,7 @@ def get_response_for_getmap(get_parameters):
 def get_response_for_getinfo(get_parameters):
     """ Return json with bounds and timesteps. """
     # Read netcdf
-    path = utils.get_netcdf_path(layer=get_parameters['layer'])
+    path = utils.get_netcdf_path(layer=get_parameters['layers'])
     with Dataset(path) as dataset:
         v = dataset.variables
         fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]

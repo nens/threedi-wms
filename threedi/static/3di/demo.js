@@ -42,7 +42,7 @@ function updateLayer(){
     { 
       data: {
         request: 'getinfo',
-        layer: getLayer(),
+        layers: getLayer(),
         srs: 'epsg:3857'
       },
       success: updateInfo
@@ -64,7 +64,7 @@ function updateInfo(data){
 
 function updateGrid(){
   var url = "/3di/wms";
-  url += "?layer=" + getLayer() + ":grid";
+  url += "?LAYERS=" + getLayer() + ":grid";
   url += "&antialias=" + getAntialias();
   grid.setUrl(url);
   grid.redraw();
@@ -72,7 +72,7 @@ function updateGrid(){
 
 function updateDepth(){
   var url = "/3di/wms";
-  url += "?layer=" + getLayer() + ":depth";
+  url += "?LAYERS=" + getLayer() + ":depth";
   url += "&time=" + getTime();
   url += "&antialias=" + getAntialias();
   depth.setUrl(url);
@@ -82,7 +82,7 @@ function updateDepth(){
 function updateBathymetry(data){
   bathymetry.redraw()
   var url = "/3di/wms";
-  url += "?layer=" + getLayer() + ":bathymetry";
+  url += "?LAYERS=" + getLayer() + ":bathymetry";
   url += "&antialias=" + getAntialias();
   url += "&limits=" + info['limits'][0] + "," + info['limits'][1];
   bathymetry.setUrl(url);

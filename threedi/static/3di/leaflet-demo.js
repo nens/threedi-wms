@@ -23,7 +23,7 @@ grid.drawTile = function(canvas, tilePoint, zoom) {
 // Tile loaders
 function loadBathymetryTile(canvas, zoom, x, y) {  
   var url = "/3di/tms/" + zoom + "/" + x + "/" + y + ".png";
-  url += "?layer=" + getLayer() + ":bathymetry";
+  url += "?layers=" + getLayer() + ":bathymetry";
   url += "&limits=" + info['limits'][0] + "," + info['limits'][1];
   url += "&antialias=" + getAntialias();
   canvas.img = new Image();
@@ -32,7 +32,7 @@ function loadBathymetryTile(canvas, zoom, x, y) {
 }
 function loadDepthTile(canvas, zoom, x, y) {  
   var url = "/3di/tms/" + zoom + "/" + x + "/" + y + ".png";
-  url += "?layer=" + getLayer() + ":depth";
+  url += "?layers=" + getLayer() + ":depth";
   url += "&time=" + getTime();
   url += "&antialias=" + getAntialias();
   canvas.img = new Image();
@@ -41,7 +41,7 @@ function loadDepthTile(canvas, zoom, x, y) {
 }
 function loadGridTile(canvas, zoom, x, y) {  
   var url = "/3di/tms/" + zoom + "/" + x + "/" + y + ".png";
-  url += "?layer=" + getLayer() + ":grid";
+  url += "?layers=" + getLayer() + ":grid";
   url += "&antialias=" + getAntialias();
   canvas.img = new Image();
   canvas.img.src = url
@@ -61,7 +61,7 @@ function updateLayer(){
     { 
       data: {
         request: 'getinfo',
-        layer: getLayer(),
+        layers: getLayer(),
         srs: 'epsg:4326'
       },
       success: updateInfo
