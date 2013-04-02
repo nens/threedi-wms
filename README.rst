@@ -9,9 +9,9 @@ The main purpose of the library is visualization of fast and accurate
 3di flooding calculations.
 
 Features:
-- Celery worker for long lasting tasks such as building bathymetry pyramids
-- File and only file based configuration
-- Modular setup employing Flask's Blueprint system
+    - Celery worker for long lasting tasks such as building bathymetry pyramids
+    - File and only file based configuration
+    - Modular setup employing Flask's Blueprint system
 
 
 Prerequisities
