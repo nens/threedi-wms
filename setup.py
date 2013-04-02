@@ -29,13 +29,13 @@ tests_require = [
 
 setup(name='threedi-wms',
       version=version,
-      description="TODO",
+      description="Flexible extensible wms server originally developed for 3di.",
       long_description=long_description,
       # Get strings from http://www.python.org/pypi?%3Aaction=list_classifiers
       classifiers=[],
       keywords=[],
-      author='TODO',
-      author_email='TODO@nelen-schuurmans.nl',
+      author='Arjan Verkerk',
+      author_email='arjan.verkerk@nelen-schuurmans.nl',
       url='',
       license='GPL',
       packages=['threedi_wms'],

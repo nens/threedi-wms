@@ -1,34 +1,46 @@
 threedi-wms
-==========================================
+===========
 
-Introduction
+A flexible implementation of parts of the wms standard using Flask for
+the web stuff. The Flask Blueprint system is used to disclose a variety
+of datasources.
 
-Usage, etc.
+The main purpose of the library is visualization of fast and accurate
+3di flooding calculations.
+
+Features:
+- Celery worker for long lasting tasks such as building bathymetry pyramids
+- File and only file based configuration
+- Modular setup employing Flask's Blueprint system
 
 
-Post-nensskel setup TODO
-------------------------
+Prerequisities
+--------------
 
-Here are some instructions on what to do after you've created the project with
-nensskel.
+For the build to work a number of system libraries is required::
 
-- Fill in a short description on https://github.com/lizardsystem/threedi-wms or
-  https://github.com/nens/threedi-wms if you haven't done so already.
+  $ libhdf5-serial-dev # Not sure about this one.
+  $ libnetcdf-dev
 
-- Use the same description in the ``setup.py``'s "description" field.
 
-- Fill in your username and email address in the ``setup.py``, see the
-  ``TODO`` fields.
+Installation of the wms server
+------------------------------
+First the basic steps::
 
-- Check https://github.com/nens/threedi-wms/settings/collaboration if the team
-  "Nelen & Schuurmans" has access.
+    $ python bootstrap.py
+    $ bin/buildout
 
-- Add a new jenkins job at
-  http://buildbot.lizardsystem.nl/jenkins/view/djangoapps/newJob or
-  http://buildbot.lizardsystem.nl/jenkins/view/libraries/newJob . Job name
-  should be "threedi-wms", make the project a copy of the existing "lizard-wms"
-  project (for django apps) or "nensskel" (for libraries). On the next page,
-  change the "github project" to ``https://github.com/nens/threedi-wms/`` and
-  "repository url" fields to ``git@github.com:nens/threedi-wms.git`` (you might
-  need to replace "nens" with "lizardsystem"). The rest of the settings should
-  be OK.
+Put your datasets in var/data/3di/<myfolder>. The name of the folder will
+be the name of the layer in the request. In the folder should be a .nc
+file and a .tif or .asc bathymetry file. .tif performs better than .asc
+in the preparation step, but after that there is no difference since
+the bathymetry is cached in a pyramid oject on the filesystem. Create
+the tif from the bathimetry .asc file with gdal::
+
+    $ gdal_translate mybathimetry.asc myresult.tif
+
+Start the server and the task processor using::
+
+    $ bin/supervisord
+    
+Go to localhost:5000/3di/demo to see the server in action.
