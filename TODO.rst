@@ -30,9 +30,13 @@ Backends
             - Remove pyramids for removed layers
             - Make pyramid name a hash of selected .nc headers to
               automatically invalidate
+    - Start using .mdu file instead of unbound .nc and .asc files
 
 Deltaportaal:
     - The proof of concept from threedi-server
 
 Shape backend:
     - Separation of style and content
+
+Pyramid backend:
+    - Backend for raster data using gislib pyramid objects
