@@ -214,7 +214,10 @@ def get_response_for_getmap(get_parameters):
         content = get_grid_image(masked_array=quads,
                                  antialias=antialias)
 
-    return content, 200, {'content-type': 'image/png'}
+    return content, 200, {
+        'content-type': 'image/png',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET'}
 
 
 def get_response_for_getinfo(get_parameters):
@@ -247,7 +250,10 @@ def get_response_for_getinfo(get_parameters):
     content = json.dumps(dict(bounds=extent,
                               limits=limits,
                               timesteps=timesteps))
-    return content, 200, {'content-type': 'application/json'}
+    return content, 200, {
+        'content-type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET'}
 
 
 class StaticData(object):
