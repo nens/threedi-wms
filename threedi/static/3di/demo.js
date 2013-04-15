@@ -30,6 +30,13 @@ function getAntialias(){
     return 'no'
   }
 }
+function getWaves(){
+  if ($("input#waves").is(":checked")) {
+    return '&anim_frame=0'
+  } else {
+    return ''
+  }
+}
 function getLayer(){
   return $('select#layer option:selected').val();
 }
@@ -75,6 +82,8 @@ function updateDepth(){
   url += "?LAYERS=" + getLayer() + ":depth";
   url += "&time=" + getTime();
   url += "&antialias=" + getAntialias();
+  url += getWaves();
+  console.log(url);
   depth.setUrl(url);
   depth.redraw();
 }
@@ -110,6 +119,9 @@ function toggleAntialias(){
   updateDepth();
   updateBathymetry();
 }
+function toggleWaves(){
+  updateDepth();
+}
   
 // Slider
 function slide(ui, slider){
@@ -141,6 +153,7 @@ $("input#depth").on("change", toggleDepth);
 $("input#bathymetry").on("change", toggleBathymetry);
 $("input#osm").on("change", toggleOsm);
 $("input#antialias").on("change", toggleAntialias);
+$("input#waves").on("change", toggleWaves);
 
 toggleGrid()
 toggleBathymetry()

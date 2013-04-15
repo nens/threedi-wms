@@ -99,12 +99,13 @@ def get_water_waves(masked_array, anim_frame, antialias=1):
     y_shape, x_shape = masked_array.shape
     x, y = np.mgrid[0:y_shape, 0:x_shape]
     offset = anim_frame * 0.01
-
     magnitude = masked_array
-    waves = (np.sin(np.pi * 64 / magnitude *
-             (offset + x / x_shape + y / y_shape)) * magnitude +
-             np.sin(np.pi * 60 / magnitude *
-             (offset + y / y_shape)) * magnitude)
+    period = masked_array.filled(1)
+    amplitude = masked_array.filled(0)
+    waves = (np.sin(np.pi * 64 / period *
+             (offset + x / x_shape + y / y_shape)) * amplitude +
+             np.sin(np.pi * 60 / period *
+             (offset + y / y_shape)) * amplitude)
 
     # 'Shade' by convolution
     waves_shade = ndimage.filters.convolve(
