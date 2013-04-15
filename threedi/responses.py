@@ -189,14 +189,13 @@ def get_response_for_getmap(get_parameters):
         antialias = 1
 
     if get_parameters.get('nocache', 'no') == 'yes':
-        nocache = True
+        use_cache = False
     else:
-        nocache = False
-
+        use_cache = True
 
     if mode == 'depth':
         time = int(get_parameters['time'])
-        dynamic_data = DynamicData.get(layer=layer, time=time)
+        dynamic_data = DynamicData.get(layer=layer, time=time, use_cache=use_cache)
         waterlevel = dynamic_data.waterlevel[quads]
         depth = waterlevel - bathymetry
 
@@ -315,7 +314,7 @@ class DynamicData(object):
     Container for only the waterlevel data from the netcdf.
     """
     @classmethod
-    def get(cls, layer, time):
+    def get(cls, layer, time, use_cache):
         """
         Return instance from cache if possible, new instance otherwise.
         """
@@ -325,9 +324,14 @@ class DynamicData(object):
         )(layer=layer, time=time)
 
         # Return object
-        try:
-            return cache[key]
-        except KeyError:
+        if use_cache:
+            try:
+                return cache[key]
+            except KeyError:
+                value = cls(layer=layer, time=time)
+                cache[key] = value
+                return value
+        else:
             value = cls(layer=layer, time=time)
             cache[key] = value
             return value
