@@ -187,6 +187,11 @@ def get_response_for_getmap(get_parameters):
     else:
         antialias = 1
 
+    if get_parameters.get('nocache', 'no') == 'yes':
+        nocache = True
+    else:
+        nocache = False
+
 
     if mode == 'depth':
         time = int(get_parameters['time'])
