@@ -22,6 +22,9 @@ For the build to work a number of system libraries is required::
   $ libhdf5-serial-dev # Not sure about this one.
   $ libnetcdf-dev
 
+GDAL 1.9.1 or higher. The server will NOT work correctly with a lower version
+(grid is misplaced).
+
 
 Installation of the wms server
 ------------------------------
