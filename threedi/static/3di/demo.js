@@ -13,6 +13,10 @@ var depth = new OpenLayers.Layer.WMS(
   "Depth", "", {layers: "basic", transparent: "true"}
 )
 map.addLayer(depth);
+var flood = new OpenLayers.Layer.WMS(
+  "Flood", "", {layers: "basic", transparent: "true"}
+)
+map.addLayer(flood);
 var grid = new OpenLayers.Layer.WMS(
   "Grid", "", {layers: "basic", transparent: "true"}
 )
@@ -62,6 +66,7 @@ function updateInfo(data){
   updateSlider();
   updateGrid();
   updateDepth();
+  updateFlood();
   updateBathymetry();
   var bounds = data['bounds'];
   map.zoomToExtent(
@@ -82,10 +87,23 @@ function updateDepth(){
   url += "?LAYERS=" + getLayer() + ":depth";
   url += "&time=" + getTime();
   url += "&antialias=" + getAntialias();
+  url += "&nocache=yes";
   url += getWaves();
   console.log(url);
   depth.setUrl(url);
   depth.redraw();
+}
+
+function updateFlood(){
+  var url = "/3di/wms";
+  url += "?LAYERS=" + getLayer() + ":flood";
+  url += "&time=" + getTime();
+  url += "&antialias=" + getAntialias();
+  url += "&nocache=yes";
+  url += getWaves();
+  console.log(url);
+  flood.setUrl(url);
+  flood.redraw();
 }
 
 function updateBathymetry(data){
@@ -106,6 +124,10 @@ function toggleDepth(){
   var state = $("input#depth").is(":checked");
   depth.setVisibility(state);
 }
+function toggleFlood(){
+  var state = $("input#flood").is(":checked");
+  flood.setVisibility(state);
+}
 function toggleBathymetry(){
   var state = $("input#bathymetry").is(":checked");
   bathymetry.setVisibility(state);
@@ -117,16 +139,19 @@ function toggleOsm(){
 function toggleAntialias(){
   updateGrid();
   updateDepth();
+  updateFlood();
   updateBathymetry();
 }
 function toggleWaves(){
   updateDepth();
+  updateFlood();
 }
   
 // Slider
 function slide(ui, slider){
   $("#time").text(slider.value);
   updateDepth();
+  updateFlood();
 }
 function getTime(){
   return $("#time").text();
@@ -150,11 +175,13 @@ $("#slider").slider({
 $("select#layer").on("change", updateLayer);
 $("input#grid").on("change", toggleGrid);
 $("input#depth").on("change", toggleDepth);
+$("input#flood").on("change", toggleFlood);
 $("input#bathymetry").on("change", toggleBathymetry);
 $("input#osm").on("change", toggleOsm);
 $("input#antialias").on("change", toggleAntialias);
 $("input#waves").on("change", toggleWaves);
 
-toggleGrid()
-toggleBathymetry()
+toggleGrid();
+toggleFlood();
+toggleBathymetry();
 updateLayer();

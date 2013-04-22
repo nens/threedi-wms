@@ -174,11 +174,11 @@ def get_response_for_getmap(get_parameters):
     except raster.LockError:
         return 'Objects not ready, preparation in progress.'
 
-    if mode in ['depth', 'bathymetry']:
+    if mode in ['depth', 'bathymetry', 'flood']:
         bathymetry, ms = get_data(container=static_data.pyramid,
                                   ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
-    if mode in ['depth', 'grid']:
+    if mode in ['depth', 'grid', 'flood']:
         quads, ms = get_data(container=static_data.monolith,
                              ma=True, **get_parameters)
         logging.debug('Got quads in {} ms.'.format(ms))
@@ -195,7 +195,27 @@ def get_response_for_getmap(get_parameters):
 
     if mode == 'depth':
         time = int(get_parameters['time'])
-        dynamic_data = DynamicData.get(layer=layer, time=time, use_cache=use_cache)
+        dynamic_data = DynamicData.get(
+            layer=layer, time=time, use_cache=use_cache)
+        waterlevel = dynamic_data.waterlevel[quads]
+        depth = waterlevel - bathymetry
+
+        if 'anim_frame' in get_parameters:
+            # Add wave animation
+            content = get_water_waves(
+                masked_array=depth,
+                anim_frame=int(get_parameters['anim_frame']),
+                antialias=antialias
+            )
+        else:
+            # Direct image
+            content = get_depth_image(masked_array=depth, 
+                                      antialias=antialias)
+    elif mode == 'flood':
+        time = int(get_parameters['time'])  # it is actually the sequence number of the flood
+        dynamic_data = DynamicData.get(
+            layer=layer, time=time, use_cache=use_cache,
+            variable='floodfill', netcdf_path=utils.get_netcdf_path_flood(layer))  # variable = floodfill
         waterlevel = dynamic_data.waterlevel[quads]
         depth = waterlevel - bathymetry
 
@@ -314,39 +334,41 @@ class DynamicData(object):
     Container for only the waterlevel data from the netcdf.
     """
     @classmethod
-    def get(cls, layer, time, use_cache):
+    def get(cls, layer, time, use_cache, variable='s1', netcdf_path=None):
         """
         Return instance from cache if possible, new instance otherwise.
         """
         # Prepare key
         key = collections.namedtuple(
-            'DynamicDataKey', ['layer', 'time'],
-        )(layer=layer, time=time)
-
+            'DynamicDataKey', ['layer', 'time', 'variable', 'netcdf_path'],
+            )(layer=layer, time=time, variable=variable, netcdf_path=netcdf_path)
         # Return object
         if use_cache:
             try:
                 return cache[key]
             except KeyError:
-                value = cls(layer=layer, time=time)
+                value = cls(layer=layer, time=time, variable=variable, 
+                            netcdf_path=netcdf_path)
                 cache[key] = value
                 return value
         else:
-            value = cls(layer=layer, time=time)
+            value = cls(layer=layer, time=time, variable=variable,
+                        netcdf_path=netcdf_path)
             cache[key] = value
             return value
 
-    def __init__(self, layer, time):
+    def __init__(self, layer, time, variable='s1', netcdf_path=None):
         """ Load data from netcdf. """
-        netcdf_path = utils.get_netcdf_path(layer)
+        if netcdf_path is None:
+            netcdf_path = utils.get_netcdf_path(layer)
         with Dataset(netcdf_path) as dataset:
-            waterlevel_variable = dataset.variables['s1']
+            waterlevel_variable = dataset.variables[variable]
 
             # Initialize empty array with one element more than amount of quads
             self.waterlevel = np.ma.array(
                 np.empty(waterlevel_variable.shape[1] + 1),
                 mask=True,
-            )
+                )
 
             # Fill with waterlevel from netcdf
             if time < waterlevel_variable.shape[0]:

@@ -13,11 +13,23 @@ from threedi import config
 
 def get_netcdf_path(layer):
     """ Return path to netcdf from layer. """
-    names = os.listdir(os.path.join(config.DATA_DIR, layer))
-    # Look for netcdf
-    for name in names:
-        if os.path.splitext(name)[1].lower() == '.nc':
-            return os.path.join(config.DATA_DIR, layer, name)
+    name = os.path.join(config.DATA_DIR, layer, 'subgrid_map.nc')
+    if not os.path.exists(name):
+        print('expected file not found: %s' % name)
+    return name
+    # # Look for netcdf
+    # for name in names:
+    #     if os.path.splitext(name)[1].lower() == '.nc':
+    #         return os.path.join(config.DATA_DIR, layer, name)
+
+
+def get_netcdf_path_flood(layer):
+    """ Return path to floodfill netcdf from layer. """
+    name = os.path.join(config.DATA_DIR, layer, 'floodfill.nc')
+    print(name)
+    if not os.path.exists(name):
+        print('expected floodfill file not found: %s' % name)
+    return name
 
 
 def get_bathymetry_path(layer):
