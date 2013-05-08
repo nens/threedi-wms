@@ -209,7 +209,7 @@ def get_response_for_getmap(get_parameters):
             )
         else:
             # Direct image
-            content = get_depth_image(masked_array=depth, 
+            content = get_depth_image(masked_array=depth,
                                       antialias=antialias)
     elif mode == 'flood':
         time = int(get_parameters['time'])  # it is actually the sequence number of the flood
@@ -228,7 +228,7 @@ def get_response_for_getmap(get_parameters):
             )
         else:
             # Direct image
-            content = get_depth_image(masked_array=depth, 
+            content = get_depth_image(masked_array=depth,
                                       antialias=antialias)
     elif mode == 'bathymetry':
         limits = map(float, get_parameters['limits'].split(','))
@@ -347,7 +347,7 @@ class DynamicData(object):
             try:
                 return cache[key]
             except KeyError:
-                value = cls(layer=layer, time=time, variable=variable, 
+                value = cls(layer=layer, time=time, variable=variable,
                             netcdf_path=netcdf_path)
                 cache[key] = value
                 return value
