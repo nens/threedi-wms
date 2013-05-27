@@ -18,7 +18,7 @@ def get_profile(wktline, src_srs=900913, rastersize=512):
     :param scr_srs: spatial reference system EPSG code
     :param rastersize: size of longest side of raster subset
 
-    :returns: array with pairs of [cumlength, rastervalue]
+    :returns: list with pairs of [cumlength, rastervalue]
     """
     # setup pyramid
     pyramid = Pyramid(config.PYRAMID_PATH)
@@ -67,7 +67,7 @@ def get_profile(wktline, src_srs=900913, rastersize=512):
                               ).transpose())[::-1]
     values = mem_ds.ReadAsArray()[indices]
     # quick&dirty oplossing to handle nodata values
-    values = np.where(values >= 0, values, 0)
+    values = np.where(values >= 0, values, 6)
     values = map(float, values)
 
     # make array with distance from origin (x values for graph)
