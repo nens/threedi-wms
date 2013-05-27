@@ -10,6 +10,7 @@ from server import config
 import os
 
 BLUEPRINT_NAME = 'rasterinfo'
+PYRAMID_PATH = '/home/arjen/data/ahn_pyramid/new/'
 
 DATA_DIR = os.path.join(config.DATA_DIR, BLUEPRINT_NAME)
 CACHE_DIR = os.path.join(config.CACHE_DIR, BLUEPRINT_NAME)
