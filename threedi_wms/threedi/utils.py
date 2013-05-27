@@ -8,7 +8,7 @@ from __future__ import division
 
 import os
 
-from threedi import config
+from threedi_wms.threedi import config
 
 
 def get_netcdf_path(layer):

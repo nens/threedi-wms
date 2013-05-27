@@ -18,8 +18,8 @@ from gislib import raster
 from server import config
 from server import loghelper
 
-from threedi import quads
-from threedi import utils
+from threedi_wms.threedi import quads
+from threedi_wms.threedi import utils
 
 # Autocreate celery db dir
 try:

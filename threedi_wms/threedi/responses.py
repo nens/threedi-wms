@@ -5,9 +5,9 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 
-from threedi import config
-from threedi import tasks
-from threedi import utils
+from threedi_wms.threedi import config
+from threedi_wms.threedi import tasks
+from threedi_wms.threedi import utils
 
 from gislib import raster
 
