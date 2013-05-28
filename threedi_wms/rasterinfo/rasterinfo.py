@@ -9,13 +9,13 @@ from shapely import wkt
 import numpy as np
 
 
-def get_profile(wktline, src_srs=900913, rastersize=512):
+def get_profile(wktline, src_epsg=900913, rastersize=512):
     """
     get raster values for pixels under linestring for Pyramid as
     set in PYRAMID_PATH
 
     :param wktline: WKT linestring for which profile should be extracted
-    :param scr_srs: spatial reference system EPSG code
+    :param scr_epsg: spatial reference system EPSG code
     :param rastersize: size of longest side of raster subset
 
     :returns: list with pairs of [cumlength, rastervalue]
@@ -42,9 +42,9 @@ def get_profile(wktline, src_srs=900913, rastersize=512):
         cellsize = length / rastersize
         xsize = int(width / cellsize) + 1
 
-    # setup srs
+    # setup epsg
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(src_srs)
+    srs.ImportFromEPSG(src_epsg)
 
     # setup dataset in memory based on bounds
     mem_drv = gdal.GetDriverByName('MEM')

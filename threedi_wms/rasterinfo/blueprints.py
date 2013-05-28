@@ -28,16 +28,8 @@ def rasterprofile():
     """
     Return json with [distance, raster values] according to request.
     """
-    #wktline = "LINESTRING (624509.038879959494807 6804205.040622464381158,\
-    #624606.396697581047192 6803551.216062948107719)"
-    #wktline = "LINESTRING (624185.945052515366115 6803547.505825876258314, \
-    #625049.321208689478226 6803997.485771679319441, \
-    #625122.488679551752284 6803865.78432412724942)"
-    #wktline = "LINESTRING (624241.882649042527191 6803781.921267291530967, \
-    #624459.548982131062075 6803781.921267291530967)"
-    #src_srs = 900913
     if request.method == 'GET':
-        src_srs = int(request.values['srs'])
+        src_epsg = int(request.values['epsg'])
         wktline = request.values['geom']
-    profile = [rasterinfo.get_profile(wktline, src_srs)]
+    profile = [rasterinfo.get_profile(wktline, src_epsg)]
     return jsonify(profile=profile)
