@@ -12,10 +12,10 @@ import numpy as np
 def get_profile(wktline, src_epsg=900913, rastersize=512):
     """
     get raster values for pixels under linestring for Pyramid as
-    set in PYRAMID_PATH
+    set in PYRAMID_PATH in config file
 
     :param wktline: WKT linestring for which profile should be extracted
-    :param scr_epsg: spatial reference system EPSG code
+    :param src_epsg: spatial reference system EPSG code
     :param rastersize: size of longest side of raster subset
 
     :returns: list with pairs of [cumlength, rastervalue]
@@ -23,8 +23,18 @@ def get_profile(wktline, src_epsg=900913, rastersize=512):
     # setup pyramid
     pyramid = Pyramid(config.PYRAMID_PATH)
 
+    # setup epsg
+    srs = osr.SpatialReference()
+    try:
+        srs.ImportFromEPSG(src_epsg)
+    except:
+        return "Malformed EPSG code: %s" % (src_epsg)
+
     # convert linestring to geometric object with shapely
-    linestring = wkt.loads(wktline)
+    try:
+        linestring = wkt.loads(wktline)
+    except:
+        return "Malformed geometry: %s" % (wktline)
     bounds = linestring.bounds
     points = list(linestring.coords)
 
@@ -41,10 +51,6 @@ def get_profile(wktline, src_epsg=900913, rastersize=512):
         ysize = rastersize
         cellsize = length / rastersize
         xsize = int(width / cellsize) + 1
-
-    # setup epsg
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(src_epsg)
 
     # setup dataset in memory based on bounds
     mem_drv = gdal.GetDriverByName('MEM')
@@ -71,7 +77,7 @@ def get_profile(wktline, src_epsg=900913, rastersize=512):
     values = map(float, values)
 
     # make array with distance from origin (x values for graph)
-    # NOTE: linestring.length returns different length than QGis
+    # NOTE: linestring.length returns different length than QGIS
     # maybe related to projection / planar?
     distances = map(float, np.arange(len(values)) *
                     linestring.length / len(values))
