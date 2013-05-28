@@ -30,7 +30,7 @@ def rasterprofile():
 
     Example: (setup data for Utrecht center)
     run Flask dev server on localhost and go to
-    `http://127.0.0.1:5000/rasterinfo/profile?geom=LINESTRING(566582.6327506%206816233.9453951,%20570156.06382243%206816233.9453951)&epsg=900913`
+    `http://127.0.0.1:5000/rasterinfo/profile?geom=LINESTRING(570060.51753709%206816367.7101946,568589.10474281%206815374.028827)&epsg=900913`
     """
     if not 'epsg' in request.values or 'geom' not in request.values:
         abort(400)
