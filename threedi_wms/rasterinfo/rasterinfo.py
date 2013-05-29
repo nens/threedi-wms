@@ -21,16 +21,20 @@ def get_profile(wktline, src_epsg=900913, rastersize=512):
     :returns: list with pairs of [cumlength, rastervalue]
     """
     # setup pyramid
+    print(config.PYRAMID_PATH)
     pyramid = Pyramid(config.PYRAMID_PATH)
 
     # setup epsg
     srs = osr.SpatialReference()
+    # TODO: use gislib method get_projection/srs
     try:
         srs.ImportFromEPSG(src_epsg)
     except:
         return "Malformed EPSG code: %s" % (src_epsg)
 
     # convert linestring to geometric object with shapely
+    # NOTE: shapely works with planar coordinates
+    # NOTE: consider ogr / fiona instead of shapely
     try:
         linestring = wkt.loads(wktline)
     except:
@@ -45,12 +49,11 @@ def get_profile(wktline, src_epsg=900913, rastersize=512):
     if longside == width:
         xsize = rastersize
         cellsize = width / rastersize
-        # +1 = ugly hack to trick the system when top = bottom
-        ysize = int(length / cellsize) + 1
+        ysize = max(int(length / cellsize), 1)
     else:
         ysize = rastersize
         cellsize = length / rastersize
-        xsize = int(width / cellsize) + 1
+        xsize = max(int(width / cellsize), 1)
 
     # setup dataset in memory based on bounds
     mem_drv = gdal.GetDriverByName('MEM')
@@ -72,17 +75,13 @@ def get_profile(wktline, src_epsg=900913, rastersize=512):
     indices = tuple(np.uint64((magicline.centers - origin) / cellsize,
                               ).transpose())[::-1]
     values = mem_ds.ReadAsArray()[indices]
-    # quick&dirty oplossing to handle nodata values
-    values = np.where(values >= 0, values, 6)
     values = map(float, values)
 
     # make array with distance from origin (x values for graph)
-    # NOTE: linestring.length returns different length than QGIS
-    # maybe related to projection / planar?
     distances = map(float, np.arange(len(values)) *
                     linestring.length / len(values))
-    graph_data = [list(a) for a in zip(distances, values)]
+    profile_data = [list(a) for a in zip(distances, values)]
 
     mem_ds = None
 
-    return graph_data
+    return profile_data
