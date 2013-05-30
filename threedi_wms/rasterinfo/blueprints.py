@@ -36,5 +36,5 @@ def rasterprofile():
         abort(400)
     src_srs = request.values['srs']
     wktline = request.values['geom']
-    profile = [rasterinfo.get_profile(wktline, src_srs)]
+    profile = rasterinfo.get_profile(wktline, src_srs)
     return jsonify(profile=profile)
