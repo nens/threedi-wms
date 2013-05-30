@@ -9,7 +9,8 @@ import os
 
 # Register your backends here
 BLUEPRINTS = [
-    'threedi',
+    'threedi_wms.threedi',
+    'threedi_wms.rasterinfo',
 ]
 
 # Directories

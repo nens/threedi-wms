@@ -14,8 +14,8 @@ import numpy as np
 from server import blueprints
 from server import utils
 
-from threedi import responses
-from threedi import config
+from threedi_wms.threedi import responses
+from threedi_wms.threedi import config
 
 blueprint = blueprints.Blueprint(name=config.BLUEPRINT_NAME,
                                  import_name=__name__,
@@ -43,6 +43,7 @@ def demo():
     return flask.render_template('3di/demo.html',
                                  layers=layers)
 
+
 @blueprint.route('/leaflet')
 def leaflet():
     layers = os.listdir(config.DATA_DIR)
@@ -62,7 +63,7 @@ def tms(x, y, zoom):
     top = limit - step * y - limit / 2
     srs = 'EPSG:3857'
     bbox = ','.join(map(str, [left, bottom, right, top]))
-    width, height ='256', '256'  # Standard tile size always?
+    width, height = '256', '256'  # Standard tile size always?
     #request = 'GetMap'
 
     get_parameters = utils.get_parameters()
