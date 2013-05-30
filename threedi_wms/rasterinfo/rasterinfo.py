@@ -1,40 +1,35 @@
-from gislib.raster import Pyramid
+from gislib.raster import Pyramid, get_spatial_reference
 from gislib.vector import MagicLine
 
 from threedi_wms.rasterinfo import config
 
-from osgeo import gdal, osr
+from osgeo import gdal
 from osgeo.gdalconst import GDT_Float32
 from shapely import wkt
 import numpy as np
 
 
-def get_profile(wktline, src_epsg=900913, rastersize=512):
+def get_profile(wktline, src_srs=900913, rastersize=512):
     """
     get raster values for pixels under linestring for Pyramid as
     set in PYRAMID_PATH in config file
 
     :param wktline: WKT linestring for which profile should be extracted
-    :param src_epsg: spatial reference system EPSG code
+    :param src_srs: spatial reference system EPSG code
     :param rastersize: size of longest side of raster subset
 
     :returns: list with pairs of [cumlength, rastervalue]
     """
     # setup pyramid
-    print(config.PYRAMID_PATH)
     pyramid = Pyramid(config.PYRAMID_PATH)
 
-    # setup epsg
-    srs = osr.SpatialReference()
-    # TODO: use gislib method get_projection/srs
+    # setup srs
     try:
-        srs.ImportFromEPSG(src_epsg)
+        srs = get_spatial_reference(src_srs)
     except:
-        return "Malformed EPSG code: %s" % (src_epsg)
+        return "Malformed EPSG code: %s" % (src_srs)
 
     # convert linestring to geometric object with shapely
-    # NOTE: shapely works with planar coordinates
-    # NOTE: consider ogr / fiona instead of shapely
     try:
         linestring = wkt.loads(wktline)
     except:
