@@ -7,6 +7,7 @@ from osgeo import gdal
 from osgeo.gdalconst import GDT_Float32
 from shapely import wkt
 import numpy as np
+import math
 
 
 def get_profile(wktline, src_srs=900913, rastersize=512):
@@ -44,13 +45,11 @@ def get_profile(wktline, src_srs=900913, rastersize=512):
     if longside == width:
         xsize = rastersize
         cellsize = width / rastersize
-        #ysize = max(int(length / cellsize), 1)
-        ysize = int(length / cellsize) + 1
+        ysize = int(max(math.ceil(length / cellsize), 1))
     else:
         ysize = rastersize
         cellsize = length / rastersize
-        #xsize = max(int(width / cellsize), 1)
-        xsize = int(width / cellsize) + 1
+        xsize = int(max(math.ceil(width / cellsize), 1))
 
     # setup dataset in memory based on bounds
     mem_drv = gdal.GetDriverByName('MEM')
