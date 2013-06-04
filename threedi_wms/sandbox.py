@@ -9,6 +9,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import argparse
+import logging
 
 from netCDF4 import Dataset
 from osgeo import gdal
@@ -24,22 +25,30 @@ def get_parser():
         description=""
     )
     parser.add_argument('sourcepath', metavar='SOURCE')
-    parser.add_argument('timestep', metavar='TIMESTEP', type=int)
     parser.add_argument('targetpath', metavar='TARGET')
+    parser.add_argument('-t', '--timestep', metavar='TIMESTEP', type=int)
     # Add arguments here.
     return parser
 
 
-def command(sourcepath, targetpath, timestep):
+def command(sourcepath, targetpath, timestep=None):
     """ Do something spectacular. """
     quaddataset = quads.get_dataset(sourcepath)
     quaddata = quaddataset.ReadAsArray()
 
-    with Dataset(sourcepath) as dataset:
-        fvx = dataset.variables['ucx'][:][timestep]
-        fvy = dataset.variables['ucy'][:][timestep]
-        #import ipdb; ipdb.set_trace() 
-    
+    if timestep is None:
+        logging.debug('Calculating maximum flow velocity.')
+        with Dataset(sourcepath) as dataset:
+            fvx = dataset.variables['ucx'][:].max(0)
+            fvy = dataset.variables['ucy'][:].max(0)
+    else:
+        with Dataset(sourcepath) as dataset:
+            logging.debug('Calculating flow velocity for time = {}.'.format(
+                dataset.variables['time'][timestep],
+            ))
+            fvx = dataset.variables['ucx'][:][timestep]
+            fvy = dataset.variables['ucy'][:][timestep]
+
     # Create linear array
     fv = np.ma.array(
         np.empty(fvx.size + 1),
@@ -58,11 +67,12 @@ def command(sourcepath, targetpath, timestep):
         1,
         gdal.GDT_Float32,
     )
+    fvdataset.SetGeoTransform(quaddataset.GetGeoTransform())
     fvband = fvdataset.GetRasterBand(1)
     fvband.Fill(-999)
     fvband.SetNoDataValue(-999)
     fvband.WriteArray(fv[quaddata].filled(-999))
-    
+
     # Create asciifile
     asc_driver = gdal.GetDriverByName(b'aaigrid')
     asc_driver.CreateCopy(
@@ -70,6 +80,7 @@ def command(sourcepath, targetpath, timestep):
         fvdataset,
         options=[b'DECIMAL_PRECISION=3']
     )
+
 
 def main():
     """ Call command with args from parser. """
