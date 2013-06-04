@@ -20,6 +20,7 @@ install_requires = [
     'scipy',
     'setuptools',
     'SQLAlchemy',
+    'Shapely',
     ],
 
 tests_require = [
