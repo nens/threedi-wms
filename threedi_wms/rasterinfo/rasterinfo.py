@@ -71,7 +71,10 @@ def get_profile(wktline, src_srs=900913, rastersize=512):
     indices = tuple(np.uint64((magicline.centers - origin) / cellsize,
                               ).transpose())[::-1]
     values = mem_ds.ReadAsArray()[indices]
-    values = map(float, values)
+
+    # set nodata values to empty
+    nodata = mem_ds.GetRasterBand(1).GetNoDataValue()
+    values = np.where(values == nodata, None, values)
 
     # make array with distance from origin (x values for graph)
     distances = map(float, np.arange(len(values)) *
