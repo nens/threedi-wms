@@ -47,3 +47,17 @@ Start the server and the task processor using::
     $ bin/supervisord
     
 Go to localhost:5000/3di/demo to see the server in action.
+
+Rasterinfo
+----------
+The rasterinfo server serves a HTTP layer over gislib functonality
+
+Go to localhost:5000/rasterinfo/ to confirm the service is working. You will see a link to the profile tool
+
+**Profile tool:**
+Send a linestring and projection to the server which returns a (json) list of (x, value) pairs where X = distance in projection units from start of line and value = value of the raster at that point.
+
+**Example:** 
+`http://localhost:5000/rasterinfo/profile?geom=LINESTRING(570060.51753709%206816367.7101946,568589.10474281%206815374.028827)&srs=EPSG:900913`
+
+
