@@ -22,10 +22,13 @@ blueprint = blueprints.Blueprint(name=config.BLUEPRINT_NAME,
                                  static_folder='static',
                                  template_folder='templates')
 
+@blueprint.route('/hello')
+def hello():
+    return 'hello'
+
 
 @blueprint.route('/wms')
 def wms():
-
     """ Return response according to request. """
     get_parameters = utils.get_parameters()
     request = get_parameters['request'].lower()
@@ -36,6 +39,21 @@ def wms():
     )
     return request_handlers[request](get_parameters=get_parameters)
 
+@blueprint.route('/data')
+def data():
+    """ 
+    Return data according to request:
+    getprofile, gettimeseries, get
+    """
+    get_parameters = utils.get_parameters()
+    request = get_parameters['request'].lower()
+
+    request_handlers = dict(
+        #getprofile=responses.get_response_for_getinfo,
+        gettimeseries=responses.get_response_for_gettimeseries,
+        #getdataset=responses.get_response_for_getdataset,
+    )
+    return request_handlers[request](get_parameters=get_parameters)
 
 @blueprint.route('/demo')
 def demo():

@@ -34,6 +34,9 @@ def get_parser():
 def command(sourcepath, targetpath, timestep=None):
     """ Do something spectacular. """
     quaddataset = quads.get_dataset(sourcepath)
+    ascdriver = gdal.GetDriverByName(b'aaigrid')
+    ascdriver.CreateCopy(b'arjen.asc', quaddataset)
+    
     quaddata = quaddataset.ReadAsArray()
 
     if timestep is None:
@@ -80,6 +83,30 @@ def command(sourcepath, targetpath, timestep=None):
         fvdataset,
         options=[b'DECIMAL_PRECISION=3']
     )
+
+    # Creating asciifile via vsimem to show capability
+    # Note that we need to 
+    vsipath = '/vsimem/' + targetpath
+    from arjan.monitor import Monitor; mon = Monitor()  
+    for i in range(500):
+        vsipath = '/vsimem/' + targetpath + str(i)
+        asc_driver.CreateCopy(
+            vsipath,
+            fvdataset,
+            options=[b'DECIMAL_PRECISION=3']
+        )
+    mon.check('')
+    a = np.ones(10000000)
+    mon.check('ones')
+
+    vsifile = gdal.VSIFOpenL(vsipath, b'r')
+    with open(targetpath + '.demo', 'w') as demofile:
+        demofile.write(gdal.VSIFReadL(
+            gdal.VSIStatL(vsipath).size,  # Size
+            1,                            # Count
+            vsifile
+        ))
+    gdal.VSIFCloseL(vsifile)
 
 
 def main():

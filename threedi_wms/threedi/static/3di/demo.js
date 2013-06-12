@@ -1,3 +1,6 @@
+/* global OpenLayers, $, console */
+/* jshint strict: false */
+
 // Init the map
 var map = new OpenLayers.Map(
   'map',
@@ -7,21 +10,21 @@ var map = new OpenLayers.Map(
 );
 var bathymetry = new OpenLayers.Layer.WMS(
   "Bathymetry", "", {layers: "basic", transparent: "true"}
-)
+);
 map.addLayer(bathymetry);
 var depth = new OpenLayers.Layer.WMS(
   "Depth", "", {layers: "basic", transparent: "true"}
-)
+);
 map.addLayer(depth);
 var flood = new OpenLayers.Layer.WMS(
   "Flood", "", {layers: "basic", transparent: "true"}
-)
+);
 map.addLayer(flood);
 var grid = new OpenLayers.Layer.WMS(
   "Grid", "", {layers: "basic", transparent: "true"}
-)
+);
 map.addLayer(grid);
-var osm = new OpenLayers.Layer.OSM()
+var osm = new OpenLayers.Layer.OSM();
 map.addLayer(osm);
 
 var info;
@@ -29,16 +32,16 @@ var info;
 // Dom access functions
 function getAntialias(){
   if ($("input#antialias").is(":checked")) {
-    return 'yes'
+    return 'yes';
   } else {
-    return 'no'
+    return 'no';
   }
 }
 function getWaves(){
   if ($("input#waves").is(":checked")) {
-    return '&anim_frame=0'
+    return '&anim_frame=0';
   } else {
-    return ''
+    return '';
   }
 }
 function getLayer(){
@@ -68,10 +71,10 @@ function updateInfo(data){
   updateDepth();
   updateFlood();
   updateBathymetry();
-  var bounds = data['bounds'];
+  var bounds = data.bounds;
   map.zoomToExtent(
     new OpenLayers.Bounds(bounds[0], bounds[1], bounds[2], bounds[3])
-  )
+  );
 }
 
 function updateGrid(){
@@ -106,14 +109,14 @@ function updateFlood(){
   flood.redraw();
 }
 
-function updateBathymetry(data){
-  bathymetry.redraw()
+function updateBathymetry(){
+  bathymetry.redraw();
   var url = "/3di/wms";
   url += "?LAYERS=" + getLayer() + ":bathymetry";
   url += "&antialias=" + getAntialias();
-  url += "&limits=" + info['limits'][0] + "," + info['limits'][1];
+  url += "&limits=" + info.limits[0] + "," + info.limits[1];
   bathymetry.setUrl(url);
-  bathymetry.redraw()
+  bathymetry.redraw();
 }
 
 function toggleGrid(){
@@ -161,9 +164,9 @@ function setTime(time){
   $("#time").text(time);
 }
 function updateSlider() {
-  var sliderMax = info['timesteps'] - 1;
+  var sliderMax = info.timesteps - 1;
   $("#slider").slider("option", "max", sliderMax);
-  if (getTime() > sliderMax) {setTime(sliderMax)}
+  if (getTime() > sliderMax) {setTime(sliderMax);}
 }
 $("#slider").slider({
   min: 0,
@@ -185,3 +188,47 @@ toggleGrid();
 toggleFlood();
 toggleBathymetry();
 updateLayer();
+
+// Click handler
+OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
+  defaultHandlerOptions: {
+    'single': true,
+    'double': false,
+    'pixelTolerance': 0,
+    'stopSingle': false,
+    'stopDouble': false
+  },
+  initialize: function() {
+    this.handlerOptions = OpenLayers.Util.extend(
+      {}, this.defaultHandlerOptions
+    );
+    OpenLayers.Control.prototype.initialize.apply(
+      this, arguments
+    ); 
+    this.handler = new OpenLayers.Handler.Click(
+      this, {
+        'click': this.trigger
+      }, this.handlerOptions
+    );
+  }, 
+  trigger: function(e) {
+    var lonlat = map.getLonLatFromPixel(e.xy);
+    console.log([lonlat.lat, lonlat.lon]);
+    $.ajax(
+      '/3di/data',
+      { 
+        data: {
+          request: 'gettimeseries',
+          layers: getLayer(),
+          srs: map.getProjection(),
+          point: lonlat.lon.toString() + ',' + lonlat.lat.toString(),
+        },
+        success: function(data) {console.log(data);}
+      }
+    );
+    }
+});
+
+var click = new OpenLayers.Control.Click();
+map.addControl(click);
+click.activate();

@@ -13,6 +13,7 @@ from gislib import raster
 
 from PIL import Image
 from netCDF4 import Dataset
+from netCDF4 import num2date
 from scipy import ndimage
 from matplotlib import cm
 from matplotlib import colors
@@ -275,6 +276,68 @@ def get_response_for_getinfo(get_parameters):
     content = json.dumps(dict(bounds=extent,
                               limits=limits,
                               timesteps=timesteps))
+    return content, 200, {
+        'content-type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET'}
+
+def get_response_for_gettimeseries(get_parameters):
+    """ Return json with timeseries """
+    # This request features a point, but an bbox is needed for reprojection.
+    point = np.array(map(float,
+                         get_parameters['point'].split(','))).reshape(1, 2)
+    bbox = ','.join(map(str, np.array(point + np.array([[-1], [1]])).ravel()))
+    get_parameters_extra=dict(height='1', width='1', bbox=bbox)
+    get_parameters_extra.update(get_parameters)
+
+    # Determine layers
+    layer_parameter = get_parameters['layers']
+    if ':' in layer_parameter:
+        layer, mode = layer_parameter.split(':')
+    else:
+        layer, mode = layer_parameter, 'depth'
+
+    # Get height and quad
+    static_data = StaticData.get(layer=layer)
+    quads, ms = get_data(container=static_data.monolith,
+                         ma=True, **get_parameters_extra)
+    quad = int(quads[0, 0])
+    logging.debug('Got quads in {} ms.'.format(ms))
+
+    bathymetry, ms = get_data(container=static_data.pyramid,
+                              ma=True, **get_parameters_extra)
+    height = float(bathymetry[0,0])
+    logging.debug('Got bathymetry in {} ms.'.format(ms))
+
+    # Read data from netcdf
+    path = utils.get_netcdf_path(layer=get_parameters['layers'])
+    with Dataset(path) as dataset:
+        v = dataset.variables
+        units = v['time'].getncattr('units')
+        time = v['time'][:]
+        depth = v['s1'][:, quad] - height
+
+    # Only return the non-masked values
+    if isinstance(depth, np.ma.core.MaskedArray):
+        index = ~depth.mask
+        compressed_time = time[index]
+        compressed_depth = depth[index]
+    else:
+        compressed_time = time
+        compressed_depth = depth
+    
+
+    if compressed_time.size:
+        time_list = map(lambda t: t.isoformat(), 
+                        num2date(compressed_time, units=units))
+    else:
+        time_list = []
+    depth_list = compressed_depth.round(3).tolist()
+
+    content = json.dumps(dict(timeseries=zip(time_list, depth_list)))
+    logging.debug(time_list)
+    logging.debug(compressed_depth)
+    logging.debug(content)
     return content, 200, {
         'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*',
