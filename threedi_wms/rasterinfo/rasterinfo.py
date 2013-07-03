@@ -68,7 +68,7 @@ def get_profile(wktline, src_srs=900913, rastersize=512):
     magicline = magicline.pixelize(cellsize)
 
     # Determine indices for these points
-    indices = tuple(np.uint64((magicline.centers - origin) / cellsize,
+    indices = tuple(np.uint64(np.abs(magicline.centers - origin) / cellsize,
                               ).transpose())[::-1]
     values = mem_ds.ReadAsArray()[indices]
     values = map(float, values)
