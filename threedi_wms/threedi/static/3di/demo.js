@@ -8,6 +8,13 @@ var map = new OpenLayers.Map(
     projection: "EPSG:3857"
   }
 );
+
+// Disable default double click zoom
+var Navigation = new OpenLayers.Control.Navigation({
+  defaultDblClick: function() { return; }
+});
+map.addControl(Navigation);
+
 var bathymetry = new OpenLayers.Layer.WMS(
   "Bathymetry", "", {layers: "basic", transparent: "true"}
 );
@@ -28,6 +35,7 @@ var osm = new OpenLayers.Layer.OSM();
 map.addLayer(osm);
 
 var info;
+var lastClickPoint;
 
 // Dom access functions
 function getAntialias(){
@@ -92,7 +100,6 @@ function updateDepth(){
   url += "&antialias=" + getAntialias();
   url += "&nocache=yes";
   url += getWaves();
-  console.log(url);
   depth.setUrl(url);
   depth.redraw();
 }
@@ -104,7 +111,6 @@ function updateFlood(){
   url += "&antialias=" + getAntialias();
   url += "&nocache=yes";
   url += getWaves();
-  console.log(url);
   flood.setUrl(url);
   flood.redraw();
 }
@@ -193,7 +199,7 @@ updateLayer();
 OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
   defaultHandlerOptions: {
     'single': true,
-    'double': false,
+    'double': true,
     'pixelTolerance': 0,
     'stopSingle': false,
     'stopDouble': false
@@ -207,13 +213,14 @@ OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
     ); 
     this.handler = new OpenLayers.Handler.Click(
       this, {
-        'click': this.trigger
+        'click': this.onClick,
+        'dblclick': this.onDblClick
       }, this.handlerOptions
     );
   }, 
-  trigger: function(e) {
+  onClick: function(e) {
     var lonlat = map.getLonLatFromPixel(e.xy);
-    console.log([lonlat.lat, lonlat.lon]);
+    lastClickPoint = [lonlat.lon, lonlat.lat];
     $.ajax(
       '/3di/data',
       { 
@@ -226,9 +233,30 @@ OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
         success: function(data) {console.log(data);}
       }
     );
-    }
+  },
+  onDblClick: function(e) {
+    var lonlat = map.getLonLatFromPixel(e.xy);
+    var wktline = 'LINESTRING (' + lastClickPoint[0].toString();
+    wktline += ' ' + lastClickPoint[1].toString();
+    wktline += ',' + lonlat.lon.toString();
+    wktline += ' ' + lonlat.lat.toString() + ')';
+    $.ajax(
+      '/3di/data',
+      { 
+        data: {
+          request: 'getprofile',
+          layers: getLayer(),
+          srs: map.getProjection(),
+          line: wktline,
+          time: getTime()
+        },
+        success: function(data) {console.log(data);}
+      }
+    );
+  }
 });
 
 var click = new OpenLayers.Control.Click();
 map.addControl(click);
 click.activate();
+

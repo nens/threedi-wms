@@ -46,7 +46,11 @@ Start the server and the task processor using::
 
     $ bin/supervisord
     
-Go to localhost:5000/3di/demo to see the server in action.
+Go to localhost:5000/3di/demo to see the server in action. To see
+the requests for timeseries and profiles along a line, check the
+developertools of the browser while single clicking a point on the map
+(timeseries) or a single click followed by a double click on some other
+point (profile along a line) on the demo page.
 
 Rasterinfo
 ----------

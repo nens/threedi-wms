@@ -49,9 +49,8 @@ def data():
     request = get_parameters['request'].lower()
 
     request_handlers = dict(
-        #getprofile=responses.get_response_for_getinfo,
+        getprofile=responses.get_response_for_getprofile,
         gettimeseries=responses.get_response_for_gettimeseries,
-        #getdataset=responses.get_response_for_getdataset,
     )
     return request_handlers[request](get_parameters=get_parameters)
 
