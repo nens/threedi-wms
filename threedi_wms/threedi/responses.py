@@ -422,9 +422,6 @@ def get_response_for_getprofile(get_parameters):
     roundfunc = lambda x: round(x, 3)
     content = json.dumps(dict(depth=map(roundfunc, compressed_depths),
                               distance=map(roundfunc, compressed_distances)))
-    from pylab import show, plot
-    plot(compressed_distances, compressed_depths)
-    show()
 
     return content, 200, {
         'content-type': 'application/json',
