@@ -52,8 +52,9 @@ developertools of the browser while single clicking a point on the map
 (timeseries) or a single click followed by a double click on some other
 point (profile along a line) on the demo page.
 
-Rasterinfo
-----------
+
+Rasterinfo (not yet working?)
+-----------------------------
 The rasterinfo server serves a HTTP layer over gislib functonality
 
 Go to localhost:5000/rasterinfo/ to confirm the service is working. You will see a link to the profile tool
