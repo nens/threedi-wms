@@ -419,7 +419,7 @@ def get_response_for_getprofile(get_parameters):
         compressed_distances = distances
         compressed_depths = depths
 
-    roundfunc = lambda x: round(x, 3)
+    roundfunc = lambda x: round(x, 5)
     content = json.dumps(dict(depth=zip(
                                 map(roundfunc, compressed_distances),
                                 map(roundfunc, compressed_depths),

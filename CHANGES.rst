@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
+- Added 2 decimals to getprofile.
+
 - Changed response for getprofile to fit nv.d3.
 
 
