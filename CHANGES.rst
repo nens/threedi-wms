@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Changed response for getprofile to fit nv.d3.
 
 
 0.1 (2013-07-15)

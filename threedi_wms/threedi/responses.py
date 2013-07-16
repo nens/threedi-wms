@@ -420,8 +420,10 @@ def get_response_for_getprofile(get_parameters):
         compressed_depths = depths
 
     roundfunc = lambda x: round(x, 3)
-    content = json.dumps(dict(depth=map(roundfunc, compressed_depths),
-                              distance=map(roundfunc, compressed_distances)))
+    content = json.dumps(dict(depth=zip(
+                                map(roundfunc, compressed_distances),
+                                map(roundfunc, compressed_depths),
+                                )))
 
     return content, 200, {
         'content-type': 'application/json',
