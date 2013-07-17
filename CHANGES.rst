@@ -9,6 +9,8 @@ Changelog of threedi-wms
 
 - Changed response for getprofile to fit nv.d3.
 
+- Added waterlevel and bathymetry to getprofile.
+
 
 0.1 (2013-07-15)
 ----------------

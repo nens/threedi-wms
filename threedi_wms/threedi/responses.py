@@ -409,21 +409,36 @@ def get_response_for_getprofile(get_parameters):
         np.abs(centers - origin) / cellsize,
     ).transpose())[::-1]
     depths = np.ma.maximum(depth[indices], 0)
+    waterlevel_sampled = np.ma.maximum(waterlevel[indices], -100)
+    bathymetry_sampled = np.ma.maximum(bathymetry[indices], -100)
 
     # Only return the non-masked values that are numbers
     index = ~depths.mask
     if isinstance(index, np.core.ndarray):
-        compressed_distances = distances[index]
         compressed_depths = depths[index]
+        compressed_distances = distances[index]
+        compressed_waterlevels = waterlevel_sampled[index]
+        compressed_bathymetry = bathymetry_sampled[index]
     else:
-        compressed_distances = distances
         compressed_depths = depths
+        compressed_distances = distances
+        compressed_waterlevels = waterlevel_sampled
+        compressed_bathymetry = bathymetry_sampled
 
     roundfunc = lambda x: round(x, 5)
-    content = json.dumps(dict(depth=zip(
-                                map(roundfunc, compressed_distances),
-                                map(roundfunc, compressed_depths),
-                                )))
+    mapped_compressed_distances = map(roundfunc, compressed_distances)
+
+    content = json.dumps(dict(
+        depth=zip(
+                mapped_compressed_distances,
+                map(roundfunc, compressed_depths)),
+        waterlevel=zip(
+                mapped_compressed_distances,
+                map(roundfunc, compressed_waterlevels)),
+        bathymetry=zip(
+                mapped_compressed_distances,
+                map(roundfunc, compressed_bathymetry)),
+    ))
 
     return content, 200, {
         'content-type': 'application/json',
