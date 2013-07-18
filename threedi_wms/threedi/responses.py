@@ -411,6 +411,9 @@ def get_response_for_getprofile(get_parameters):
     depths = np.ma.maximum(depth[indices], 0)
     waterlevel_sampled = np.ma.maximum(waterlevel[indices], -100)
     bathymetry_sampled = np.ma.maximum(bathymetry[indices], -100)
+    
+    #bathymetry from 0 up
+    bathymetry_sampled = bathymetry_sampled - np.ma.amin(bathymetry_sampled, 0)
 
     # Only return the non-masked values that are numbers
     index = ~depths.mask
