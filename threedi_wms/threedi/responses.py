@@ -268,7 +268,10 @@ def get_response_for_getinfo(get_parameters):
     # Determine transformed extent
     srs = get_parameters['srs']
     if srs:
-        source_projection = raster.RD
+        # CURRENTLY WE DON'T KNOW THE PROJECTION FROM THE NETCDF.
+        # IT DEFAULTS TO RIJKSDRIEHOEK, BUT FOR KAAPSTAD WE MAKE AN
+        # EXCEPTION HERE
+        source_projection = 22234 if 'kaapstad' in path else raster.RD
         target_projection = srs
         extent = raster.get_transformed_extent(
             extent=netcdf_extent,
