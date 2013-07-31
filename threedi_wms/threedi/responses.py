@@ -411,7 +411,7 @@ def get_response_for_getprofile(get_parameters):
     depths = np.ma.maximum(depth[indices], 0)
     waterlevel_sampled = np.ma.maximum(waterlevel[indices], -100)
     bathymetry_sampled = np.ma.maximum(bathymetry[indices], -100)
-    
+
     #bathymetry from 0 up
     bathymetry_sampled = bathymetry_sampled - np.ma.amin(bathymetry_sampled, 0)
 
@@ -433,20 +433,65 @@ def get_response_for_getprofile(get_parameters):
 
     content = json.dumps(dict(
         depth=zip(
-                mapped_compressed_distances,
-                map(roundfunc, compressed_depths)),
+            mapped_compressed_distances,
+            map(roundfunc, compressed_depths)),
         waterlevel=zip(
-                mapped_compressed_distances,
-                map(roundfunc, compressed_waterlevels)),
+            mapped_compressed_distances,
+            map(roundfunc, compressed_waterlevels)),
         bathymetry=zip(
-                mapped_compressed_distances,
-                map(roundfunc, compressed_bathymetry)),
+            mapped_compressed_distances,
+            map(roundfunc, compressed_bathymetry)),
     ))
 
     return content, 200, {
         'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET'}
+
+
+def get_response_for_getquantity(get_parameters):
+    """ Return json with quantity for all calculation cells. """
+
+    # Determine layer and time
+    layer = get_parameters['layers']
+    time = int(get_parameters['time'])
+    quantity = get_parameters['quantity']
+    try:
+        decimals = int(get_parameters['decimals'])
+    except KeyError:
+        decimals = None
+
+    # Load quantity from netcdf
+    netcdf_path = utils.get_netcdf_path(layer)
+    with Dataset(netcdf_path) as dataset:
+        ma = dataset.variables[quantity][time]
+    nodatavalue = ma.fill_value
+    if decimals is None:
+        data = dict(enumerate(ma.filled().tolist()))
+    else:
+        data = dict(enumerate(ma.filled().round(decimals).tolist()))
+    content = json.dumps(dict(nodatavalue=nodatavalue, data=data))
+    return content, 200, {'content-type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Methods': 'GET'}
+
+
+def get_response_for_getcontours(get_parameters):
+    """ Return json with quantity for all calculation cells. """
+
+    # Determine layer and time
+    layer = get_parameters['layers']
+
+    # Load contours from netcdf
+    netcdf_path = utils.get_netcdf_path(layer)
+    with Dataset(netcdf_path) as dataset:
+        x = dataset.variables['FlowElemContour_x'][:]
+        y = dataset.variables['FlowElemContour_y'][:]
+    contours = dict(enumerate(np.dstack([x, y]).tolist()))
+    content = json.dumps(dict(contours=contours))
+    return content, 200, {'content-type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Methods': 'GET'}
 
 
 class StaticData(object):

@@ -51,6 +51,8 @@ def data():
     request_handlers = dict(
         getprofile=responses.get_response_for_getprofile,
         gettimeseries=responses.get_response_for_gettimeseries,
+        getquantity=responses.get_response_for_getquantity,
+        getcontours=responses.get_response_for_getcontours,
     )
     return request_handlers[request](get_parameters=get_parameters)
 

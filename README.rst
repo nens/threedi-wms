@@ -52,6 +52,12 @@ developertools of the browser while single clicking a point on the map
 (timeseries) or a single click followed by a double click on some other
 point (profile along a line) on the demo page.
 
+Examples of requests for contours and quanties directly from the netcdf::
+
+    http://localhost:5000/3di/data?request=getcontours&layers=purmer2
+    http://localhost:5000/3di/data?request=getquantity&layers=purmer2&
+        quantity=dep&time=0&decimals=2
+
 
 Rasterinfo (not yet working?)
 -----------------------------
