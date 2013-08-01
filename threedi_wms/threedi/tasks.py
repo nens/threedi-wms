@@ -56,8 +56,7 @@ def make_pyramid(layer):
         # BUT FOR KAAPSTAD WE MAKE AN EXCEPTION HERE
         if 'kaapstad' in layer:
             dataset.SetProjection(raster.get_wkt(22234))
-            
-        pyramid.add(gdal.Open(str(dataset_path)))
+        pyramid.add(dataset)
     except raster.LockError:
         logging.info('Pyramid busy for {}'.format(layer))
         return

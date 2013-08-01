@@ -74,7 +74,8 @@ def get_dataset(path):
     else:
         projection = None
 
-    dataset = geometry.to_dataset(datatype=gdal.GDT_UInt32)
+    dataset = geometry.to_dataset(projection=projection,
+                                  datatype=gdal.GDT_UInt32)
     band = dataset.GetRasterBand(1)
     band.SetNoDataValue(areas.size)
     band.WriteArray(quad_grid.filled(areas.size))
