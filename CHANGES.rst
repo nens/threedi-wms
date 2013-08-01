@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
+- Update gislib to 0.1.1
+
 - Added 2 decimals to getprofile.
 
 - Changed response for getprofile to fit nv.d3.
