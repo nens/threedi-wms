@@ -418,18 +418,10 @@ def get_response_for_getprofile(get_parameters):
     #bathymetry from 0 up
     bathymetry_sampled = bathymetry_sampled - np.ma.amin(bathymetry_sampled, 0)
 
-    # Only return the non-masked values that are numbers
-    index = ~depths.mask
-    if isinstance(index, np.core.ndarray):
-        compressed_depths = depths[index]
-        compressed_distances = distances[index]
-        compressed_waterlevels = waterlevel_sampled[index]
-        compressed_bathymetry = bathymetry_sampled[index]
-    else:
-        compressed_depths = depths
-        compressed_distances = distances
-        compressed_waterlevels = waterlevel_sampled
-        compressed_bathymetry = bathymetry_sampled
+    compressed_depths = depths.filled(0)
+    compressed_distances = distances
+    compressed_waterlevels = waterlevel_sampled.filled(0)
+    compressed_bathymetry = bathymetry_sampled.filled(0)
 
     roundfunc = lambda x: round(x, 5)
     mapped_compressed_distances = map(roundfunc, compressed_distances)
