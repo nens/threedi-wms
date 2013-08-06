@@ -296,7 +296,9 @@ def get_response_for_gettimeseries(get_parameters):
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
                          get_parameters['point'].split(','))).reshape(1, 2)
-    bbox = ','.join(map(str, np.array(point + np.array([[-1], [1]])).ravel()))
+    #bbox = ','.join(map(str, np.array(point + np.array([[-1], [1]])).ravel()))
+    # Make a fake bounding box. Beware: units depend on epsg (wgs84)
+    bbox = ','.join(map(str, np.array(point + np.array([[-0.0001], [0.0001]])).ravel()))
     get_parameters_extra = dict(height='1', width='1', bbox=bbox)
     get_parameters_extra.update(get_parameters)
 
@@ -328,13 +330,13 @@ def get_response_for_gettimeseries(get_parameters):
         depth = v['s1'][:, quad] - height
 
     # Only return the non-masked values that are numbers
-    if isinstance(depth, np.ma.core.MaskedArray):
-        index = ~depth.mask
-        compressed_time = time[index]
-        compressed_depth = depth[index]
-    else:
-        compressed_time = time
-        compressed_depth = depth
+    # if isinstance(depth, np.ma.core.MaskedArray):
+    #     index = ~depth.mask
+    #     compressed_time = time[index]
+    #     compressed_depth = depth[index]
+    # else:
+    compressed_time = time
+    compressed_depth = depth
 
     if compressed_time.size:
         time_list = map(lambda t: t.isoformat(),
