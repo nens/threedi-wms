@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
+- Added support for Kaapstad (case insensitive) which is in EPSG:22234.
+
 - Update gislib to 0.1.1
 
 - Added 2 decimals to getprofile.

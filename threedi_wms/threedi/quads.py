@@ -69,7 +69,7 @@ def get_dataset(path):
     # CURRENTLY WE DON'T KNOW THE PROJECTION FROM THE NETCDF.
     # IT DEFAULTS TO RIJKSDRIEHOEK (28992) IN THE GISLIB
     # BUT FOR KAAPSTAD WE MAKE AN EXCEPTION HERE
-    if 'kaapstad' in path:
+    if 'kaapstad' in path.lower():
         projection = 22234
     else:
         projection = None

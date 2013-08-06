@@ -54,7 +54,7 @@ def make_pyramid(layer):
         # CURRENTLY WE DON'T KNOW THE PROJECTION FROM THE BATHYMETRY.
         # IT DEFAULTS TO RIJKSDRIEHOEK (28992) IN THE GISLIB
         # BUT FOR KAAPSTAD WE MAKE AN EXCEPTION HERE
-        if 'kaapstad' in layer:
+        if 'kaapstad' in layer.lower():
             dataset.SetProjection(raster.get_wkt(22234))
         pyramid.add(dataset)
     except raster.LockError:
