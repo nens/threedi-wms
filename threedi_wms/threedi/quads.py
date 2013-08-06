@@ -70,6 +70,7 @@ def get_dataset(path):
     # IT DEFAULTS TO RIJKSDRIEHOEK (28992) IN THE GISLIB
     # BUT FOR KAAPSTAD WE MAKE AN EXCEPTION HERE
     if 'kaapstad' in path.lower():
+        logging.debug('Detected model kaapstad... epsg:22234')
         projection = 22234
     else:
         projection = None

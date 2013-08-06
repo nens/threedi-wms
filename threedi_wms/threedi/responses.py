@@ -532,6 +532,7 @@ class StaticData(object):
                                    memory=True,
                                    compression='DEFLATE')
         # Order building if necessary
+        # TODO: this can be initiated multiple times, that's unnecessary
         if not monolith.has_data():
             tasks.make_monolith.delay(layer=layer)
             raise ValueError('Monolith not ready yet, task submitted.')

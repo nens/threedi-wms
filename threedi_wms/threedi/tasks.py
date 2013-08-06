@@ -44,6 +44,8 @@ def make_pyramid(layer):
     # Get paths
     pyramid_path = utils.get_pyramid_path(layer)
     dataset_path = utils.get_bathymetry_path(layer)
+    logging.info("Pyramid path: %r" % pyramid_path)
+    logging.info("Dataset path: %r" % dataset_path)
     # Create pyramid
     try:
         pyramid = raster.Pyramid(path=pyramid_path, compression='DEFLATE')
@@ -55,6 +57,7 @@ def make_pyramid(layer):
         # IT DEFAULTS TO RIJKSDRIEHOEK (28992) IN THE GISLIB
         # BUT FOR KAAPSTAD WE MAKE AN EXCEPTION HERE
         if 'kaapstad' in layer.lower():
+            logging.debug('Task. Detected model kaapstad... epsg:22234')
             dataset.SetProjection(raster.get_wkt(22234))
         pyramid.add(dataset)
     except raster.LockError:
