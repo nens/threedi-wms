@@ -177,7 +177,8 @@ def get_response_for_getmap(get_parameters):
     if rebuild_static:
         logging.debug('Got rebuild_static {}, deleting cache.'.format(layer))
         # delete var/cache/3di/<model> directory
-        cache_path = os.path.join(config.CACHE_DIR, layer)
+        # make sure layer has no directories or whatsoever.
+        cache_path = os.path.join(config.CACHE_DIR, layer.replace('/', ''))
         shutil.rmtree(cache_path)
 
     try:
