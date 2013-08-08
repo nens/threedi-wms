@@ -298,7 +298,7 @@ def get_response_for_gettimeseries(get_parameters):
                          get_parameters['point'].split(','))).reshape(1, 2)
     #bbox = ','.join(map(str, np.array(point + np.array([[-1], [1]])).ravel()))
     # Make a fake bounding box. Beware: units depend on epsg (wgs84)
-    bbox = ','.join(map(str, np.array(point + np.array([[-0.0001], [0.0001]])).ravel()))
+    bbox = ','.join(map(str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))
     get_parameters_extra = dict(height='1', width='1', bbox=bbox)
     get_parameters_extra.update(get_parameters)
 
@@ -327,7 +327,8 @@ def get_response_for_gettimeseries(get_parameters):
         v = dataset.variables
         units = v['time'].getncattr('units')
         time = v['time'][:]
-        depth = v['s1'][:, quad] - height
+        # Depth values can be negative or non existent.
+        depth = np.ma.maximum(v['s1'][:, quad] - height, 0).filled(0)
 
     # Only return the non-masked values that are numbers
     # if isinstance(depth, np.ma.core.MaskedArray):

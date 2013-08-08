@@ -5,7 +5,8 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
-- Fixed bug for timeseries ('negative depths'). Timeseries now from t0.
+- Fixed bug for timeseries ('negative depths'). Timeseries now from t0. More
+  negative depths solved.
 
 - Added support for Kaapstad (case insensitive) which is in EPSG:22234.
 
