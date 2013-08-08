@@ -172,8 +172,10 @@ def get_response_for_getmap(get_parameters):
     else:
         layer, mode = layer_parameter, 'depth'
 
+    reload_static = get_parameters.get('reload_static', 'no') == 'yes'
+
     try:
-        static_data = StaticData.get(layer=layer)
+        static_data = StaticData.get(layer=layer, reload=reload_static)
     except ValueError:
         return 'Objects not ready, starting preparation.'
     except raster.LockError:
@@ -497,7 +499,7 @@ class StaticData(object):
     Container for static data from the netcdf.
     """
     @classmethod
-    def get(cls, layer):
+    def get(cls, layer, reload=False):
         """
         Return instance from cache if possible, new instance otherwise.
         """
@@ -505,6 +507,11 @@ class StaticData(object):
         key = collections.namedtuple(
             'StaticDataKey', ['layer'],
         )(layer=layer)
+
+        if reload:
+            value = cls(layer=layer)
+            cache[key] = value
+            return value
 
         # Return object
         try:

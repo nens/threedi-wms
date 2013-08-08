@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
+- Added option "reload_static=yes" for getmap.
+
 - Fixed bug for timeseries ('negative depths'). Timeseries now from t0. More
   negative depths solved.
 
