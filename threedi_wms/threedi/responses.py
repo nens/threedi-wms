@@ -29,6 +29,7 @@ import json
 import logging
 import math
 import os
+import shutil
 
 
 cache = {}
@@ -172,10 +173,15 @@ def get_response_for_getmap(get_parameters):
     else:
         layer, mode = layer_parameter, 'depth'
 
-    reload_static = get_parameters.get('reload_static', 'no') == 'yes'
+    rebuild_static = get_parameters.get('rebuild_static', 'no') == 'yes'
+    if rebuild_static:
+        logging.debug('Got rebuild_static {}, deleting cache.'.format(layer))
+        # delete var/cache/3di/<model> directory
+        cache_path = os.path.join(config.CACHE_DIR, layer)
+        shutil.rmtree(cache_path)
 
     try:
-        static_data = StaticData.get(layer=layer, reload=reload_static)
+        static_data = StaticData.get(layer=layer, reload=rebuild_static)
     except ValueError:
         return 'Objects not ready, starting preparation.'
     except raster.LockError:
