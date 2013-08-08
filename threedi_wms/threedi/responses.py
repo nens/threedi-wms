@@ -516,7 +516,7 @@ class StaticData(object):
         )(layer=layer)
 
         if reload:
-            value = cls(layer=layer)
+            value = cls(layer=layer, reload=reload)
             cache[key] = value
             return value
 
@@ -528,12 +528,19 @@ class StaticData(object):
             cache[key] = value
             return value
 
-    def __init__(self, layer):
+    def __init__(self, layer, reload=False):
         """ Init pyramid and monolith, and order creation if necessary. """
         # Initialize pyramid for bathymetry
         pyramid_path = utils.get_pyramid_path(layer)
         pyramid = raster.Pyramid(path=pyramid_path,
                                  compression='DEFLATE')
+
+        # Initialize monolith for quad layout, optionally reset memory
+        monolith_path = os.path.join(config.CACHE_DIR, layer, 'monolith')
+        monolith = raster.Monolith(path=monolith_path,
+                                   memory=(not reload),
+                                   compression='DEFLATE')
+
         # Order building if necessary
         if not pyramid.has_data():
             tasks.make_pyramid.delay(layer)
@@ -541,11 +548,6 @@ class StaticData(object):
         # If all ok, set pyramid attribute.
         self.pyramid = pyramid
 
-        # Initialize monolith for quad layout
-        monolith_path = os.path.join(config.CACHE_DIR, layer, 'monolith')
-        monolith = raster.Monolith(path=monolith_path,
-                                   memory=True,
-                                   compression='DEFLATE')
         # Order building if necessary
         # TODO: this can be initiated multiple times, that's unnecessary
         if not monolith.has_data():
@@ -585,10 +587,12 @@ class DynamicData(object):
 
     def __init__(self, layer, time, variable='s1', netcdf_path=None):
         """ Load data from netcdf. """
+        #logging.debug('Loading dynamic data layer {}...'.format(layer))
         if netcdf_path is None:
             netcdf_path = utils.get_netcdf_path(layer)
         with Dataset(netcdf_path) as dataset:
             waterlevel_variable = dataset.variables[variable]
+            #logging.debug(waterlevel_variable)
 
             # Initialize empty array with one element more than amount of quads
             self.waterlevel = np.ma.array(
