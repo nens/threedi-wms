@@ -10,6 +10,7 @@ import os
 
 import flask
 import numpy as np
+import sys
 
 from server import blueprints
 from server import utils
@@ -25,7 +26,6 @@ blueprint = blueprints.Blueprint(name=config.BLUEPRINT_NAME,
 @blueprint.route('/hello')
 def hello():
     return 'hello'
-
 
 @blueprint.route('/wms')
 def wms():
