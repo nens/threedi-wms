@@ -534,29 +534,35 @@ class StaticData(object):
 
     def __init__(self, layer, reload=False):
         """ Init pyramid and monolith, and order creation if necessary. """
+        logging.debug('Initializing StaticData for {}'.format(layer))
+        errors = []
         # Initialize pyramid for bathymetry
         pyramid_path = utils.get_pyramid_path(layer)
         pyramid = raster.Pyramid(path=pyramid_path,
                                  compression='DEFLATE')
 
-        # Initialize monolith for quad layout, optionally reset memory
-        monolith_path = os.path.join(config.CACHE_DIR, layer, 'monolith')
-        monolith = raster.Monolith(path=monolith_path,
-                                   memory=(not reload),
-                                   compression='DEFLATE')
-
         # Order building if necessary
         if not pyramid.has_data():
             tasks.make_pyramid.delay(layer)
-            raise ValueError('Pyramid not ready yet, task submitted.')
+            errors.append('Pyramid not ready yet, task submitted.')
+            #raise ValueError('Pyramid not ready yet, task submitted.')
         # If all ok, set pyramid attribute.
         self.pyramid = pyramid
+
+        # Initialize monolith for quad layout
+        monolith_path = os.path.join(config.CACHE_DIR, layer, 'monolith')
+        monolith = raster.Monolith(path=monolith_path, compression='DEFLATE')
 
         # Order building if necessary
         # TODO: this can be initiated multiple times, that's unnecessary
         if not monolith.has_data():
             tasks.make_monolith.delay(layer=layer)
-            raise ValueError('Monolith not ready yet, task submitted.')
+            errors.append('Pyramid not ready yet, task submitted.')
+            #raise ValueError('Monolith not ready yet, task submitted.')
+
+        if errors:
+            raise ValueError(' '.join(errors))
+
         # If all ok, set monolith attribute.
         self.monolith = monolith
 
