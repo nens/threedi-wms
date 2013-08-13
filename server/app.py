@@ -22,7 +22,6 @@ for blueprint in blueprints.get_blueprints():
 # Setup logging
 loghelper.setup_logging(logfile_name='server.log')
 
-
 # Main
 def run():
     app.run(host='0.0.0.0', debug=True)
