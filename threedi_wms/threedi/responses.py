@@ -536,6 +536,8 @@ class StaticData(object):
                                  compression='DEFLATE')
 
         # Initialize monolith for quad layout, optionally reset memory
+        if reload:
+            logging.debug('Resetting monolith memory {}'.format(layer))
         monolith_path = os.path.join(config.CACHE_DIR, layer, 'monolith')
         monolith = raster.Monolith(path=monolith_path,
                                    memory=(not reload),
