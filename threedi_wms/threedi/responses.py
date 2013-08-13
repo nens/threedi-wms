@@ -428,7 +428,8 @@ def get_response_for_getprofile(get_parameters):
     bathymetry_sampled = np.ma.maximum(bathymetry[indices], -100)
 
     #bathymetry from 0 up
-    bathymetry_sampled = bathymetry_sampled - np.ma.amin(bathymetry_sampled, 0)
+    bathymetry_minimum = min(np.ma.amin(bathymetry_sampled, 0), 0)
+    bathymetry_sampled = bathymetry_sampled - bathymetry_minimum
 
     compressed_depths = depths.filled(0)
     compressed_distances = distances
@@ -438,16 +439,19 @@ def get_response_for_getprofile(get_parameters):
     roundfunc = lambda x: round(x, 5)
     mapped_compressed_distances = map(roundfunc, compressed_distances)
 
+    # The bias is needed for displaying stacked graphs below zero in nv.d3.
     content = json.dumps(dict(
         depth=zip(
             mapped_compressed_distances,
             map(roundfunc, compressed_depths)),
-        waterlevel=zip(
-            mapped_compressed_distances,
-            map(roundfunc, compressed_waterlevels)),
+        # waterlevel=zip(
+        #     mapped_compressed_distances,
+        #     map(roundfunc, compressed_waterlevels)),
         bathymetry=zip(
             mapped_compressed_distances,
             map(roundfunc, compressed_bathymetry)),
+        bias=zip(mapped_compressed_distances,
+            [roundfunc(bathymetry_minimum)]*len(mapped_compressed_distances)),
     ))
 
     return content, 200, {

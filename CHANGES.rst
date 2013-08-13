@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
+- Added bias in profile: this is needed for nv.d3.
+
 - Added option "rebuild_static=yes" for getmap.
 
 - Fixed bug for timeseries ('negative depths'). Timeseries now from t0. More
