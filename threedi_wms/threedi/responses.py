@@ -339,12 +339,6 @@ def get_response_for_gettimeseries(get_parameters):
         # Depth values can be negative or non existent.
         depth = np.ma.maximum(v['s1'][:, quad] - height, 0).filled(0)
 
-    # Only return the non-masked values that are numbers
-    # if isinstance(depth, np.ma.core.MaskedArray):
-    #     index = ~depth.mask
-    #     compressed_time = time[index]
-    #     compressed_depth = depth[index]
-    # else:
     compressed_time = time
     compressed_depth = depth
 
@@ -355,7 +349,10 @@ def get_response_for_gettimeseries(get_parameters):
         time_list = []
     depth_list = compressed_depth.round(3).tolist()
 
-    content = json.dumps(dict(timeseries=zip(time_list, depth_list)))
+    content_dict = dict(
+        timeseries=zip(time_list, depth_list), 
+        height=float(height))
+    content = json.dumps(content_dict)
     return content, 200, {
         'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*',

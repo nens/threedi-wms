@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
+- You can now also use gettimeseries to get the height of that point.
+
 - Added bias in profile: this is needed for nv.d3.
 
 - Added option "rebuild_static=yes" for getmap.
