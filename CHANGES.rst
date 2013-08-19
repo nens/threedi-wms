@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.2 (unreleased)
 ----------------
 
+- Try to get projection information from geotiff, defaults to rijksdriehoek
+  (28992).
+
 - You can now also use gettimeseries to get the height of that point.
 
 - Added bias in profile: this is needed for nv.d3.
