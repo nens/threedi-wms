@@ -8,6 +8,16 @@ from __future__ import division
 
 import os
 
+try:
+    from osgeo import gdal
+except ImportError:
+    import gdal
+
+try:
+    from osgeo import osr
+except ImportError:
+    import osr
+
 from threedi_wms.threedi import config
 
 
@@ -57,3 +67,13 @@ def get_pyramid_path(layer):
 def get_monolith_path(layer):
     """ Return monolith path. """
     return os.path.join(config.CACHE_DIR, layer, 'monolith')
+
+
+def get_bathymetry_srs(filename):
+    """Return srs from bathymetry, None if not set"""
+    ds = gdal.Open(filename, gdal.GA_ReadOnly)
+    src = osr.SpatialReference()
+    src.ImportFromWkt(ds.GetProjection())
+    result = src.GetAttrValue(str('PROJCS|AUTHORITY'), 1)  # None or '22234'
+    ds = None  # Close dataset
+    return result

@@ -44,8 +44,6 @@ def make_pyramid(layer):
     # Get paths
     pyramid_path = utils.get_pyramid_path(layer)
     dataset_path = utils.get_bathymetry_path(layer)
-    logging.info("Pyramid path: %r" % pyramid_path)
-    logging.info("Dataset path: %r" % dataset_path)
     # Create pyramid
     try:
         pyramid = raster.Pyramid(path=pyramid_path, compression='DEFLATE')
@@ -53,12 +51,18 @@ def make_pyramid(layer):
             logging.info('Pyramid has data for {}'.format(layer))
             return
         dataset = gdal.Open(str(dataset_path))
-        # CURRENTLY WE DON'T KNOW THE PROJECTION FROM THE BATHYMETRY.
-        # IT DEFAULTS TO RIJKSDRIEHOEK (28992) IN THE GISLIB
-        # BUT FOR KAAPSTAD WE MAKE AN EXCEPTION HERE
-        if 'kaapstad' in layer.lower():
-            logging.debug('Task. Detected model kaapstad... epsg:22234')
-            dataset.SetProjection(raster.get_wkt(22234))
+
+        logging.info("Pyramid path: %r" % pyramid_path)
+        logging.info("Dataset path: %r" % dataset_path)
+        bathy_srs = utils.get_bathymetry_srs(dataset_path)
+        logging.info("Bathy srs: %r" % bathy_srs)
+        # We try to extract the projection of the bathymetry of the geotiff
+        # file, it defaults to rijksdriehoek (28992)
+        if bathy_srs is not None:  #if 'kaapstad' in layer.lower():
+            logging.info('Pyramid projection is {}'.format(bathy_srs))
+            dataset.SetProjection(raster.get_wkt(int(bathy_srs)))
+        else:
+            logging.info('No pyramid projection info available.')
         pyramid.add(dataset)
     except raster.LockError:
         logging.info('Pyramid busy for {}'.format(layer))
@@ -73,13 +77,18 @@ def make_monolith(layer):
     # Get paths
     monolith_path = utils.get_monolith_path(layer)
     netcdf_path = utils.get_netcdf_path(layer)
+    bathy_path = utils.get_bathymetry_path(layer)
+    projection = utils.get_bathymetry_srs(bathy_path)
+    if projection is not None: 
+        projection = int(projection)
+    logging.info('Monolith projection is {}'.format(projection))
     # Create monolith
     try:
         monolith = raster.Monolith(path=monolith_path, compression='DEFLATE')
         if monolith.has_data():
             logging.info('Monolith has data for {}'.format(layer))
             return
-        monolith.add(quads.get_dataset(path=netcdf_path))
+        monolith.add(quads.get_dataset(path=netcdf_path, projection=projection))
     except raster.LockError:
         logging.info('Monolith busy for {}'.format(layer))
         return
