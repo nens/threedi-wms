@@ -7,8 +7,16 @@ from __future__ import absolute_import
 from __future__ import division
 
 import os
-import gdal
-import osr
+
+try:
+    from osgeo import gdal
+except ImportError:
+    import gdal
+
+try:
+    from osgeo import osr
+except ImportError:
+    import osr
 
 from threedi_wms.threedi import config
 
