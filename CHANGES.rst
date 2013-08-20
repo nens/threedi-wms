@@ -2,7 +2,7 @@ Changelog of threedi-wms
 ===================================================
 
 
-0.2 (unreleased)
+0.2 (2013-08-20)
 ----------------
 
 - Try to get projection information from geotiff, defaults to rijksdriehoek
