@@ -16,8 +16,10 @@ import numpy as np
 import logging
 
 
-def get_dataset(path):
-    """ Return a gdaldataset containing the quad positions. """
+def get_dataset(path, projection=None):
+    """ Return a gdaldataset containing the quad positions. 
+
+    projection is None or 22234 (int) or something"""
     # Load data
     with Dataset(path) as dataset:
         v = dataset.variables
@@ -64,16 +66,6 @@ def get_dataset(path):
             quad_grid,
             quad_index[data_index].reshape(height, width)
         ], axis=0)
-
-
-    # CURRENTLY WE DON'T KNOW THE PROJECTION FROM THE NETCDF.
-    # IT DEFAULTS TO RIJKSDRIEHOEK (28992) IN THE GISLIB
-    # BUT FOR KAAPSTAD WE MAKE AN EXCEPTION HERE
-    if 'kaapstad' in path.lower():
-        logging.debug('Detected model kaapstad... epsg:22234')
-        projection = 22234
-    else:
-        projection = None
 
     dataset = geometry.to_dataset(projection=projection,
                                   datatype=gdal.GDT_UInt32)
