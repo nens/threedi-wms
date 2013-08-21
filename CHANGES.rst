@@ -5,7 +5,10 @@ Changelog of threedi-wms
 0.3 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Made water more pretty by adding alpha, requires matplotlib 1.2.0 or higher
+  (1.3.0 requires pyparsing >= 1.5.6 which conflicts).
+
+- Pinned matplotlib 1.2.0 (was 1.1.1rc)
 
 
 0.2 (2013-08-20)

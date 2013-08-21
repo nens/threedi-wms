@@ -60,7 +60,11 @@ def get_depth_image(masked_array, waves=None, antialias=1):
                   (1.0, 65. / 256, 65. / 256)),
         'blue': ((0.0, 255. / 256, 255. / 256),
                  (0.5, 221. / 256, 221. / 256),
-                 (1.0, 176. / 256, 176. / 256)),
+                 (1.0, 146. / 256, 146. / 256)),
+        'alpha': ((0.0, 64. / 256, 64. / 256),
+                  (0.1, 128. / 256, 128. / 256),
+                 (0.5, 256. / 256, 256. / 256),
+                 (1.0, 256. / 256, 256. / 256)),
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
     # Apply scaling and colormap
