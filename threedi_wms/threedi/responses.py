@@ -310,7 +310,12 @@ def get_response_for_getinfo(get_parameters):
 
 
 def get_response_for_gettimeseries(get_parameters):
-    """ Return json with timeseries """
+    """ Return json with timeseries.
+
+    provide layers=<modelname>:<mode>, where mode is one of
+
+    s1 (default), bath, su, vol, dep, ucx, ucy, interception, rain, evap 
+    """
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
                          get_parameters['point'].split(','))).reshape(1, 2)
@@ -324,8 +329,9 @@ def get_response_for_gettimeseries(get_parameters):
     layer_parameter = get_parameters['layers']
     if ':' in layer_parameter:
         layer, mode = layer_parameter.split(':')
+        get_parameters['layers'] = layer
     else:
-        layer, mode = layer_parameter, 'depth'
+        layer, mode = layer_parameter, 's1'
 
     # Get height and quad
     static_data = StaticData.get(layer=layer)
@@ -346,7 +352,11 @@ def get_response_for_gettimeseries(get_parameters):
         units = v['time'].getncattr('units')
         time = v['time'][:]
         # Depth values can be negative or non existent.
-        depth = np.ma.maximum(v['s1'][:, quad] - height, 0).filled(0)
+        if mode == 's1':
+            depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
+        else:
+            depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
+        var_units = v[mode].getncattr('units')
 
     compressed_time = time
     compressed_depth = depth
@@ -360,7 +370,8 @@ def get_response_for_gettimeseries(get_parameters):
 
     content_dict = dict(
         timeseries=zip(time_list, depth_list), 
-        height=float(height))
+        height=float(height),
+        units=var_units)
     content = json.dumps(content_dict)
     return content, 200, {
         'content-type': 'application/json',
