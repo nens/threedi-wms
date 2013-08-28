@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.3 (unreleased)
 ----------------
 
+- Enabled request variables other than s1 in gettimeseries.
+
 - Made water more pretty by adding alpha, requires matplotlib 1.2.0 or higher
   (1.3.0 requires pyparsing >= 1.5.6 which conflicts).
 
