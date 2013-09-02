@@ -60,9 +60,10 @@ def make_pyramid(layer):
         # file, it defaults to rijksdriehoek (28992)
         if bathy_srs is not None:  #if 'kaapstad' in layer.lower():
             logging.info('Pyramid projection is {}'.format(bathy_srs))
-            dataset.SetProjection(raster.get_wkt(int(bathy_srs)))
         else:
-            logging.info('No pyramid projection info available.')
+            logging.info('No pyramid projection info available. Assume 28992')
+            bathy_srs = '28992'
+        dataset.SetProjection(raster.get_wkt(int(bathy_srs)))
         pyramid.add(dataset)
     except raster.LockError:
         logging.info('Pyramid busy for {}'.format(layer))

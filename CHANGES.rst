@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.3 (unreleased)
 ----------------
 
+- Bugfix: now explicitly add srs 28992 if no projection info is available.
+
 - Enabled request variables other than s1 in gettimeseries.
 
 - Made water more pretty by adding alpha, requires matplotlib 1.2.0 or higher
