@@ -2,7 +2,7 @@ Changelog of threedi-wms
 ===================================================
 
 
-0.3 (unreleased)
+0.3 (2013-09-03)
 ----------------
 
 - Bugfix: now explicitly add srs 28992 if no projection info is available.
