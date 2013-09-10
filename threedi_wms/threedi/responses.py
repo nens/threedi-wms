@@ -46,10 +46,10 @@ def rgba2image(rgba, antialias=1):
     return buf.getvalue()
 
 
-def get_depth_image(masked_array, waves=None, antialias=1):
+def get_depth_image(masked_array, waves=None, antialias=1, hmin=0, hmax=2):
     """ Return a png image from masked_array. """
     # Hardcode depth limits, until better height data
-    normalize = colors.Normalize(vmin=0, vmax=2)
+    normalize = colors.Normalize(vmin=hmin, vmax=hmax)
     # Custom color map
     cdict = {
         'red': ((0.0, 170. / 256, 170. / 256),
@@ -212,6 +212,7 @@ def get_response_for_getmap(get_parameters):
         use_cache = True
 
     if mode == 'depth':
+        hmax = get_parameters.get('hmax', 2.0)
         time = int(get_parameters['time'])
         dynamic_data = DynamicData.get(
             layer=layer, time=time, use_cache=use_cache)
@@ -223,14 +224,17 @@ def get_response_for_getmap(get_parameters):
             content = get_water_waves(
                 masked_array=depth,
                 anim_frame=int(get_parameters['anim_frame']),
-                antialias=antialias
+                antialias=antialias,
+                hmax=hmax
             )
         else:
             # Direct image
             content = get_depth_image(masked_array=depth,
-                                      antialias=antialias)
+                                      antialias=antialias,
+                                      hmax=hmax)
     elif mode == 'flood':
         # time is actually the sequence number of the flood
+        hmax = get_parameters.get('hmax', 2.0)
         time = int(get_parameters['time'])
         dynamic_data = DynamicData.get(
             layer=layer, time=time, use_cache=use_cache, variable='floodfill',
@@ -249,7 +253,8 @@ def get_response_for_getmap(get_parameters):
         else:
             # Direct image
             content = get_depth_image(masked_array=depth,
-                                      antialias=antialias)
+                                      antialias=antialias,
+                                      hmax=hmax)
     elif mode == 'bathymetry':
         limits = map(float, get_parameters['limits'].split(','))
         content = get_bathymetry_image(masked_array=bathymetry,
