@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.4 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Added hmax option for GetMap depth.
 
 
 0.3 (2013-09-03)
