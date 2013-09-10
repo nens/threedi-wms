@@ -289,6 +289,7 @@ def get_response_for_getinfo(get_parameters):
             # Overwrite RD with proper RD projection
             source_projection = raster.RD
 
+        logging.info('Source projection: %r' % source_projection)
         #source_projection = 22234 if 'kaapstad' in path.lower() else raster.RD
         target_projection = srs
         extent = raster.get_transformed_extent(
@@ -297,6 +298,7 @@ def get_response_for_getinfo(get_parameters):
             target_projection=target_projection,
         )
     else:
+        logging.warning('No srs data available.')
         extent = netcdf_extent
 
     # Prepare response
