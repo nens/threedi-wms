@@ -7,6 +7,8 @@ Changelog of threedi-wms
 
 - Added hmax option for GetMap depth.
 
+- Use syseggrecipe for buildout sysegg entry.
+
 
 0.3 (2013-09-03)
 ----------------
