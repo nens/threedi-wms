@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.4 (unreleased)
 ----------------
 
+Note: you have to delete the whole cache dir, it is not compatible with the
+new gislib.
+
 - Upgraded from gislib 0.1.1 to gislib 0.2.8.
 
 - Added hmax option for GetMap depth.
