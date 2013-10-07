@@ -2,7 +2,7 @@ Changelog of threedi-wms
 ===================================================
 
 
-0.4 (unreleased)
+0.4 (2013-10-07)
 ----------------
 
 Note: you have to delete the whole cache dir, it is not compatible with the
