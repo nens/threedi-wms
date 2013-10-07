@@ -1,5 +1,6 @@
-from gislib.raster import Pyramid, get_spatial_reference
-from gislib.vector import MagicLine
+from gislib.rasters import Pyramid
+from gislib.projections import get_spatial_reference
+from gislib.vectors import MagicLine
 
 from threedi_wms.rasterinfo import config
 

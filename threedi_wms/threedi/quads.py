@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 
-from gislib import raster
+from gislib import rasters
 
 from netCDF4 import Dataset
 from scipy import spatial
@@ -38,7 +38,7 @@ def get_dataset(path, projection=None):
     # Determine the grid based on the smallest quads.
     width = int(round((extent[2] - extent[0]) / widths.min()))
     height = int(round((extent[3] - extent[1]) / heights.min()))
-    geometry = raster.DatasetGeometry(
+    geometry = rasters.DatasetGeometry(
         extent=extent, size=(width, height),
     )
     gridpoints = geometry.gridpoints()

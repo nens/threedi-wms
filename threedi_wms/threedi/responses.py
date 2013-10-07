@@ -9,8 +9,9 @@ from threedi_wms.threedi import config
 from threedi_wms.threedi import tasks
 from threedi_wms.threedi import utils
 
-from gislib import raster
-from gislib import vector
+from gislib import rasters as raster
+from gislib import vectors as vector
+from gislib import utils as gislib_utils
 
 from PIL import Image
 from netCDF4 import Dataset
@@ -288,16 +289,13 @@ def get_response_for_getinfo(get_parameters):
     if srs:
         # Read projection from bathymetry file, defaults to RD.
         bathy_path = utils.get_bathymetry_path(layer=get_parameters['layers'])
-        bathy_srs = utils.get_bathymetry_srs(bathy_path)
-        source_projection = int(bathy_srs) if bathy_srs else raster.RD
-        if source_projection == 28992:
-            # Overwrite RD with proper RD projection
-            source_projection = raster.RD
+        # It defaults to Rijksdriehoek RD
+        source_projection = utils.get_bathymetry_srs(bathy_path)
 
         logging.info('Source projection: %r' % source_projection)
         #source_projection = 22234 if 'kaapstad' in path.lower() else raster.RD
         target_projection = srs
-        extent = raster.get_transformed_extent(
+        extent = gislib_utils.get_transformed_extent(
             extent=netcdf_extent,
             source_projection=source_projection,
             target_projection=target_projection,

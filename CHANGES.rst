@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.4 (unreleased)
 ----------------
 
+- Upgraded from gislib 0.1.1 to gislib 0.2.8.
+
 - Added hmax option for GetMap depth.
 
 - Use syseggrecipe for buildout sysegg entry.

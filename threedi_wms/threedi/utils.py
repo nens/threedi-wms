@@ -19,6 +19,7 @@ except ImportError:
     import osr
 
 from threedi_wms.threedi import config
+from gislib import projections
 
 
 def get_netcdf_path(layer):
@@ -71,9 +72,10 @@ def get_monolith_path(layer):
 
 def get_bathymetry_srs(filename):
     """Return srs from bathymetry, None if not set"""
-    ds = gdal.Open(filename, gdal.GA_ReadOnly)
-    src = osr.SpatialReference()
-    src.ImportFromWkt(ds.GetProjection())
-    result = src.GetAttrValue(str('PROJCS|AUTHORITY'), 1)  # None or '22234'
-    ds = None  # Close dataset
-    return result
+    ds = gdal.Open(filename)
+    return projections.get_wkt(ds.GetProjection())
+    # src = osr.SpatialReference()
+    # src.ImportFromWkt(ds.GetProjection())
+    # result = src.GetAttrValue(str('PROJCS|AUTHORITY'), 1)  # None or '22234'
+    # ds = None  # Close dataset
+    # return result
