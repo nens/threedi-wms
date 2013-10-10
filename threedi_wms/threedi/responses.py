@@ -9,7 +9,7 @@ from threedi_wms.threedi import config
 from threedi_wms.threedi import tasks
 from threedi_wms.threedi import utils
 
-from gislib import rasters as raster
+from gislib import rasters
 from gislib import vectors as vector
 from gislib import utils as gislib_utils
 
@@ -150,7 +150,7 @@ def get_data(container, ma=False, **get_parameters):
     srs = get_parameters['srs']
 
     # Create dataset
-    geometry = raster.DatasetGeometry(size=size, extent=extent)
+    geometry = rasters.DatasetGeometry(size=size, extent=extent)
     dataset = geometry.to_dataset(
         datatype=container.datatype,
         projection=srs,
@@ -190,7 +190,7 @@ def get_response_for_getmap(get_parameters):
         static_data = StaticData.get(layer=layer, reload=rebuild_static)
     except ValueError:
         return 'Objects not ready, starting preparation.'
-    except raster.LockError:
+    except rasters.LockError:
         return 'Objects not ready, preparation in progress.'
 
     if mode in ['depth', 'bathymetry', 'flood']:
@@ -293,7 +293,7 @@ def get_response_for_getinfo(get_parameters):
         source_projection = utils.get_bathymetry_srs(bathy_path)
 
         logging.info('Source projection: %r' % source_projection)
-        #source_projection = 22234 if 'kaapstad' in path.lower() else raster.RD
+        #source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
         target_projection = srs
         extent = gislib_utils.get_transformed_extent(
             extent=netcdf_extent,
@@ -560,7 +560,7 @@ class StaticData(object):
         errors = []
         # Initialize pyramid for bathymetry
         pyramid_path = utils.get_pyramid_path(layer)
-        pyramid = raster.Pyramid(path=pyramid_path,
+        pyramid = rasters.Pyramid(path=pyramid_path,
                                  compression='DEFLATE')
 
         # Order building if necessary
@@ -573,7 +573,7 @@ class StaticData(object):
 
         # Initialize monolith for quad layout
         monolith_path = os.path.join(config.CACHE_DIR, layer, 'monolith')
-        monolith = raster.Monolith(path=monolith_path, compression='DEFLATE')
+        monolith = rasters.Monolith(path=monolith_path, compression='DEFLATE')
 
         # Order building if necessary
         # TODO: this can be initiated multiple times, that's unnecessary
