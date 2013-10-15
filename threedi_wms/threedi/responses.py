@@ -320,6 +320,10 @@ def get_response_for_gettimeseries(get_parameters):
     provide layers=<modelname>:<mode>, where mode is one of
 
     s1 (default), bath, su, vol, dep, ucx, ucy, interception, rain, evap 
+
+    options: 
+    quad=<quadtree index>
+    absolute=true (default false): do not subtract height from s1
     """
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
@@ -332,6 +336,7 @@ def get_response_for_gettimeseries(get_parameters):
     quad = get_parameters.get('quad', None)
     if quad is not None:
         quad = int(quad)
+    absolute = get_parameters.get('absolute', 'false')
 
     # Determine layers
     layer_parameter = get_parameters['layers']
@@ -347,8 +352,8 @@ def get_response_for_gettimeseries(get_parameters):
                          ma=True, **get_parameters_extra)
     if quad is None:
         quad = int(quads[0, 0])
+        logging.debug('Got quads in {} ms.'.format(ms))
     logging.debug('Quad = %r' % quad)
-    logging.debug('Got quads in {} ms.'.format(ms))
 
     bathymetry, ms = get_data(container=static_data.pyramid,
                               ma=True, **get_parameters_extra)
@@ -363,7 +368,10 @@ def get_response_for_gettimeseries(get_parameters):
         time = v['time'][:]
         # Depth values can be negative or non existent.
         if mode == 's1':
-            depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
+            if absolute == 'false':
+                depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
+            else:
+                depth = v[mode][:, quad].filled(0)
         else:
             depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
         var_units = v[mode].getncattr('units')

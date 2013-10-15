@@ -25,6 +25,9 @@ def get_dataset(path, projection=None):
         v = dataset.variables
         fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
         fcx, fcy = v['FlowElem_xcc'][:], v['FlowElem_ycc'][:]
+        # For boezemstelsel Delfland only
+        # fex, fey = v['FlowElemContour_x'][:1], v['FlowElemContour_y'][:1]
+        # fcx, fcy = v['FlowElem_xcc'][:1], v['FlowElem_ycc'][:1]
     x1, y1, x2, y2 = fex.min(1), fey.min(1), fex.max(1), fey.max(1)
 
     # Set convenient arrays
