@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.5 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Added option quad in gettimeseries.
 
 
 0.4 (2013-10-07)
