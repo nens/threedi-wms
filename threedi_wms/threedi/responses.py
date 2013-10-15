@@ -329,6 +329,9 @@ def get_response_for_gettimeseries(get_parameters):
     bbox = ','.join(map(str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))
     get_parameters_extra = dict(height='1', width='1', bbox=bbox)
     get_parameters_extra.update(get_parameters)
+    quad = get_parameters.get('quad', None)
+    if quad is not None:
+        quad = int(quad)
 
     # Determine layers
     layer_parameter = get_parameters['layers']
@@ -342,7 +345,9 @@ def get_response_for_gettimeseries(get_parameters):
     static_data = StaticData.get(layer=layer)
     quads, ms = get_data(container=static_data.monolith,
                          ma=True, **get_parameters_extra)
-    quad = int(quads[0, 0])
+    if quad is None:
+        quad = int(quads[0, 0])
+    logging.debug('Quad = %r' % quad)
     logging.debug('Got quads in {} ms.'.format(ms))
 
     bathymetry, ms = get_data(container=static_data.pyramid,
