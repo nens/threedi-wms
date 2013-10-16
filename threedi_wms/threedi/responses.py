@@ -324,6 +324,7 @@ def get_response_for_gettimeseries(get_parameters):
     options: 
     quad=<quadtree index>
     absolute=true (default false): do not subtract height from s1
+    timestep=<max timestep you want to see>
     """
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
@@ -333,10 +334,17 @@ def get_response_for_gettimeseries(get_parameters):
     bbox = ','.join(map(str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))
     get_parameters_extra = dict(height='1', width='1', bbox=bbox)
     get_parameters_extra.update(get_parameters)
+
+    # For 1D test
     quad = get_parameters.get('quad', None)
     if quad is not None:
         quad = int(quad)
     absolute = get_parameters.get('absolute', 'false')
+    timestep = get_parameters.get('timestep', None)
+    if timestep is not None:
+        timestep = int(timestep)
+        if timestep == 0:
+            timestep = 1  # Or it won't work correctly
 
     # Determine layers
     layer_parameter = get_parameters['layers']
@@ -358,6 +366,10 @@ def get_response_for_gettimeseries(get_parameters):
     bathymetry, ms = get_data(container=static_data.pyramid,
                               ma=True, **get_parameters_extra)
     height = bathymetry[0, 0]
+    if not height:
+        logging.debug('Got not height.')
+        height = 0
+    logging.debug('Got height {}.'.format(height))
     logging.debug('Got bathymetry in {} ms.'.format(ms))
 
     # Read data from netcdf
@@ -371,7 +383,10 @@ def get_response_for_gettimeseries(get_parameters):
             if absolute == 'false':
                 depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
             else:
-                depth = v[mode][:, quad].filled(0)
+                if timestep:
+                    depth = v[mode][:timestep, quad].filled(0)
+                else:
+                    depth = v[mode][:, quad].filled(0)
         else:
             depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
         var_units = v[mode].getncattr('units')
