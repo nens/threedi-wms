@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import os
+import logging
 
 try:
     from osgeo import gdal
@@ -20,6 +21,8 @@ except ImportError:
 
 from threedi_wms.threedi import config
 from gislib import projections
+
+logger = logging.getLogger(__name__)
 
 
 def get_netcdf_path(layer):
