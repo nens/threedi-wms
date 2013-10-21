@@ -2,7 +2,7 @@ Changelog of threedi-wms
 ===================================================
 
 
-0.5 (unreleased)
+0.5 (2013-10-21)
 ----------------
 
 - Added option quad, absolute in gettimeseries.
