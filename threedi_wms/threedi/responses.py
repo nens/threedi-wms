@@ -319,9 +319,9 @@ def get_response_for_gettimeseries(get_parameters):
 
     provide layers=<modelname>:<mode>, where mode is one of
 
-    s1 (default), bath, su, vol, dep, ucx, ucy, interception, rain, evap 
+    s1 (default), bath, su, vol, dep, ucx, ucy, interception, rain, evap
 
-    options: 
+    options:
     quad=<quadtree index>
     absolute=true (default false): do not subtract height from s1
     timestep=<max timestep you want to see>
@@ -402,7 +402,7 @@ def get_response_for_gettimeseries(get_parameters):
     depth_list = compressed_depth.round(3).tolist()
 
     content_dict = dict(
-        timeseries=zip(time_list, depth_list), 
+        timeseries=zip(time_list, depth_list),
         height=float(height),
         units=var_units)
     content = json.dumps(content_dict)
