@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.6 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Added option timeformat=iso/epoch in gettimeseries.
 
 
 0.5 (2013-10-21)

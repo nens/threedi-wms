@@ -335,6 +335,7 @@ def get_response_for_gettimeseries(get_parameters):
     get_parameters_extra = dict(height='1', width='1', bbox=bbox)
     get_parameters_extra.update(get_parameters)
 
+    timeformat = get_parameters.get('timeformat', 'iso')  # iso or epoch
     # For 1D test
     quad = get_parameters.get('quad', None)
     if quad is not None:
@@ -395,8 +396,13 @@ def get_response_for_gettimeseries(get_parameters):
     compressed_depth = depth
 
     if compressed_time.size:
-        time_list = map(lambda t: t.isoformat(),
-                        num2date(compressed_time, units=units))
+        if timeformat == 'iso':
+            time_list = map(lambda t: t.isoformat(),
+                            num2date(compressed_time, units=units))
+        else:
+            # Time in milliseconds from epoch.
+            time_list = map(lambda t: 1000*float(t.strftime('%s')),
+                            num2date(compressed_time, units=units))
     else:
         time_list = []
     depth_list = compressed_depth.round(3).tolist()
