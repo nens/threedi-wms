@@ -17,14 +17,25 @@ import logging
 
 
 def get_dataset(path, projection=None):
-    """ Return a gdaldataset containing the quad positions. 
+    """ Return a gdaldataset containing the quad positions.
 
     projection is None or 22234 (int) or something"""
     # Load data
     with Dataset(path) as dataset:
         v = dataset.variables
-        fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
-        fcx, fcy = v['FlowElem_xcc'][:], v['FlowElem_ycc'][:]
+        try:
+            nr_of_2d_elements = dataset.nFlowElem2d
+        except AttributeError:
+            # No dataset.nFlowElem2d. Assume all variables are 2D.
+            fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
+            fcx, fcy = v['FlowElem_xcc'][:], v['FlowElem_ycc'][:]
+        else:
+            # This dataset contains nFlowElem2d. Using it here to only get
+            # 2D elements.
+            fex = v['FlowElemContour_x'][:nr_of_2d_elements]
+            fey = v['FlowElemContour_y'][:nr_of_2d_elements]
+            fcx = v['FlowElem_xcc'][:nr_of_2d_elements]
+            fcy = v['FlowElem_ycc'][:nr_of_2d_elements]
         # For boezemstelsel Delfland only
         # fex, fey = v['FlowElemContour_x'][:1], v['FlowElemContour_y'][:1]
         # fcx, fcy = v['FlowElem_xcc'][:1], v['FlowElem_ycc'][:1]
