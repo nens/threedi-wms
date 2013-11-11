@@ -400,6 +400,7 @@ def get_response_for_gettimeseries(get_parameters):
             time_list = map(lambda t: t.isoformat(),
                             num2date(compressed_time, units=units))
         else:
+            # Time in milliseconds from epoch.
             time_list = map(lambda t: 1000*float(t.strftime('%s')),
                             num2date(compressed_time, units=units))
     else:
