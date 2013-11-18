@@ -531,7 +531,10 @@ def get_response_for_getquantity(get_parameters):
     # Load quantity from netcdf
     netcdf_path = utils.get_netcdf_path(layer)
     with Dataset(netcdf_path) as dataset:
-        ma = dataset.variables[quantity][time]
+        # Explicitly make a masked array. Some quantities (unorm, q) return an
+        # ndarray.
+        ma = np.ma.masked_array(dataset.variables[quantity][time])
+        #ma = dataset.variables[quantity][time]
     nodatavalue = ma.fill_value
     if decimals is None:
         data = dict(enumerate(ma.filled().tolist()))
