@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.6 (unreleased)
 ----------------
 
+- Fixed bug in gettimeseries. We do NOT want max(v, 0) for everything.
+
 - get_quantity now also works for tables q, unorm.
 
 - Added option timeformat=iso/epoch in gettimeseries.

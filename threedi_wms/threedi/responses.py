@@ -380,6 +380,7 @@ def get_response_for_gettimeseries(get_parameters):
         units = v['time'].getncattr('units')
         time = v['time'][:]
         # Depth values can be negative or non existent.
+        # Note: all variables can be looked up here, so 'depth' is misleading.
         if mode == 's1':
             if absolute == 'false':
                 depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
@@ -389,7 +390,8 @@ def get_response_for_gettimeseries(get_parameters):
                 else:
                     depth = v[mode][:, quad].filled(0)
         else:
-            depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
+            #depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
+            depth = v[mode][:, quad]
         var_units = v[mode].getncattr('units')
 
     compressed_time = time
