@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.6 (unreleased)
 ----------------
 
+- Option 'absolute' now also works for other parameters than s1.
+
 - Fixed bug in gettimeseries. We do NOT want max(v, 0) for everything.
 
 - get_quantity now also works for tables q, unorm.

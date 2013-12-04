@@ -391,7 +391,11 @@ def get_response_for_gettimeseries(get_parameters):
                     depth = v[mode][:, quad].filled(0)
         else:
             #depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
-            depth = v[mode][:, quad]
+            if absolute == 'true':
+                # For unorm, q
+                depth = np.ma.abs(v[mode][:, quad])
+            else:
+                depth = v[mode][:, quad]
         var_units = v[mode].getncattr('units')
 
     compressed_time = time
