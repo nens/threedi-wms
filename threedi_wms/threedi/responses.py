@@ -386,9 +386,9 @@ def get_response_for_gettimeseries(get_parameters):
                 depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
             else:
                 if timestep:
-                    depth = v[mode][:timestep, quad].filled(0)
+                    depth = v[mode][:timestep, quad]
                 else:
-                    depth = v[mode][:, quad].filled(0)
+                    depth = v[mode][:, quad]
         else:
             #depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
             if absolute == 'true':
