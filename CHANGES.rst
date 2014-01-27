@@ -5,7 +5,8 @@ Changelog of threedi-wms
 0.7 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Upgrade to latest buildout to fix problems with distribute during
+  bootstrap.
 
 
 0.6 (2013-12-04)
