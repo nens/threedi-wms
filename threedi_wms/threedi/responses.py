@@ -44,7 +44,7 @@ def rgba2image(rgba, antialias=1):
 
     buf = io.BytesIO()
     image.save(buf, 'png')
-    return buf.getvalue()
+    return buf.getvalue(), image
 
 
 def get_depth_image(masked_array, waves=None, antialias=1, hmin=0, hmax=2):
@@ -224,7 +224,7 @@ def get_response_for_getmap(get_parameters):
     except rasters.LockError:
         return 'Objects not ready, preparation in progress.'
 
-    if mode in ['depth', 'bathymetry', 'flood']:
+    if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
         bathymetry, ms = get_data(container=static_data.pyramid,
                                   ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
@@ -243,7 +243,8 @@ def get_response_for_getmap(get_parameters):
     else:
         use_cache = True
 
-    if mode == 'depth':
+    # The velocity layer has the depth layer beneath it
+    if mode == 'depth' or mode == 'velocity':  
         hmax = get_parameters.get('hmax', 2.0)
         time = int(get_parameters['time'])
         dynamic_data = DynamicData.get(
@@ -261,7 +262,7 @@ def get_response_for_getmap(get_parameters):
             )
         else:
             # Direct image
-            content = get_depth_image(masked_array=depth,
+            content, img = get_depth_image(masked_array=depth,
                                       antialias=antialias,
                                       hmax=hmax)
     elif mode == 'flood':
@@ -284,18 +285,20 @@ def get_response_for_getmap(get_parameters):
             )
         else:
             # Direct image
-            content = get_depth_image(masked_array=depth,
+            content, img  = get_depth_image(masked_array=depth,
                                       antialias=antialias,
                                       hmax=hmax)
     elif mode == 'bathymetry':
         limits = map(float, get_parameters['limits'].split(','))
-        content = get_bathymetry_image(masked_array=bathymetry,
+        content, img  = get_bathymetry_image(masked_array=bathymetry,
                                        limits=limits,
                                        antialias=antialias)
     elif mode == 'grid':
-        content = get_grid_image(masked_array=quads,
+        content, img  = get_grid_image(masked_array=quads,
                                  antialias=antialias)
-    elif mode == 'velocity':
+
+    # Add velocity on top of depth layer
+    if mode == 'velocity':
         hmax = get_parameters.get('hmax', 2.0)
         time = int(get_parameters['time'])
         dynamic_data_x = DynamicData.get(
@@ -305,8 +308,12 @@ def get_response_for_getmap(get_parameters):
         u = np.sqrt(dynamic_data_x.waterlevel[quads] ** 2 + 
             dynamic_data_y.waterlevel[quads] ** 2)
 
-        content = get_velocity_image(masked_array=u,
+        content2, img2  = get_velocity_image(masked_array=u,
                                      antialias=antialias)
+        img.paste(img2, (0, 0), img2)
+        buf = io.BytesIO()
+        img.save(buf, 'png')
+        content = buf.getvalue()
 
     return content, 200, {
         'content-type': 'image/png',
