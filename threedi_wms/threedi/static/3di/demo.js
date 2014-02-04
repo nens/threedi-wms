@@ -23,6 +23,10 @@ var depth = new OpenLayers.Layer.WMS(
   "Depth", "", {layers: "basic", transparent: "true"}
 );
 map.addLayer(depth);
+var velocity = new OpenLayers.Layer.WMS(
+  "Velocity", "", {layers: "basic", transparent: "true"}
+);
+map.addLayer(velocity);
 var flood = new OpenLayers.Layer.WMS(
   "Flood", "", {layers: "basic", transparent: "true"}
 );
@@ -79,6 +83,7 @@ function updateInfo(data){
   updateDepth();
   updateFlood();
   updateBathymetry();
+  updateVelocity();
   var bounds = data.bounds;
   map.zoomToExtent(
     new OpenLayers.Bounds(bounds[0], bounds[1], bounds[2], bounds[3])
@@ -125,6 +130,17 @@ function updateBathymetry(){
   bathymetry.redraw();
 }
 
+function updateVelocity(){
+  velocity.redraw();
+  var url = "/3di/wms";
+  url += "?LAYERS=" + getLayer() + ":velocity";
+  url += "&time=" + getTime();
+  url += "&antialias=" + getAntialias();
+  url += "&nocache=yes";
+  velocity.setUrl(url);
+  velocity.redraw();
+}
+
 function toggleGrid(){
   var state = $("input#grid").is(":checked");
   grid.setVisibility(state);
@@ -141,6 +157,10 @@ function toggleBathymetry(){
   var state = $("input#bathymetry").is(":checked");
   bathymetry.setVisibility(state);
 }
+function toggleVelocity(){
+  var state = $("input#velocity").is(":checked");
+  velocity.setVisibility(state);
+}
 function toggleOsm(){
   var state = $("input#osm").is(":checked");
   osm.setVisibility(state);
@@ -150,6 +170,7 @@ function toggleAntialias(){
   updateDepth();
   updateFlood();
   updateBathymetry();
+  updateVelocity();
 }
 function toggleWaves(){
   updateDepth();
@@ -160,6 +181,7 @@ function toggleWaves(){
 function slide(ui, slider){
   $("#time").text(slider.value);
   updateDepth();
+  updateVelocity();
   updateFlood();
 }
 function getTime(){
@@ -186,6 +208,7 @@ $("input#grid").on("change", toggleGrid);
 $("input#depth").on("change", toggleDepth);
 $("input#flood").on("change", toggleFlood);
 $("input#bathymetry").on("change", toggleBathymetry);
+$("input#velocity").on("change", toggleVelocity);
 $("input#osm").on("change", toggleOsm);
 $("input#antialias").on("change", toggleAntialias);
 $("input#waves").on("change", toggleWaves);
@@ -193,6 +216,7 @@ $("input#waves").on("change", toggleWaves);
 toggleGrid();
 toggleFlood();
 toggleBathymetry();
+toggleVelocity();
 updateLayer();
 
 // Click handler

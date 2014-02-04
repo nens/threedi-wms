@@ -15,6 +15,11 @@ depth.drawTile = function(canvas, tilePoint, zoom) {
   loadDepthTile(canvas, zoom, tilePoint.x, tilePoint.y);
 }
 
+var velocity = new L.tileLayer.canvas({zIndex: 1});
+velocity.drawTile = function(canvas, tilePoint, zoom) {
+  loadVelocityTile(canvas, zoom, tilePoint.x, tilePoint.y);
+}
+
 var grid = new L.tileLayer.canvas({zIndex: 3});
 grid.drawTile = function(canvas, tilePoint, zoom) {
   loadGridTile(canvas, zoom, tilePoint.x, tilePoint.y);
@@ -22,6 +27,15 @@ grid.drawTile = function(canvas, tilePoint, zoom) {
   
 // Tile loaders
 function loadBathymetryTile(canvas, zoom, x, y) {  
+  var url = "/3di/tms/" + zoom + "/" + x + "/" + y + ".png";
+  url += "?layers=" + getLayer() + ":bathymetry";
+  url += "&limits=" + info['limits'][0] + "," + info['limits'][1];
+  url += "&antialias=" + getAntialias();
+  canvas.img = new Image();
+  canvas.img.src = url
+  canvas.img.onload = drawData.bind(canvas);
+}
+function loadVelocityTile(canvas, zoom, x, y) {  
   var url = "/3di/tms/" + zoom + "/" + x + "/" + y + ".png";
   url += "?layers=" + getLayer() + ":bathymetry";
   url += "&limits=" + info['limits'][0] + "," + info['limits'][1];
@@ -133,6 +147,14 @@ function toggleBathymetry(){
     map.addLayer(bathymetry);
   }
 }
+function toggleBathymetry(){
+  var state = $("input#bathymetry").is(":checked");
+  if (state == false) {
+    map.removeLayer(velocity);
+  } else {
+    map.addLayer(velocity);
+  }
+}
 function toggleDepth(){
   var state = $("input#depth").is(":checked");
   if (state == false) {
@@ -162,6 +184,7 @@ $("select#layer").on("change", updateLayer);
 $("input#grid").on("change", toggleGrid);
 $("input#depth").on("change", toggleDepth);
 $("input#bathymetry").on("change", toggleBathymetry);
+$("input#velocity").on("change", toggleVelocity);
 $("input#osm").on("change", toggleOsm);
 $("input#antialias").on("change", toggleAntialias);
 

@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.7 (unreleased)
 ----------------
 
+- Added velocity as possible layer.
+
 - Upgrade to latest buildout to fix problems with distribute during
   bootstrap.
 

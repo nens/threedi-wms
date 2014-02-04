@@ -103,6 +103,37 @@ def get_grid_image(masked_array, antialias=1):
     return rgba2image(rgba=rgba, antialias=antialias)
 
 
+def get_velocity_image(masked_array, antialias=0):
+    """ Return imagedata. """
+    # Custom color map
+    cdict = {
+        'green': ((0.0, 170. / 256, 170. / 256),
+                (0.5, 65. / 256, 65. / 256),
+                (1.0, 4. / 256, 4. / 256)),
+        'blue': ((0.0, 200. / 256, 200. / 256),
+                  (0.5, 120. / 256, 120. / 256),
+                  (1.0, 65. / 256, 65. / 256)),
+        'red': ((0.0, 255. / 256, 255. / 256),
+                 (0.5, 221. / 256, 221. / 256),
+                 (1.0, 146. / 256, 146. / 256)),
+        'alpha': ((0.0, 0. / 256, 0. / 256),
+                  (0.1, 64. / 256, 64. / 256),
+                  (0.4, 128. / 256, 128. / 256),
+                 (0.5, 256. / 256, 256. / 256),
+                 (1.0, 256. / 256, 256. / 256)),
+    }
+    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
+
+    normalize = colors.Normalize()
+    #colormap = cm.summer
+    rgba = colormap(normalize(masked_array), bytes=True)
+
+    # Only show velocities that matter.
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.1)] = 0
+
+    return rgba2image(rgba=rgba, antialias=antialias)
+
+
 def get_water_waves(masked_array, anim_frame, antialias=1):
     """
     Calculate waves from velocity array
@@ -197,7 +228,7 @@ def get_response_for_getmap(get_parameters):
         bathymetry, ms = get_data(container=static_data.pyramid,
                                   ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
-    if mode in ['depth', 'grid', 'flood']:
+    if mode in ['depth', 'grid', 'flood', 'velocity']:
         quads, ms = get_data(container=static_data.monolith,
                              ma=True, **get_parameters)
         logging.debug('Got quads in {} ms.'.format(ms))
@@ -264,6 +295,18 @@ def get_response_for_getmap(get_parameters):
     elif mode == 'grid':
         content = get_grid_image(masked_array=quads,
                                  antialias=antialias)
+    elif mode == 'velocity':
+        hmax = get_parameters.get('hmax', 2.0)
+        time = int(get_parameters['time'])
+        dynamic_data_x = DynamicData.get(
+            layer=layer, time=time, use_cache=use_cache, variable='ucx')
+        dynamic_data_y = DynamicData.get(
+            layer=layer, time=time, use_cache=use_cache, variable='ucy')
+        u = np.sqrt(dynamic_data_x.waterlevel[quads] ** 2 + 
+            dynamic_data_y.waterlevel[quads] ** 2)
+
+        content = get_velocity_image(masked_array=u,
+                                     antialias=antialias)
 
     return content, 200, {
         'content-type': 'image/png',
