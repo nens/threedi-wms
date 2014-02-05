@@ -103,9 +103,10 @@ def get_grid_image(masked_array, antialias=1):
     return rgba2image(rgba=rgba, antialias=antialias)
 
 
-def get_velocity_image(masked_array, antialias=0):
+def get_velocity_image(masked_array, antialias=0, vmin=0, vmax=1.):
     """ Return imagedata. """
     # Custom color map
+    normalize = colors.Normalize(vmin=vmin, vmax=vmax)
     cdict = {
         'green': ((0.0, 170. / 256, 170. / 256),
                 (0.5, 65. / 256, 65. / 256),
@@ -124,12 +125,11 @@ def get_velocity_image(masked_array, antialias=0):
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
-    normalize = colors.Normalize()
     #colormap = cm.summer
     rgba = colormap(normalize(masked_array), bytes=True)
 
     # Only show velocities that matter.
-    rgba[..., 3][np.ma.less_equal(masked_array, 0.1)] = 0
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.)] = 0
 
     return rgba2image(rgba=rgba, antialias=antialias)
 
