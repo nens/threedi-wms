@@ -2,7 +2,7 @@ Changelog of threedi-wms
 ===================================================
 
 
-0.7 (unreleased)
+0.7 (2014-02-05)
 ----------------
 
 - Added velocity as possible layer.
