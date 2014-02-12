@@ -17,12 +17,17 @@ from PIL import Image
 from netCDF4 import Dataset
 from netCDF4 import num2date
 from scipy import ndimage
+from scipy import interpolate
 from matplotlib import cm
 from matplotlib import colors
+
+import zmq
 
 import numpy as np
 import ogr
 
+
+import threading
 import collections
 import datetime
 import io
@@ -35,6 +40,9 @@ import shutil
 
 cache = {}
 ogr.UseExceptions()
+
+# global zmq context 
+ctx = zmq.Context()
 
 
 def rgba2image(rgba, antialias=1):
@@ -217,6 +225,12 @@ def get_response_for_getmap(get_parameters):
         cache_path = os.path.join(config.CACHE_DIR, layer.replace('/', ''))
         shutil.rmtree(cache_path)
 
+    if get_parameters.get('messages', 'yes') == 'yes':
+        use_messages = True
+    else:
+        use_messages = False
+
+
     try:
         static_data = StaticData.get(layer=layer, reload=rebuild_static)
     except ValueError:
@@ -224,11 +238,20 @@ def get_response_for_getmap(get_parameters):
     except rasters.LockError:
         return 'Objects not ready, preparation in progress.'
 
+
+    
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
-        bathymetry, ms = get_data(container=static_data.pyramid,
-                                  ma=True, **get_parameters)
+        # lookup bathymetry in target coordiante system
+        if use_messages:
+            container = message_data.get('waterlevel')
+            bathymetry, ms = get_data(container=container,
+                                      ma=True, **get_parameters)
+        else:
+            bathymetry, ms = get_data(container=static_data.pyramid,
+                                      ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
     if mode in ['depth', 'grid', 'flood', 'velocity']:
+        # lookup quads in target coordinate system
         quads, ms = get_data(container=static_data.monolith,
                              ma=True, **get_parameters)
         logging.debug('Got quads in {} ms.'.format(ms))
@@ -243,14 +266,32 @@ def get_response_for_getmap(get_parameters):
     else:
         use_cache = True
 
+
+    
+    interpolate = get_parameters.get('interpolate', 'nearest') 
+        
+
     # The velocity layer has the depth layer beneath it
     if mode == 'depth' or mode == 'velocity':  
         hmax = get_parameters.get('hmax', 2.0)
+
         time = int(get_parameters['time'])
-        dynamic_data = DynamicData.get(
-            layer=layer, time=time, use_cache=use_cache)
-        waterlevel = dynamic_data.waterlevel[quads]
-        depth = waterlevel - bathymetry
+        
+        if not use_messages:
+            dynamic_data = DynamicData.get(
+                layer=layer, time=time, use_cache=use_cache)
+            waterlevel = dynamic_data.waterlevel[quads]
+            depth = waterlevel - bathymetry
+        else:
+            if message_data.grid is None:
+                # we did not receive a grid yet, get it first....
+                message_data.grid = message_data.recv_grid()
+                
+            if message_data.grid and not message_data.L:
+                message_data.update_indices()
+            container = message_data.get("waterlevel", interpolate=interpolate)
+            waterlevel, ms = get_data(container, ma=True, **get_parameters)
+            depth = waterlevel - bathymetry 
 
         if 'anim_frame' in get_parameters:
             # Add wave animation
@@ -265,6 +306,7 @@ def get_response_for_getmap(get_parameters):
             content, img = get_depth_image(masked_array=depth,
                                       antialias=antialias,
                                       hmax=hmax)
+        
     elif mode == 'flood':
         # time is actually the sequence number of the flood
         hmax = get_parameters.get('hmax', 2.0)
@@ -315,6 +357,7 @@ def get_response_for_getmap(get_parameters):
         img.save(buf, 'png')
         content = buf.getvalue()
 
+    
     return content, 200, {
         'content-type': 'image/png',
         'Access-Control-Allow-Origin': '*',
@@ -682,6 +725,133 @@ class StaticData(object):
         self.monolith = monolith
 
 
+
+class MessageData(object):
+    """
+    Container for model message data
+    """
+    @staticmethod
+    def recv_array(socket, flags=0, copy=False, track=False):
+        """receive a numpy array"""
+        md = socket.recv_json(flags=flags)
+        msg = socket.recv(flags=flags, copy=copy, track=track)
+        buf = buffer(msg)
+        A = np.frombuffer(buf, dtype=md['dtype'])
+        A.reshape(md['shape'])
+        return A, md
+    @staticmethod
+    def make_listener(sub_port, data):
+        """make a socket that waits for new data in a thread"""
+        subsock = ctx.socket(zmq.SUB)
+        subsock.connect("tcp://localhost:{port}".format(port=sub_port))
+        subsock.setsockopt(zmq.SUBSCRIBE,b'')
+        def model_listener(socket, data):
+            while True:
+                arr, metadata = MessageData.recv_array(socket)
+                logging.info("got msg {}".format(metadata))
+                data[metadata['name']] = arr
+        thread = threading.Thread(target=model_listener,
+                                  args=[subsock, data]
+                                  )
+        thread.daemon = True
+        thread.start()
+    @staticmethod
+    def recv_grid(req_port=5556, timeout=5000):
+        """connect to the socket to get an updated grid"""
+        req = ctx.socket(zmq.REQ)
+        # Blocks until connection is found
+        req.connect("tcp://localhost:{port}".format(port=req_port))
+        # Wait at most 5 seconds
+        req.setsockopt(zmq.RCVTIMEO, timeout)
+        # We don't have a message format
+        req.send(b"give me the grid")
+        try:
+            grid = req.recv_pyobj()
+        except zmq.error.Again:
+            logging.exception("Grid not received")
+            # We don't have a grid, get it later
+            # reraise
+            raise 
+        logging.info("Grid  received")
+
+        return grid
+        
+    def update_indices(self):
+        """create all the indices that we need for performance"""
+
+        # lookup cell centers
+        if self.grid is None:
+            self.grid = MessageData.recv_grid()
+        grid = self.grid
+        m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
+        n = (grid['nodn']-1)*grid['jmaxk'][grid['nodk']-1]
+        size = grid['imaxk'][grid['nodk']-1]
+        mc = m + size/2.0
+        nc = n + size/2.0
+
+        points = np.c_[mc.ravel(),nc.ravel()]
+        # create array with values
+        values = np.zeros_like(mc.ravel())
+        # create an interpolation function
+        # replace L.values with a an array of size points,nvar to interpolate
+        self.L = interpolate.LinearNDInterpolator(points, values)
+        self.quad_grid = self.grid['quad_grid']
+        s = np.s_[
+            grid['y0p']:grid['y1p']:complex(0,grid['jmax']),
+            grid['x0p']:grid['x1p']:complex(0,grid['imax'])
+        ]
+        self.x, self.y = np.ogrid[s]
+        self.X, self.Y = np.mgrid[s]
+        transform= (float(grid['x0p']),  # xmin
+                    float(grid['dxp']), # xmax
+                    0,            # for rotation
+                    float(grid['y0p']),
+                    0,
+                    float(grid['dyp']))
+        self.transform = transform
+        self.wkt = grid['wkt']
+
+
+    def get(self, layer, interpolate='nearest'):
+        if self.grid is None:
+            self.grid = MessageData.recv_grid()
+        grid = self.grid
+        if layer == 'waterlevel':
+            dps = grid['dps']
+            quad_grid = grid['quad_grid']
+            mask = np.logical_or(quad_grid.mask, dps<-9000)
+
+            s1 = self.data['s1']
+            if interpolate == 'nearest':
+                waterheight = s1[quad_grid.filled(0)]
+            else:
+                self.L.values = np.ascontiguousarray(s1[:,np.newaxis])
+                waterheight = self.L(self.X, self.Y) 
+            array = np.ma.masked_array(waterheight - (-dps ), mask = mask)
+            container = rasters.NumpyContainer(array, self.transform, self.wkt)
+            return container
+        else:
+            raise NotImplemented("working on it")
+    def __init__(self, req_port=5556, sub_port=5558):
+        try:
+            self.grid = self.recv_grid(req_port)
+            self.update_indices()
+        except zmq.error.Again:
+            # We'll get it later
+            self.grid = None
+        # continuously fill data
+        self.data = {}
+
+        self.make_listener(sub_port, self.data)
+
+        # define an interpolation function
+        # use update indices to update these variables
+        self.L = None
+        self.x = None
+        self.y = None
+        self.X = None
+        self.Y = None
+
 class DynamicData(object):
     """
     Container for only the waterlevel data from the netcdf.
@@ -731,3 +901,6 @@ class DynamicData(object):
             else:
                 corrected_time = waterlevel_variable.shape[0] - 1
             self.waterlevel[0:-1] = waterlevel_variable[corrected_time]
+
+# this one is global because we only have one event loop that receives messages
+message_data = MessageData()
