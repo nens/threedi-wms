@@ -386,6 +386,8 @@ def get_response_for_gettimeseries(get_parameters):
     get_parameters_extra.update(get_parameters)
 
     timeformat = get_parameters.get('timeformat', 'iso')  # iso or epoch
+    maxpoints = get_parameters.get('maxpoints', '500')
+    maxpoints = int(maxpoints)
     # For 1D test
     quad = get_parameters.get('quad', None)
     if quad is not None:
@@ -462,6 +464,11 @@ def get_response_for_gettimeseries(get_parameters):
     else:
         time_list = []
     depth_list = compressed_depth.round(3).tolist()
+
+    while len(depth_list) > maxpoints:
+        # Never throw away the last item.
+        depth_list = depth_list[:-1:2] + depth_list[-1:]
+        time_list = time_list[:-1:2] + time_list[-1:]
 
     content_dict = dict(
         timeseries=zip(time_list, depth_list),

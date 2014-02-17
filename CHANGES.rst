@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.8 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Added option maxpoints to gettimeseries: throw away points till you have the max number of points you have :-)
 
 
 0.7 (2014-02-05)
