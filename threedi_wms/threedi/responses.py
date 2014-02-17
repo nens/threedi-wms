@@ -21,6 +21,7 @@ from scipy import interpolate
 from matplotlib import cm
 from matplotlib import colors
 
+from mmi import send_array, recv_array
 import zmq
 
 import numpy as np
@@ -731,15 +732,6 @@ class MessageData(object):
     Container for model message data
     """
     @staticmethod
-    def recv_array(socket, flags=0, copy=False, track=False):
-        """receive a numpy array"""
-        md = socket.recv_json(flags=flags)
-        msg = socket.recv(flags=flags, copy=copy, track=track)
-        buf = buffer(msg)
-        A = np.frombuffer(buf, dtype=md['dtype'])
-        A.reshape(md['shape'])
-        return A, md
-    @staticmethod
     def make_listener(sub_port, data):
         """make a socket that waits for new data in a thread"""
         subsock = ctx.socket(zmq.SUB)
@@ -747,7 +739,7 @@ class MessageData(object):
         subsock.setsockopt(zmq.SUBSCRIBE,b'')
         def model_listener(socket, data):
             while True:
-                arr, metadata = MessageData.recv_array(socket)
+                arr, metadata = recv_array(socket)
                 logging.info("got msg {}".format(metadata))
                 data[metadata['name']] = arr
         thread = threading.Thread(target=model_listener,
@@ -764,7 +756,7 @@ class MessageData(object):
         # Wait at most 5 seconds
         req.setsockopt(zmq.RCVTIMEO, timeout)
         # We don't have a message format
-        req.send(b"give me the grid")
+        req.send_json({"pyobj": True})
         try:
             grid = req.recv_pyobj()
         except zmq.error.Again:
