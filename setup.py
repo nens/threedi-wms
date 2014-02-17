@@ -21,6 +21,7 @@ install_requires = [
     'setuptools',
     'SQLAlchemy',
     'Shapely',
+    'mmi'
     ],
 
 tests_require = [

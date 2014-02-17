@@ -23,32 +23,26 @@
         <label>Timestep: <span id="time">0</span></label>
         <div id="slider"></div><br />
         <label>Toggle layers:</label>
-        <label class="checkbox">
-          <input type="checkbox" id="grid" >Grid
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="depth" checked>Depth
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="velocity" >Velocity
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="flood">Flood
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="bathymetry" >Bathymetry
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="osm" checked>Osm
-        </label>
+        <div><label class="checkbox" for="grid">Grid</label><input type="checkbox" id="grid" /></div>
+        <div><label class="checkbox" for="depth">Depth</label><input type="checkbox" id="depth" checked /></div>
+        <div><label class="checkbox" for="velocity">Velocity</label><input type="checkbox" id="velocity" /></div>
+        <div><label class="checkbox" for="quad_grid">Quads</label><input type="checkbox" id="quad_grid" /></div>
+        <div><label class="checkbox" for="flood">Flood</label><input type="checkbox" id="flood"/></div>
+        <div><label class="checkbox" for="bathymetry">Bathymetry</label><input type="checkbox" id="bathymetry" /></div>
+        <div><label class="checkbox" for="osm">OpenStreetMap</label><input type="checkbox" id="osm" checked/></div>
         <label>Toggle options:</label>
-        <label class="checkbox">
-          <input type="checkbox" id="antialias" >Antialias
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="waves" >Waves
-        </label>
+        <div>
+          <label class="checkbox" for="interpolate">Interpolate</label>
+          <select id="interpolate">
+            <option value="nearest">nearest</option>
+            <option value="linear">linear</option>
+          </select>
+        </div>
+        <div><label class="checkbox" for="antialias">Antialias</label><input type="checkbox" id="antialias" /></div>
+        <div><label class="checkbox" for="messages">Messages</label><input type="checkbox" id="messages" /></div>
+        <div><label class="checkbox" for="waves">Waves</label><input type="checkbox" id="waves" /></div>
       </fieldset>
+      <button id="update">update</button>
     </div>
   </div>
 {% endblock %}

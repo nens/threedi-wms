@@ -6,3 +6,12 @@
 #map img {
     max-width: none;
 }
+
+
+ label, input {
+  display:inline-block;
+}
+
+ label {
+     width:150px; /* or whatever size you want them */
+}
