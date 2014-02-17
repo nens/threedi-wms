@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.8 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Add find link for netCDF4 1.0.4 to buildout.cfg.
 
 
 0.7 (2014-02-05)
