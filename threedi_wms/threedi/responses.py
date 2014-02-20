@@ -16,8 +16,6 @@ from gislib import utils as gislib_utils
 from PIL import Image
 from netCDF4 import Dataset
 from netCDF4 import num2date
-from scipy import ndimage
-import scipy.interpolate
 from matplotlib import cm
 from matplotlib import colors
 
@@ -227,7 +225,7 @@ def get_response_for_getmap(get_parameters):
         layer, mode = layer_parameter.split(':')
     else:
         layer, mode = layer_parameter, 'depth'
-    if get_parameters.get('messages', 'true') == 'true':
+    if get_parameters.get('messages', 'false') == 'true':
         use_messages = True
     else:
         use_messages = False
@@ -263,8 +261,11 @@ def get_response_for_getmap(get_parameters):
         # lookup quads in target coordinate system
         if use_messages:
             container = message_data.get('quad_grid')
-        quads, ms = get_data(container=static_data.monolith,
-                                 ma=True, **get_parameters)
+            quads, ms = get_data(container=container,
+                                     ma=True, **get_parameters)
+        else:
+            quads, ms = get_data(container=static_data.monolith,
+                                     ma=True, **get_parameters)
         logging.debug('Got quads in {} ms.'.format(ms))
 
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
