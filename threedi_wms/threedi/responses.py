@@ -256,7 +256,6 @@ def get_response_for_getmap(get_parameters):
     except rasters.LockError:
         return 'Objects not ready, preparation in progress.'
 
-
     if mode in ['depth', 'grid', 'flood', 'velocity', 'quad_grid']:
         # lookup quads in target coordinate system
         if use_messages:

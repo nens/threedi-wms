@@ -33,6 +33,7 @@ class MessageData(object):
                                   )
         thread.daemon = True
         thread.start()
+
     @staticmethod
     def recv_grid(req_port=5556, timeout=5000):
         """connect to the socket to get an updated grid"""
@@ -53,7 +54,6 @@ class MessageData(object):
         logging.info("Grid  received")
 
         return grid
-        
 
     def getgrid(self):
         if self._grid is None:
@@ -66,14 +66,13 @@ class MessageData(object):
                 logging.exception("Grid not received")
             
         return self._grid
+
     def setgrid(self, value):
         self._grid = value
+
     def delgrid(self):
         del self._grid
     grid = property(getgrid, setgrid, delgrid, "The grid property")
-
-
-
 
     def update_indices(self):
         """create all the indices that we need for performance"""
@@ -107,7 +106,6 @@ class MessageData(object):
                     float(grid['dyp']))
         self.transform = transform
         self.wkt = grid['wkt']
-
 
     def get(self, layer, interpolate='nearest'):
         grid = self.grid
@@ -143,6 +141,7 @@ class MessageData(object):
             return container
         else:
             raise NotImplemented("working on it")
+
     def __init__(self, req_port=5556, sub_port=5558):
         self.transform = None
         # continuously fill data
