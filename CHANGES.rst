@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.9 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Improved memory messages, ports are configurable in gunicorn: bin/gunicorn 'server.app:build_app(req_port=5557,sub_port=5558)' -w 1 -b 0.0.0.0:5000
 
 
 0.8 (2014-02-17)

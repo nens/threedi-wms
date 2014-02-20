@@ -27,6 +27,18 @@ GDAL 1.9.1 or higher. The server will NOT work correctly with a lower version
 (grid is misplaced).
 
 
+Running
+-------
+
+Production::
+
+    $ bin/gunicorn 'server.app:build_app(req_port=5557,sub_port=5558)' -w 1 -b 0.0.0.0:5000
+
+Development::
+
+    $ bin/flask
+
+
 Installation of the wms server
 ------------------------------
 First the basic steps::
