@@ -8,11 +8,14 @@ from __future__ import division
 
 from server import blueprints
 from server import loghelper
+from server.messages import MessageData
 
 import flask
 
 # App
 app = flask.Flask(__name__)
+# this one is global because we only have one event loop that receives messages
+message_data = MessageData()
 
 # Register the blueprints
 for blueprint in blueprints.get_blueprints():
