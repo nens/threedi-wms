@@ -6,7 +6,7 @@ Changelog of threedi-wms
 ----------------
 
 - Add find link for netCDF4 1.0.4 to buildout.cfg.
-
+- New in memory messages (receive numpy arrays through ZMQ sockets).
 
 0.7 (2014-02-05)
 ----------------
