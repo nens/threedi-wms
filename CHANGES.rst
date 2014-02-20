@@ -14,7 +14,7 @@ Changelog of threedi-wms
 - Added option maxpoints to gettimeseries: throw away points till you have the max number of points you have :-)
 
 - Add find link for netCDF4 1.0.4 to buildout.cfg.
-
+- New in memory messages (receive numpy arrays through ZMQ sockets).
 
 0.7 (2014-02-05)
 ----------------

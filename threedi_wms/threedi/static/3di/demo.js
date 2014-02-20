@@ -35,6 +35,10 @@ var grid = new OpenLayers.Layer.WMS(
   "Grid", "", {layers: "basic", transparent: "true"}
 );
 map.addLayer(grid);
+var quad_grid = new OpenLayers.Layer.WMS(
+    "QuadGrid", "", {layers: "basic", transparent: "true"}
+);
+map.addLayer(quad_grid);
 var osm = new OpenLayers.Layer.OSM();
 map.addLayer(osm);
 
@@ -56,10 +60,26 @@ function getWaves(){
     return '';
   }
 }
+function getWaves(){
+    if ($("input#waves").is(":checked")) {
+        return '&anim_frame=0';
+    } else {
+        return '';
+    }
+}
+
 function getLayer(){
   return $('select#layer option:selected').val();
 }
+
+function getMessages(){
+    return $('input#messages').is(":checked") + "&random=" + Math.random() ;
+}
   
+
+function getInterpolate(){
+    return $('select#interpolate option:selected').val();
+}
 // Updaters
 function updateLayer(){
   // Determine bounds
@@ -80,6 +100,7 @@ function updateInfo(data){
   info = data;
   updateSlider();
   updateGrid();
+  updateQuadGrid();
   updateDepth();
   updateFlood();
   updateBathymetry();
@@ -97,16 +118,26 @@ function updateGrid(){
   grid.setUrl(url);
   grid.redraw();
 }
+function updateQuadGrid(){
+    var url = "/3di/wms";
+    url += "?LAYERS=" + getLayer() + ":quad_grid";
+    url += "&antialias=" + getAntialias();
+    quad_grid.setUrl(url);
+    quad_grid.redraw();
+}
 
 function updateDepth(){
   var url = "/3di/wms";
   url += "?LAYERS=" + getLayer() + ":depth";
   url += "&time=" + getTime();
   url += "&antialias=" + getAntialias();
+  url += "&messages=" + getMessages();
+  url += "&interpolate=" + getInterpolate();
   url += "&nocache=yes";
   url += getWaves();
   depth.setUrl(url);
   depth.redraw();
+  console.log(url);
 }
 
 function updateFlood(){
@@ -114,6 +145,7 @@ function updateFlood(){
   url += "?LAYERS=" + getLayer() + ":flood";
   url += "&time=" + getTime();
   url += "&antialias=" + getAntialias();
+  url += "&messages=" + getMessages();
   url += "&nocache=yes";
   url += getWaves();
   flood.setUrl(url);
@@ -125,6 +157,7 @@ function updateBathymetry(){
   var url = "/3di/wms";
   url += "?LAYERS=" + getLayer() + ":bathymetry";
   url += "&antialias=" + getAntialias();
+  url += "&messages=" + getMessages();
   url += "&limits=" + info.limits[0] + "," + info.limits[1];
   bathymetry.setUrl(url);
   bathymetry.redraw();
@@ -135,6 +168,7 @@ function updateVelocity(){
   var url = "/3di/wms";
   url += "?LAYERS=" + getLayer() + ":velocity";
   url += "&time=" + getTime();
+  url += "&messages=" + getMessages();
   url += "&antialias=" + getAntialias();
   url += "&nocache=yes";
   velocity.setUrl(url);
@@ -144,6 +178,11 @@ function updateVelocity(){
 function toggleGrid(){
   var state = $("input#grid").is(":checked");
   grid.setVisibility(state);
+}
+
+function toggleQuadGrid(){
+    var state = $("input#quad_grid").is(":checked");
+    quad_grid.setVisibility(state);
 }
 function toggleDepth(){
   var state = $("input#depth").is(":checked");
@@ -167,6 +206,7 @@ function toggleOsm(){
 }
 function toggleAntialias(){
   updateGrid();
+  updateQuadGrid();
   updateDepth();
   updateFlood();
   updateBathymetry();
@@ -205,6 +245,7 @@ $("#slider").slider({
 // Bind controls
 $("select#layer").on("change", updateLayer);
 $("input#grid").on("change", toggleGrid);
+$("input#quad_grid").on("change", toggleQuadGrid);
 $("input#depth").on("change", toggleDepth);
 $("input#flood").on("change", toggleFlood);
 $("input#bathymetry").on("change", toggleBathymetry);
@@ -212,8 +253,14 @@ $("input#velocity").on("change", toggleVelocity);
 $("input#osm").on("change", toggleOsm);
 $("input#antialias").on("change", toggleAntialias);
 $("input#waves").on("change", toggleWaves);
+$("#update").on("click", function(){
+    updateDepth();
+    console.log("updated depth");
+});
+
 
 toggleGrid();
+toggleQuadGrid();
 toggleFlood();
 toggleBathymetry();
 toggleVelocity();
@@ -279,7 +326,6 @@ OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
     );
   }
 });
-
 var click = new OpenLayers.Control.Click();
 map.addControl(click);
 click.activate();
