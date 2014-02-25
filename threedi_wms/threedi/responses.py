@@ -584,13 +584,15 @@ def get_response_for_getprofile(get_parameters):
 
         bathymetry, ms = get_data(container=bathy_container,
                                   ma=True, **get_parameters_extra)
-        bathymetry = -bathymetry
+        bathymetry = -bathymetry  # Strange stuff, it is inverted.
         logging.debug('Got bathymetry in {} ms.'.format(ms))
 
         waterlevel_container = message_data.get("waterlevel", interpolate=interpolate)
+        logging.debug('Got depth container.')
         waterlevel, ms = get_data(
             waterlevel_container, ma=True, **get_parameters_extra)
         depth = waterlevel
+        logging.debug('Got depth.')
     else:
         static_data = StaticData.get(layer=layer)
         quad_container = static_data.monolith
