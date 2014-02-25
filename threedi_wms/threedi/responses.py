@@ -626,7 +626,7 @@ def get_response_for_getquantity(get_parameters):
 
     # Determine layer and time
     layer = get_parameters['layers']
-    time = int(get_parameters['time'])
+    time = int(get_parameters.get('time', 0))
     quantity = get_parameters['quantity']
     try:
         decimals = int(get_parameters['decimals'])

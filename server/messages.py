@@ -50,7 +50,7 @@ class MessageData(object):
         # Wait at most 5 seconds
         req.setsockopt(zmq.RCVTIMEO, timeout)
         # We don't have a message format
-        req.send_json({"action": "send grid"})
+        req.send_json({"action": "send init"})
         try:
             grid = req.recv_pyobj()
         except zmq.error.Again:
@@ -58,7 +58,7 @@ class MessageData(object):
             # We don't have a grid, get it later
             # reraise
             raise 
-        logging.info("Grid  received")
+        logging.info("Grid received")
 
         return grid
 
