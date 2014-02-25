@@ -53,19 +53,19 @@ class MessageData(object):
         req.send_json({"action": "send init"})
         try:
             grid = req.recv_pyobj()
+            logging.info("Grid received: %r" % grid.keys())
         except zmq.error.Again:
             logging.exception("Grid not received")
             # We don't have a grid, get it later
             # reraise
             raise 
-        logging.info("Grid received")
 
         return grid
 
     def getgrid(self):
         if self._grid is None:
             try:
-                self._grid = MessageData.recv_grid()
+                self._grid = MessageData.recv_grid(req_port=self.req_port)
                 logging.debug("Grid received")
                 self.update_indices()
                 logging.debug("Indices created")
@@ -120,6 +120,9 @@ class MessageData(object):
             dps = grid["dps"]
             quad_grid = grid['quad_grid']
             mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])
+            if 's1' not in self.data:
+                logging.info('Requesting init data...')
+                self.data = self.recv_grid(req_port=self.req_port)  # triggers init data
             s1 = self.data['s1']
             logging.debug("shape s1: {}".format(s1.shape))
             logging.debug("quad_grid, min-max: {} {}".format(quad_grid.min(), quad_grid.max()))
@@ -150,6 +153,9 @@ class MessageData(object):
             raise NotImplemented("working on it")
 
     def __init__(self, req_port=5556, sub_port=5558):
+        self.req_port = req_port
+        self.sub_port = sub_port
+
         self.transform = None
         # continuously fill data
         self.data = {}

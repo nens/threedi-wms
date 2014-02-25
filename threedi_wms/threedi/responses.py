@@ -37,8 +37,6 @@ cache = {}
 ogr.UseExceptions()
 
 
-
-
 def rgba2image(rgba, antialias=1):
     """ return imagedata. """
     size = [d // antialias for d in rgba.shape[1::-1]]
@@ -47,8 +45,6 @@ def rgba2image(rgba, antialias=1):
     buf = io.BytesIO()
     image.save(buf, 'png')
     return buf.getvalue(), image
-
-
 
 
 def get_depth_image(masked_array, waves=None, antialias=1, hmin=0, hmax=2):
@@ -105,7 +101,6 @@ def get_grid_image(masked_array, antialias=1):
     rgba[index] = (255, 0, 0, 255)
     rgba[~index] = (255, 0, 0, 0)
     return rgba2image(rgba=rgba, antialias=antialias)
-
 
 
 def get_quad_grid_image(masked_array, antialias=1):
@@ -250,13 +245,14 @@ def get_response_for_getmap(get_parameters):
         cache_path = os.path.join(config.CACHE_DIR, layer.replace('/', ''))
         shutil.rmtree(cache_path)
 
-    # Also for messages we use the pyramid data.
-    try:
-        static_data = StaticData.get(layer=layer, reload=rebuild_static)
-    except ValueError:
-        return 'Objects not ready, starting preparation.'
-    except rasters.LockError:
-        return 'Objects not ready, preparation in progress.'
+    # Pyramid + monolith, when not using messages
+    if not use_messages:
+        try:
+            static_data = StaticData.get(layer=layer, reload=rebuild_static)
+        except ValueError:
+            return 'Objects not ready, starting preparation.'
+        except rasters.LockError:
+            return 'Objects not ready, preparation in progress.'
 
     if mode in ['depth', 'grid', 'flood', 'velocity', 'quad_grid']:
         # lookup quads in target coordinate system
@@ -524,7 +520,20 @@ def get_response_for_gettimeseries(get_parameters):
 
 
 def get_response_for_getprofile(get_parameters):
-    """ Return json with profile. """
+    """ Return json with profile. 
+
+    get_parameters(may be incomplete):
+
+    use_messages: 'true' / 'false'
+    line
+    layers
+    """
+
+    if get_parameters.get('messages', 'false') == 'true':
+        use_messages = True
+    else:
+        use_messages = False
+
     # This request features a point, but an bbox is needed for reprojection.
     # Note that GetEnvelope() returns x1, x2, y1, y2 but bbox is x1, y1, x2, y2
     geometry = ogr.CreateGeometryFromWkt(str(get_parameters['line']))
