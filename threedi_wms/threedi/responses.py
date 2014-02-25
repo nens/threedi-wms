@@ -529,10 +529,14 @@ def get_response_for_getprofile(get_parameters):
     layers
     """
 
+    # No global import, celery doesn't want this.
+    from server.app import message_data 
+
     if get_parameters.get('messages', 'false') == 'true':
         use_messages = True
     else:
         use_messages = False
+    interpolate = get_parameters.get('interpolate', 'nearest')
 
     # This request features a point, but an bbox is needed for reprojection.
     # Note that GetEnvelope() returns x1, x2, y1, y2 but bbox is x1, y1, x2, y2
@@ -543,6 +547,7 @@ def get_response_for_getprofile(get_parameters):
     bbox = ','.join(map(str, bbox_array))
 
     # set longest side to fixed size
+    # Not clear why we need this...
     rastersize = 512
     x_extent = bbox_array[2] - bbox_array[0]
     y_extent = bbox_array[3] - bbox_array[1]
@@ -569,39 +574,40 @@ def get_response_for_getprofile(get_parameters):
     get_parameters_extra.update(get_parameters)
 
     # get quads, bathymetry, depth
-    # if use_messages:
-    #     quad_container = message_data.get('quad_grid')
-    #     bathy_container = message_data.get('bathymetry')
+    if use_messages:
+        quad_container = message_data.get('quad_grid')
+        bathy_container = message_data.get('bathymetry')
 
-    #     quads, ms = get_data(container=quad_container,
-    #                              ma=True, **get_parameters)
-    #     logging.debug('Got quads in {} ms.'.format(ms))
+        quads, ms = get_data(container=quad_container,
+                                 ma=True, **get_parameters_extra)
+        logging.debug('Got quads in {} ms.'.format(ms))
 
-    #     bathymetry, ms = get_data(container=bathy_container,
-    #                               ma=True, **get_parameters_extra)
-    #     logging.debug('Got bathymetry in {} ms.'.format(ms))
+        bathymetry, ms = get_data(container=bathy_container,
+                                  ma=True, **get_parameters_extra)
+        logging.debug('Got bathymetry in {} ms.'.format(ms))
 
-    #     waterlevel_container = message_data.get("waterlevel", interpolate=interpolate)
-    #     waterlevel, ms = get_data(waterlevel_container, ma=True, **get_parameters)
-    #     depth = waterlevel
-    # else:
-    static_data = StaticData.get(layer=layer)
-    quad_container = static_data.monolith
-    bathy_container = static_data.pyramid
+        waterlevel_container = message_data.get("waterlevel", interpolate=interpolate)
+        waterlevel, ms = get_data(
+            waterlevel_container, ma=True, **get_parameters_extra)
+        depth = waterlevel - bathymetry
+    else:
+        static_data = StaticData.get(layer=layer)
+        quad_container = static_data.monolith
+        bathy_container = static_data.pyramid
 
-    quads, ms = get_data(container=quad_container,
-                             ma=True, **get_parameters)
-    logging.debug('Got quads in {} ms.'.format(ms))
+        quads, ms = get_data(container=quad_container,
+                                 ma=True, **get_parameters_extra)
+        logging.debug('Got quads in {} ms.'.format(ms))
 
-    bathymetry, ms = get_data(container=bathy_container,
-                              ma=True, **get_parameters_extra)
-    logging.debug('Got bathymetry in {} ms.'.format(ms))
+        bathymetry, ms = get_data(container=bathy_container,
+                                  ma=True, **get_parameters_extra)
+        logging.debug('Got bathymetry in {} ms.'.format(ms))
 
-    # Determine the waterlevel
-    dynamic_data = DynamicData.get(
-        layer=layer, time=time, use_cache=False)
-    waterlevel = dynamic_data.waterlevel[quads]
-    depth = waterlevel - bathymetry
+        # Determine the waterlevel
+        dynamic_data = DynamicData.get(
+            layer=layer, time=time, use_cache=False)
+        waterlevel = dynamic_data.waterlevel[quads]
+        depth = waterlevel - bathymetry
 
     # Sample the depth using the cellsize
     magicline = vector.MagicLine(np.array(geometry.GetPoints())[:, :2])
