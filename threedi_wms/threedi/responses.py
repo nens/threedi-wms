@@ -567,12 +567,33 @@ def get_response_for_getprofile(get_parameters):
     # Get height and quad
     get_parameters_extra = dict(width=width, height=height, bbox=bbox)
     get_parameters_extra.update(get_parameters)
+
+    # get quads, bathymetry, depth
+    # if use_messages:
+    #     quad_container = message_data.get('quad_grid')
+    #     bathy_container = message_data.get('bathymetry')
+
+    #     quads, ms = get_data(container=quad_container,
+    #                              ma=True, **get_parameters)
+    #     logging.debug('Got quads in {} ms.'.format(ms))
+
+    #     bathymetry, ms = get_data(container=bathy_container,
+    #                               ma=True, **get_parameters_extra)
+    #     logging.debug('Got bathymetry in {} ms.'.format(ms))
+
+    #     waterlevel_container = message_data.get("waterlevel", interpolate=interpolate)
+    #     waterlevel, ms = get_data(waterlevel_container, ma=True, **get_parameters)
+    #     depth = waterlevel
+    # else:
     static_data = StaticData.get(layer=layer)
-    quads, ms = get_data(container=static_data.monolith,
-                         ma=True, **get_parameters_extra)
+    quad_container = static_data.monolith
+    bathy_container = static_data.pyramid
+
+    quads, ms = get_data(container=quad_container,
+                             ma=True, **get_parameters)
     logging.debug('Got quads in {} ms.'.format(ms))
 
-    bathymetry, ms = get_data(container=static_data.pyramid,
+    bathymetry, ms = get_data(container=bathy_container,
                               ma=True, **get_parameters_extra)
     logging.debug('Got bathymetry in {} ms.'.format(ms))
 
