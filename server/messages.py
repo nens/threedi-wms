@@ -18,18 +18,25 @@ class MessageData(object):
     Container for model message data
     """
     @staticmethod
-    def make_listener(sub_port, data):
+    def make_listener(message_data, sub_port):
         """make a socket that waits for new data in a thread"""
         subsock = ctx.socket(zmq.SUB)
         subsock.connect("tcp://localhost:{port}".format(port=sub_port))
         subsock.setsockopt(zmq.SUBSCRIBE,b'')
-        def model_listener(socket, data):
+        def model_listener(socket, message_data):
             while True:
                 arr, metadata = recv_array(socket)
                 logging.info("got msg {}".format(metadata))
-                data[metadata['name']] = arr
+                if 'model' in metadata:
+                    if metadata['model'] != message_data.loaded_model:
+                        # New model detected
+                        logging.info('New model detected: %r' % metadata['model'])
+                        message_data.loaded_model = metadata['model']
+                        message_data.data = {}
+                        message_data.grid = None
+                message_data.data[metadata['name']] = arr
         thread = threading.Thread(target=model_listener,
-                                  args=[subsock, data]
+                                  args=[subsock, message_data]
                                   )
         thread.daemon = True
         thread.start()
@@ -146,9 +153,10 @@ class MessageData(object):
         self.transform = None
         # continuously fill data
         self.data = {}
+        self.loaded_model = None
         self._grid = None
         self.grid
-        self.make_listener(sub_port, self.data)
+        self.make_listener(self, sub_port)
 
         # define an interpolation function
         # use update indices to update these variables

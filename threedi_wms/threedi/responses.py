@@ -242,6 +242,7 @@ def get_response_for_getmap(get_parameters):
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
+    # TODO: I don't think this is effective. It is also not used.
     if rebuild_static:
         logging.debug('Got rebuild_static {}, deleting cache.'.format(layer))
         # delete var/cache/3di/<model> directory
@@ -249,6 +250,7 @@ def get_response_for_getmap(get_parameters):
         cache_path = os.path.join(config.CACHE_DIR, layer.replace('/', ''))
         shutil.rmtree(cache_path)
 
+    # Also for messages we use the pyramid data.
     try:
         static_data = StaticData.get(layer=layer, reload=rebuild_static)
     except ValueError:
