@@ -8,6 +8,7 @@ import logging
 import threading
 import numpy as np
 
+import time  # stopwatch
 
 # global zmq context 
 ctx = zmq.Context()
@@ -116,32 +117,47 @@ class MessageData(object):
 
     def get(self, layer, interpolate='nearest'):
         grid = self.grid
+        time_start = time.time()
         if layer == 'waterlevel':
+            logging.debug('start waterlevel...')
             dps = grid["dps"]
             quad_grid = grid['quad_grid']
-            mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])
+            logging.debug('or reduce...')
+            logging.debug('time %2f' % (time.time() - time_start))
+            mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
+            logging.debug('time %2f' % (time.time() - time_start))
+            logging.debug('check s1...')
             if 's1' not in self.data:
                 logging.info('Requesting init data...')
                 self.data = self.recv_grid(req_port=self.req_port)  # triggers init data
+            logging.debug('s1...')
             s1 = self.data['s1']
-            logging.debug("shape s1: {}".format(s1.shape))
-            logging.debug("quad_grid, min-max: {} {}".format(quad_grid.min(), quad_grid.max()))
+            #logging.debug("shape s1: {}".format(s1.shape))
+            #logging.debug("quad_grid, min-max: {} {}".format(quad_grid.min(), quad_grid.max()))
             if interpolate == 'nearest':
-                waterheight = s1[quad_grid.filled(0)]
-                logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
+                logging.debug('nearest interpolation...')
+                logging.debug('time %2f' % (time.time() - time_start))
+                waterheight = s1[quad_grid.filled(0)]  # 1.5 seconds
+                logging.debug('time %2f' % (time.time() - time_start))
+                #logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
             else:
+                logging.debug('linear interpolation...')
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 self.L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 L = self.L
                 waterheight = L(self.X, self.Y) 
                 mask = np.logical_or(np.isnan(waterheight), mask)
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
-                logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
-                
+                #logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
+             
+            logging.debug('waterlevel...')   
             waterlevel = waterheight - (-dps)
-            logging.debug("s1  - - dps: {} {}".format(waterlevel.min(), waterlevel.max()))
+            #logging.debug("s1  - - dps: {} {}".format(waterlevel.min(), waterlevel.max()))
+            logging.debug('masked array...')   
             array = np.ma.masked_array(waterlevel, mask = mask)
+            logging.debug('container...')   
             container = rasters.NumpyContainer(array, self.transform, self.wkt)
+            logging.debug('time %2f' % (time.time() - time_start))
             return container
         elif layer == 'bathymetry':
             container = rasters.NumpyContainer(grid['dps'], self.transform, self.wkt)
