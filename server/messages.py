@@ -41,6 +41,8 @@ class MessageData(object):
                         message_data.init_grids()
                 #message_data.data[metadata['name']] = arr
                 message_data.is_updating.acquire()
+                if metadata['name'] in message_data.grid:
+                    del message_data.grid[metadata['name']]  # saves memory
                 message_data.grid[metadata['name']] = arr
                 logging.debug('I have data for: %r' % message_data.grid.keys())
                 if metadata['name'] == 'dps' or metadata['name'] == 'quad_grid':
@@ -146,6 +148,7 @@ class MessageData(object):
     def init_grids(self):
         logging.debug('init grids, acquire semaphore...')
         self.is_updating.acquire()
+        del self.grid
         time_start = time.time()
         logging.debug('receiving grids...')
         self._grid = self.recv_grid(req_port=self.req_port)  # triggers init data
@@ -235,8 +238,6 @@ class MessageData(object):
         self.loaded_model = None
         self._grid = {}
         #self.grid
-        self.init_grids()  # doesn't seem to work?
-        self.make_listener(self, sub_port)
 
         # define an interpolation function
         # use update indices to update these variables
@@ -245,3 +246,7 @@ class MessageData(object):
         self.y = None
         self.X = None
         self.Y = None
+
+        self.init_grids()  # doesn't seem to work?
+        self.make_listener(self, sub_port)
+
