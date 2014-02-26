@@ -177,63 +177,69 @@ class MessageData(object):
             self.is_updating.acquire()
             dps = grid['dps']
             quad_grid = grid['quad_grid']
-            #logging.debug('or reduce...')
-            #logging.debug('time %2f' % (time.time() - time_start))
-            #mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
             mask = grid['quad_grid_dps_mask']
-            #logging.debug('time %2f' % (time.time() - time_start))
-            #logging.debug('check s1...')
-            # if 's1' not in self.grid:
-            #     logging.info('Requesting init data...')
-            #     self.init_grids()
-            #logging.debug('s1...')
-            #s1 = self.data['s1']
             s1 = self.grid['s1']
-            #logging.debug("shape s1: {}".format(s1.shape))
-            #logging.debug("quad_grid, min-max: {} {}".format(quad_grid.min(), quad_grid.max()))
+
             if interpolate == 'nearest':
                 logging.debug('nearest interpolation...')
                 logging.debug('time %2f' % (time.time() - time_start))
-                waterheight = s1[quad_grid.filled(0)]  # 1.5 seconds (all quads!!)
+                waterheight = s1[quad_grid.filled(0)]  # 2 seconds (all quads!!)
                 logging.debug('time %2f' % (time.time() - time_start))
                 #logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
             else:
-                logging.debug('linear interpolation...')
+                logging.debug('linear interpolation...')  # slow!
+                logging.debug('time %2f' % (time.time() - time_start))
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 self.L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 L = self.L
                 waterheight = L(self.X, self.Y) 
                 mask = np.logical_or(np.isnan(waterheight), mask)
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
+                logging.debug('time %2f' % (time.time() - time_start))
                 #logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
              
             logging.debug('waterlevel...')   
-            waterlevel = waterheight - (-dps)
+            logging.debug('time %2f' % (time.time() - time_start))
+            waterlevel = waterheight - (-dps)  # 0.5 second
+            logging.debug('time %2f' % (time.time() - time_start))
             #logging.debug("s1  - - dps: {} {}".format(waterlevel.min(), waterlevel.max()))
             logging.debug('masked array...')   
+            logging.debug('time %2f' % (time.time() - time_start))
             array = np.ma.masked_array(waterlevel, mask = mask)
+            logging.debug('time %2f' % (time.time() - time_start))
             logging.debug('container...')   
+            logging.debug('time %2f' % (time.time() - time_start))
             container = rasters.NumpyContainer(array, self.transform, self.wkt)
             logging.debug('time %2f' % (time.time() - time_start))
             self.is_updating.release()
 
             return container
-        elif layer == 'bathymetry':
-            if 'dps' not in self.grid:
-                # temp fix
-                self.init_grids()
+        elif layer == 'dps':
+            # if 'dps' not in self.grid:
+            #     # temp fix
+            #     self.init_grids()
+            logging.debug('bathymetry')
+            logging.debug('time %2f' % (time.time() - time_start))
             container = rasters.NumpyContainer(
                 grid['dps'], self.transform, self.wkt)
+            logging.debug('time %2f' % (time.time() - time_start))
             return container
         elif layer == 'quad_grid':
-            if 'quad_grid' not in self.grid:
-                # temp fix
-                self.init_grids()
+            # if 'quad_grid' not in self.grid:
+            #     # temp fix
+            #     self.init_grids()
+            logging.debug('quad_grid')
+            logging.debug('time %2f' % (time.time() - time_start))
             container = rasters.NumpyContainer(
                 self.grid['quad_grid'], self.transform, self.wkt)
+            logging.debug('time %2f' % (time.time() - time_start))
             return container
         else:
             raise NotImplemented("working on it")
+
+    def get_raw(self, layer):
+        """testing"""
+        return self.grid[layer]
 
     def __init__(self, req_port=5556, sub_port=5558):
         self.req_port = req_port

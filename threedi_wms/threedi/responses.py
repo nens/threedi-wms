@@ -31,6 +31,7 @@ import logging
 import math
 import os
 import shutil
+import time as _time # stop watch
 
 
 cache = {}
@@ -142,35 +143,35 @@ def get_velocity_image(masked_array, antialias=0, vmin=0, vmax=1.):
     return rgba2image(rgba=rgba, antialias=antialias)
 
 
-def get_water_waves(masked_array, anim_frame, antialias=1):
-    """
-    Calculate waves from velocity array
-    """
-    # Animating 'waves'
-    y_shape, x_shape = masked_array.shape
-    x, y = np.mgrid[0:y_shape, 0:x_shape]
-    offset = anim_frame * 0.01
-    period = masked_array.filled(1)
-    amplitude = masked_array.filled(0)
-    waves = (np.sin(np.pi * 64 / period *
-             (offset + x / x_shape + y / y_shape)) * amplitude +
-             np.sin(np.pi * 60 / period *
-             (offset + y / y_shape)) * amplitude)
+# def get_water_waves(masked_array, anim_frame, antialias=1):
+#     """
+#     Calculate waves from velocity array
+#     """
+#     # Animating 'waves'
+#     y_shape, x_shape = masked_array.shape
+#     x, y = np.mgrid[0:y_shape, 0:x_shape]
+#     offset = anim_frame * 0.01
+#     period = masked_array.filled(1)
+#     amplitude = masked_array.filled(0)
+#     waves = (np.sin(np.pi * 64 / period *
+#              (offset + x / x_shape + y / y_shape)) * amplitude +
+#              np.sin(np.pi * 60 / period *
+#              (offset + y / y_shape)) * amplitude)
 
-    # 'Shade' by convolution
-    waves_shade = ndimage.filters.convolve(
-        waves,
-        np.array([[-.2, -0.5, -0.7, -.5, .3],
-                  [-.5, -0.7, -1.5,  .4, .5],
-                  [-.7, -1.5,  0.0, 1.5, .7],
-                  [-.5, -0.4,  1.5,  .7, .5],
-                  [-.3,  0.5,  0.7,  .5, .2]]))
+#     # 'Shade' by convolution
+#     waves_shade = ndimage.filters.convolve(
+#         waves,
+#         np.array([[-.2, -0.5, -0.7, -.5, .3],
+#                   [-.5, -0.7, -1.5,  .4, .5],
+#                   [-.7, -1.5,  0.0, 1.5, .7],
+#                   [-.5, -0.4,  1.5,  .7, .5],
+#                   [-.3,  0.5,  0.7,  .5, .2]]))
 
-    normalize = colors.Normalize(vmin=0, vmax=24)
+#     normalize = colors.Normalize(vmin=0, vmax=24)
 
-    return get_depth_image(masked_array,
-                           antialias=antialias,
-                           waves=normalize(waves_shade))
+#     return get_depth_image(masked_array,
+#                            antialias=antialias,
+#                            waves=normalize(waves_shade))
 
 
 def get_data(container, ma=False, **get_parameters):
@@ -268,39 +269,43 @@ def get_response_for_getmap(get_parameters):
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
         # lookup bathymetry in target coordiante system
         if use_messages:
-            container = message_data.get('bathymetry')
-            bathymetry, ms = get_data(container=container,
-                                      ma=True, **get_parameters)
+            container = message_data.get('dps')
+            dps, ms = get_data(container=container,
+                               ma=True, **get_parameters)
+            bathymetry = -dps
         else:
             bathymetry, ms = get_data(container=static_data.pyramid,
                                       ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
     # The velocity layer has the depth layer beneath it
     if mode in {'depth', 'velocity'}:
+        time_start = _time.time()
         if not use_messages:
             dynamic_data = DynamicData.get(
                 layer=layer, time=time, use_cache=use_cache)
             waterlevel = dynamic_data.waterlevel[quads]
             depth = waterlevel - bathymetry
         else:
+            # TODO: somehow this is way slower than the DynamicData method.
             # TODO: cleanup bathymetry. Best do substraction before interpolation
-            container = message_data.get("waterlevel", interpolate=interpolate)
-            waterlevel, ms = get_data(container, ma=True, **get_parameters)
-            depth = waterlevel
+            if interpolate == 'linear':
+                # per pixel data is calculated for probably the whole model area --> slow!
+                container = message_data.get("waterlevel", interpolate=interpolate)
+                waterlevel, ms = get_data(container, ma=True, **get_parameters)
+                depth = waterlevel
+            else:
+                # Don't know how it works, but it works and it's fast
 
-        if 'anim_frame' in get_parameters:
-            # Add wave animation
-            content = get_water_waves(
-                masked_array=depth,
-                anim_frame=int(get_parameters['anim_frame']),
-                antialias=antialias,
-                hmax=hmax
-            )
-        else:
-            # Direct image
-            content, img = get_depth_image(masked_array=depth,
-                                      antialias=antialias,
-                                      hmax=hmax)
+                # The values of the indices of s1 are mapped on the
+                # quad, the quad (now filled with values) is the result.
+                waterlevel = message_data.get_raw('s1')[quads]
+                depth = waterlevel - bathymetry
+        logging.debug('Get depth in {} s.'.format(_time.time()-time_start))
+
+        # Direct image
+        content, img = get_depth_image(masked_array=depth,
+                                  antialias=antialias,
+                                  hmax=hmax)
     elif mode == 'flood':
         # time is actually the sequence number of the flood
         hmax = get_parameters.get('hmax', 2.0)
@@ -312,18 +317,10 @@ def get_response_for_getmap(get_parameters):
         waterlevel = dynamic_data.waterlevel[quads]
         depth = waterlevel - bathymetry
 
-        if 'anim_frame' in get_parameters:
-            # Add wave animation
-            content = get_water_waves(
-                masked_array=depth,
-                anim_frame=int(get_parameters['anim_frame']),
-                antialias=antialias
-            )
-        else:
-            # Direct image
-            content, img  = get_depth_image(masked_array=depth,
-                                      antialias=antialias,
-                                      hmax=hmax)
+        # Direct image
+        content, img  = get_depth_image(masked_array=depth,
+                                  antialias=antialias,
+                                  hmax=hmax)
     elif mode == 'bathymetry':
         limits = map(float, get_parameters['limits'].split(','))
         content, img  = get_bathymetry_image(masked_array=bathymetry,
@@ -575,28 +572,37 @@ def get_response_for_getprofile(get_parameters):
 
     # get quads, bathymetry, depth
     if use_messages:
+        time_start = _time.time()
         quad_container = message_data.get('quad_grid')
-        bathy_container = message_data.get('bathymetry')
+        dps_container = message_data.get('dps')
+        logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
 
         quads, ms = get_data(container=quad_container,
                                  ma=True, **get_parameters_extra)
         logging.debug('Got quads in {} ms.'.format(ms))
 
-        bathymetry, ms = get_data(container=bathy_container,
+        dps, ms = get_data(container=dps_container,
                                   ma=True, **get_parameters_extra)
-        bathymetry = -bathymetry  # Strange stuff, it is inverted.
-        logging.debug('Got bathymetry in {} ms.'.format(ms))
+        logging.debug('Got dps in {} ms.'.format(ms))
 
-        waterlevel_container = message_data.get("waterlevel", interpolate=interpolate)
-        logging.debug('Got depth container.')
-        waterlevel, ms = get_data(
-            waterlevel_container, ma=True, **get_parameters_extra)
-        depth = waterlevel
-        logging.debug('Got depth.')
+        if interpolate == 'linear':
+            # Not tested, probably very slow!!
+            waterlevel_container = message_data.get("waterlevel", interpolate=interpolate)
+            logging.debug('Got depth container.')
+            waterlevel, ms = get_data(
+                waterlevel_container, ma=True, **get_parameters_extra)
+            depth = waterlevel
+            logging.debug('Got depth.')
+        else:
+            waterlevel = message_data.get_raw('s1')[quads]
+            depth = waterlevel + dps
+        bathymetry = -dps  # for later use
     else:
+        time_start = _time.time()
         static_data = StaticData.get(layer=layer)
         quad_container = static_data.monolith
         bathy_container = static_data.pyramid
+        logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
 
         quads, ms = get_data(container=quad_container,
                                  ma=True, **get_parameters_extra)
@@ -805,7 +811,8 @@ class DynamicData(object):
             netcdf_path = utils.get_netcdf_path(layer)
         with Dataset(netcdf_path) as dataset:
             waterlevel_variable = dataset.variables[variable]
-            #logging.debug(waterlevel_variable)
+            # logging.debug("waterlevel_variable shape")
+            # logging.debug(waterlevel_variable.shape)
 
             # Initialize empty array with one element more than amount of quads
             self.waterlevel = np.ma.array(
@@ -819,6 +826,3 @@ class DynamicData(object):
             else:
                 corrected_time = waterlevel_variable.shape[0] - 1
             self.waterlevel[0:-1] = waterlevel_variable[corrected_time]
-
-# # this one is global because we only have one event loop that receives messages
-# message_data = MessageData()
