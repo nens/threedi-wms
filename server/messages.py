@@ -10,6 +10,8 @@ import numpy as np
 
 import time  # stopwatch
 
+from threading import BoundedSemaphore
+
 # global zmq context 
 ctx = zmq.Context()
 
@@ -29,13 +31,22 @@ class MessageData(object):
                 arr, metadata = recv_array(socket)
                 logging.info("got msg {}".format(metadata))
                 if 'model' in metadata:
-                    if metadata['model'] != message_data.loaded_model:
+                    if metadata['model'] != message_data.loaded_model or (
+                        metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1):
                         # New model detected
-                        logging.info('New model detected: %r' % metadata['model'])
+                        logging.info('New model detected: %r (old=%r)' % (
+                            metadata['model'], message_data.loaded_model))
                         message_data.loaded_model = metadata['model']
-                        message_data.data = {}
-                        message_data.grid = None
-                message_data.data[metadata['name']] = arr
+                        message_data.grid = {}
+                        message_data.init_grids()
+                #message_data.data[metadata['name']] = arr
+                message_data.is_updating.acquire()
+                message_data.grid[metadata['name']] = arr
+                logging.debug('I have data for: %r' % message_data.grid.keys())
+                if metadata['name'] == 'dps' or metadata['name'] == 'quad_grid':
+                    logging.debug('Update grids after receiving dps or quad_grid...')
+                    message_data.update_grids()
+                message_data.is_updating.release()
         thread = threading.Thread(target=model_listener,
                                   args=[subsock, message_data]
                                   )
@@ -44,7 +55,9 @@ class MessageData(object):
 
     @staticmethod
     def recv_grid(req_port=5556, timeout=5000):
-        """connect to the socket to get an updated grid"""
+        """connect to the socket to get an updated grid
+        TODO: not nice that this is different than the listener
+        """
         req = ctx.socket(zmq.REQ)
         # Blocks until connection is found
         req.connect("tcp://localhost:{port}".format(port=req_port))
@@ -64,12 +77,14 @@ class MessageData(object):
         return grid
 
     def getgrid(self):
-        if self._grid is None:
+        if not self._grid:
             try:
-                self._grid = MessageData.recv_grid(req_port=self.req_port)
-                logging.debug("Grid received")
-                self.update_indices()
-                logging.debug("Indices created")
+                self.init_grids()
+                # self._grid = MessageData.recv_grid(req_port=self.req_port)
+                # logging.debug("Grid received")
+                # self.update_indices()
+                # self.update_grids()
+                # logging.debug("Indices created")
             except zmq.error.Again as e:
                 logging.exception("Grid not received")
             
@@ -115,29 +130,60 @@ class MessageData(object):
         self.transform = transform
         self.wkt = grid['wkt']
 
+    def update_grids(self):
+        """Preprocess some stuff that only needs to be done once.
+
+        Needs to be run when quad_grid or dps is updated.
+        """
+        grid = self._grid
+        quad_grid = grid['quad_grid']
+        dps = grid['dps']
+        logging.debug('quad grid shape: %r' % (str(quad_grid.shape)))
+        logging.debug('dps shape: %r' % (str(dps.shape)))
+        mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
+        grid['quad_grid_dps_mask'] = mask
+
+    def init_grids(self):
+        logging.debug('init grids, acquire semaphore...')
+        self.is_updating.acquire()
+        time_start = time.time()
+        logging.debug('receiving grids...')
+        self._grid = self.recv_grid(req_port=self.req_port)  # triggers init data
+        self.loaded_model = self._grid['loaded_model']
+        logging.debug('time after receive grid %2f' % (time.time() - time_start))
+        self.update_indices()
+        logging.debug('time after update indices %2f' % (time.time() - time_start))
+        self.update_grids()
+        logging.debug('time after update grids %2f' % (time.time() - time_start))
+        self.is_updating.release()
+
     def get(self, layer, interpolate='nearest'):
         grid = self.grid
+
         time_start = time.time()
         if layer == 'waterlevel':
             logging.debug('start waterlevel...')
-            dps = grid["dps"]
+            self.is_updating.acquire()
+            dps = grid['dps']
             quad_grid = grid['quad_grid']
-            logging.debug('or reduce...')
-            logging.debug('time %2f' % (time.time() - time_start))
-            mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
-            logging.debug('time %2f' % (time.time() - time_start))
-            logging.debug('check s1...')
-            if 's1' not in self.data:
-                logging.info('Requesting init data...')
-                self.data = self.recv_grid(req_port=self.req_port)  # triggers init data
-            logging.debug('s1...')
-            s1 = self.data['s1']
+            #logging.debug('or reduce...')
+            #logging.debug('time %2f' % (time.time() - time_start))
+            #mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
+            mask = grid['quad_grid_dps_mask']
+            #logging.debug('time %2f' % (time.time() - time_start))
+            #logging.debug('check s1...')
+            # if 's1' not in self.grid:
+            #     logging.info('Requesting init data...')
+            #     self.init_grids()
+            #logging.debug('s1...')
+            #s1 = self.data['s1']
+            s1 = self.grid['s1']
             #logging.debug("shape s1: {}".format(s1.shape))
             #logging.debug("quad_grid, min-max: {} {}".format(quad_grid.min(), quad_grid.max()))
             if interpolate == 'nearest':
                 logging.debug('nearest interpolation...')
                 logging.debug('time %2f' % (time.time() - time_start))
-                waterheight = s1[quad_grid.filled(0)]  # 1.5 seconds
+                waterheight = s1[quad_grid.filled(0)]  # 1.5 seconds (all quads!!)
                 logging.debug('time %2f' % (time.time() - time_start))
                 #logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
             else:
@@ -158,12 +204,22 @@ class MessageData(object):
             logging.debug('container...')   
             container = rasters.NumpyContainer(array, self.transform, self.wkt)
             logging.debug('time %2f' % (time.time() - time_start))
+            self.is_updating.release()
+
             return container
         elif layer == 'bathymetry':
-            container = rasters.NumpyContainer(grid['dps'], self.transform, self.wkt)
+            if 'dps' not in self.grid:
+                # temp fix
+                self.init_grids()
+            container = rasters.NumpyContainer(
+                grid['dps'], self.transform, self.wkt)
             return container
         elif layer == 'quad_grid':
-            container = rasters.NumpyContainer(self.grid["quad_grid"], self.transform, self.wkt)
+            if 'quad_grid' not in self.grid:
+                # temp fix
+                self.init_grids()
+            container = rasters.NumpyContainer(
+                self.grid['quad_grid'], self.transform, self.wkt)
             return container
         else:
             raise NotImplemented("working on it")
@@ -171,13 +227,15 @@ class MessageData(object):
     def __init__(self, req_port=5556, sub_port=5558):
         self.req_port = req_port
         self.sub_port = sub_port
+        self.is_updating = BoundedSemaphore(1)  # When updating, let 'get' function wait
 
         self.transform = None
         # continuously fill data
-        self.data = {}
+        #self.data = {}
         self.loaded_model = None
-        self._grid = None
-        self.grid
+        self._grid = {}
+        #self.grid
+        self.init_grids()  # doesn't seem to work?
         self.make_listener(self, sub_port)
 
         # define an interpolation function
