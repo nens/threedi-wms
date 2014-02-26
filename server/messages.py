@@ -102,6 +102,12 @@ class MessageData(object):
     def update_indices(self):
         """create all the indices that we need for performance"""
 
+        del self.L
+        del self.x
+        del self.y
+        del self.X
+        del self.Y
+
         # lookup cell centers
         grid = self._grid
         m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
@@ -143,6 +149,8 @@ class MessageData(object):
         logging.debug('quad grid shape: %r' % (str(quad_grid.shape)))
         logging.debug('dps shape: %r' % (str(dps.shape)))
         mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
+        if 'quad_grid_dps_mask' in grid:
+            del grid['quad_grid_dps_mask']
         grid['quad_grid_dps_mask'] = mask
 
     def init_grids(self):
