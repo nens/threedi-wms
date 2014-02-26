@@ -100,7 +100,10 @@ class MessageData(object):
     grid = property(getgrid, setgrid, delgrid, "The grid property")
 
     def update_indices(self):
-        """create all the indices that we need for performance"""
+        """create all the indices that we need for performance
+
+        These vars probably use a lot of memory.
+        """
 
         del self.L
         del self.x
