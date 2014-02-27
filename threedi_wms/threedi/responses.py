@@ -226,7 +226,6 @@ def get_response_for_getmap(get_parameters):
         use_messages = True
     else:
         use_messages = False
-    rebuild_static = get_parameters.get('rebuild_static', 'no') == 'yes'
     if get_parameters.get('antialias', 'no') == 'yes':
         antialias = 2
     else:
@@ -239,18 +238,19 @@ def get_response_for_getmap(get_parameters):
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
-    # TODO: I don't think this is effective. It is also not used.
-    if rebuild_static:
-        logging.debug('Got rebuild_static {}, deleting cache.'.format(layer))
-        # delete var/cache/3di/<model> directory
-        # make sure layer has no directories or whatsoever.
-        cache_path = os.path.join(config.CACHE_DIR, layer.replace('/', ''))
-        shutil.rmtree(cache_path)
+    # rebuild_static = get_parameters.get('rebuild_static', 'no') == 'yes'
+    # # TODO: I don't think this is effective. It is also not used.
+    # if rebuild_static:
+    #     logging.debug('Got rebuild_static {}, deleting cache.'.format(layer))
+    #     # delete var/cache/3di/<model> directory
+    #     # make sure layer has no directories or whatsoever.
+    #     cache_path = os.path.join(config.CACHE_DIR, layer.replace('/', ''))
+    #     shutil.rmtree(cache_path)
 
     # Pyramid + monolith, when not using messages
     if not use_messages:
         try:
-            static_data = StaticData.get(layer=layer, reload=rebuild_static)
+            static_data = StaticData.get(layer=layer, reload=False)
         except ValueError:
             return 'Objects not ready, starting preparation.'
         except rasters.LockError:
