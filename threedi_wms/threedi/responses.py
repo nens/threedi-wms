@@ -409,8 +409,22 @@ def get_response_for_gettimeseries(get_parameters):
     options:
     quad=<quadtree index>
     absolute=true (default false): do not subtract height from s1
-    timestep=<max timestep you want to see>
+    messages=true/false
     """
+    # No global import, celery doesn't want this.
+    from server.app import message_data 
+
+    if get_parameters.get('messages', 'false') == 'true':
+        use_messages = True
+    else:
+        use_messages = False
+    interpolate = get_parameters.get('interpolate', 'nearest')
+
+    # Option to directly get the value of a quad
+    quad = get_parameters.get('quad', None)
+    if quad is not None:
+        quad = int(quad)
+
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
                          get_parameters['point'].split(','))).reshape(1, 2)
@@ -423,16 +437,8 @@ def get_response_for_gettimeseries(get_parameters):
     timeformat = get_parameters.get('timeformat', 'iso')  # iso or epoch
     maxpoints = get_parameters.get('maxpoints', '500')
     maxpoints = int(maxpoints)
-    # For 1D test
-    quad = get_parameters.get('quad', None)
-    if quad is not None:
-        quad = int(quad)
+
     absolute = get_parameters.get('absolute', 'false')
-    timestep = get_parameters.get('timestep', None)
-    if timestep is not None:
-        timestep = int(timestep)
-        if timestep == 0:
-            timestep = 1  # Or it won't work correctly
 
     # Determine layers
     layer_parameter = get_parameters['layers']
@@ -472,10 +478,7 @@ def get_response_for_gettimeseries(get_parameters):
             if absolute == 'false':
                 depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
             else:
-                if timestep:
-                    depth = v[mode][:timestep, quad]
-                else:
-                    depth = v[mode][:, quad]
+                depth = v[mode][:, quad]
         else:
             #depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
             if absolute == 'true':

@@ -5,6 +5,12 @@ Changelog of threedi-wms
 0.9 (unreleased)
 ----------------
 
+- Improved getmap messages.
+
+- Getprofile now also works with messages.
+
+- Removed gettimeseries:timestep option.
+
 - Improved memory messages, ports are configurable in gunicorn: bin/gunicorn 'server.app:build_app(req_port=5557,sub_port=5558)' -w 1 -b 0.0.0.0:5000
 
 
