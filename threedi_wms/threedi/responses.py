@@ -18,6 +18,7 @@ from netCDF4 import Dataset
 from netCDF4 import num2date
 from matplotlib import cm
 from matplotlib import colors
+from scipy import ndimage
 
 import numpy as np
 import ogr
