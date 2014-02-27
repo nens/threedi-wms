@@ -7,7 +7,8 @@ Changelog of threedi-wms
 
 - Improved getmap messages.
 
-- Getprofile now also works with messages.
+- Getprofile, gettimeseries now also works with messages. Gettimeseries uses
+  messages for getting the height and quad cell.
 
 - Removed gettimeseries:timestep option.
 

@@ -409,7 +409,8 @@ def get_response_for_gettimeseries(get_parameters):
     options:
     quad=<quadtree index>
     absolute=true (default false): do not subtract height from s1
-    messages=true/false
+    messages=true/false -> for height
+    maxpoints=500 -> throw away points if # > maxpoints
     """
     # No global import, celery doesn't want this.
     from server.app import message_data 
@@ -449,22 +450,42 @@ def get_response_for_gettimeseries(get_parameters):
         layer, mode = layer_parameter, 's1'
 
     # Get height and quad
-    static_data = StaticData.get(layer=layer)
-    quads, ms = get_data(container=static_data.monolith,
-                         ma=True, **get_parameters_extra)
-    if quad is None:
-        quad = int(quads[0, 0])
-        logging.debug('Got quads in {} ms.'.format(ms))
-    logging.debug('Quad = %r' % quad)
+    if use_messages:
+        quad_container = message_data.get('quad_grid')
+        dps_container = message_data.get('dps')
 
-    bathymetry, ms = get_data(container=static_data.pyramid,
-                              ma=True, **get_parameters_extra)
-    height = bathymetry[0, 0]
+        if quad is None:
+            quads, ms = get_data(container=quad_container,
+                                     ma=True, **get_parameters_extra)
+            quad = int(quads[0, 0])
+            logging.debug('Got quads in {} ms.'.format(ms))
+        logging.debug('Got quads in {} ms.'.format(ms))
+
+        dps, ms = get_data(container=dps_container,
+                                  ma=True, **get_parameters_extra)
+        logging.debug('Got dps in {} ms.'.format(ms))
+
+        bathymetry = -dps
+        height = bathymetry[0, 0]  # not needed when absolute=true
+    else:
+        static_data = StaticData.get(layer=layer)
+        if quad is None:
+            quads, ms = get_data(container=static_data.monolith,
+                                 ma=True, **get_parameters_extra)
+            quad = int(quads[0, 0])
+            logging.debug('Got quads in {} ms.'.format(ms))
+        logging.debug('Quad = %r' % quad)
+
+        bathymetry, ms = get_data(container=static_data.pyramid,
+                                  ma=True, **get_parameters_extra)
+        logging.debug('Got bathymetry in {} ms.'.format(ms))
+
+        height = bathymetry[0, 0]
+
     if not height:
-        logging.debug('Got not height.')
+        logging.debug('Got no height.')
         height = 0
     logging.debug('Got height {}.'.format(height))
-    logging.debug('Got bathymetry in {} ms.'.format(ms))
 
     # Read data from netcdf
     path = utils.get_netcdf_path(layer=get_parameters['layers'])
