@@ -1,3 +1,4 @@
+
 from mmi import send_array, recv_array
 from gislib import rasters
 from scipy import ndimage
@@ -12,92 +13,88 @@ import time  # stopwatch
 
 from threading import BoundedSemaphore
 
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 # global zmq context 
 ctx = zmq.Context()
 
+
+class Listener(threading.Thread):
+    def __init__(self, socket, message_data, *args, **kwargs):
+        self.socket = socket
+        self.message_data = message_data
+        threading.Thread.__init__(self, *args, **kwargs)
+        # A flag to notify the thread that it should finish up and exit
+        self.kill_received = False
+
+    def run(self):
+        """run the thread"""
+        message_data = self.message_data
+        socket = self.socket
+        while not self.kill_received:
+            arr, metadata = recv_array(socket)
+            logger.info("got msg {}".format(metadata))
+            if 'model' in metadata:
+                restarted = metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1
+                if metadata['model'] != message_data.loaded_model or restarted:
+                    # New model detected
+                    logger.info('New model detected: %r (old=%r)' % (
+                        metadata['model'], message_data.loaded_model))
+                    message_data.loaded_model = metadata['model']
+                    message_data.grid = message_data.recv_grid()
+            if metadata['name'] in message_data.grid:
+                del message_data.grid[metadata['name']]  # saves memory
+            message_data.grid[metadata['name']] = arr
+            logger.debug('I have data for: %r' % message_data.grid.keys())
+            if metadata['name'] == 'dps' or metadata['name'] == 'quad_grid':
+                logger.debug('Update grids after receiving dps or quad_grid...')
+                message_data.update_grids()
 
 class MessageData(object):
     """
     Container for model message data
     """
-    @staticmethod
-    def make_listener(message_data, sub_port):
+    def make_listener(self, sub_port):
         """make a socket that waits for new data in a thread"""
         subsock = ctx.socket(zmq.SUB)
         subsock.connect("tcp://localhost:{port}".format(port=sub_port))
         subsock.setsockopt(zmq.SUBSCRIBE,b'')
-        def model_listener(socket, message_data):
-            while True:
-                arr, metadata = recv_array(socket)
-                logging.info("got msg {}".format(metadata))
-                if 'model' in metadata:
-                    if metadata['model'] != message_data.loaded_model or (
-                        metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1):
-                        # New model detected
-                        logging.info('New model detected: %r (old=%r)' % (
-                            metadata['model'], message_data.loaded_model))
-                        message_data.loaded_model = metadata['model']
-                        message_data.grid = {}
-                        message_data.init_grids()
-                #message_data.data[metadata['name']] = arr
-                message_data.is_updating.acquire()
-                if metadata['name'] in message_data.grid:
-                    del message_data.grid[metadata['name']]  # saves memory
-                message_data.grid[metadata['name']] = arr
-                logging.debug('I have data for: %r' % message_data.grid.keys())
-                if metadata['name'] == 'dps' or metadata['name'] == 'quad_grid':
-                    logging.debug('Update grids after receiving dps or quad_grid...')
-                    message_data.update_grids()
-                message_data.is_updating.release()
-        thread = threading.Thread(target=model_listener,
-                                  args=[subsock, message_data]
-                                  )
+        thread = Listener(subsock, self)
         thread.daemon = True
         thread.start()
+        self.thread = thread
+        # In a hook of the website: thread.kill_received = True
+    def stop_listener(self):
+        if self.thread and self.thread.isAlive:
+            logger.debug("Killing listener in thread {}".format(self.thread))
+            self.thread.kill_received = True
 
-    @staticmethod
-    def recv_grid(req_port=5556, timeout=5000):
+
+    def recv_grid(self, req_port=5556, timeout=10000):
         """connect to the socket to get an updated grid
         TODO: not nice that this is different than the listener
         """
-        req = ctx.socket(zmq.REQ)
-        # Blocks until connection is found
-        req.connect("tcp://localhost:{port}".format(port=req_port))
-        # Wait at most 5 seconds
-        req.setsockopt(zmq.RCVTIMEO, timeout)
-        # We don't have a message format
-        req.send_json({"action": "send init"})
-        try:
-            grid = req.recv_pyobj()
-            logging.info("Grid received: %r" % grid.keys())
-        except zmq.error.Again:
-            logging.exception("Grid not received")
-            # We don't have a grid, get it later
-            # reraise
-            raise 
-
-        return grid
-
-    def getgrid(self):
-        if not self._grid:
+        # We don't have a message format for this yet
+        for i in range(10):
+            # We could keep this socket open.
+            req = ctx.socket(zmq.REQ)
+            # Blocks until connection is found
+            logger.info("Getting new grid from socket {}".format(req) )
+            req.connect("tcp://localhost:{port}".format(port=req_port))
+            # Wait at most 5 seconds
+            req.setsockopt(zmq.RCVTIMEO, timeout)
+            # try 10 times
+            req.send_json({"action": "send init"})
             try:
-                self.init_grids()
-                # self._grid = MessageData.recv_grid(req_port=self.req_port)
-                # logging.debug("Grid received")
-                # self.update_indices()
-                # self.update_grids()
-                # logging.debug("Indices created")
-            except zmq.error.Again as e:
-                logging.exception("Grid not received")
-            
-        return self._grid
-
-    def setgrid(self, value):
-        self._grid = value
-
-    def delgrid(self):
-        del self._grid
-    grid = property(getgrid, setgrid, delgrid, "The grid property")
+                grid = req.recv_pyobj()
+                return grid
+            except zmq.error.Again:
+                logger.exception("Grid not received")
+            finally:
+                req.close()
+        else:
+            raise ValueError("Grid not received after 10 tries, giving up")
 
     def update_indices(self):
         """create all the indices that we need for performance
@@ -112,7 +109,7 @@ class MessageData(object):
         del self.Y
 
         # lookup cell centers
-        grid = self._grid
+        grid = self.grid
         m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
         n = (grid['nodn']-1)*grid['jmaxk'][grid['nodk']-1]
         size = grid['imaxk'][grid['nodk']-1]
@@ -146,96 +143,148 @@ class MessageData(object):
 
         Needs to be run when quad_grid or dps is updated.
         """
-        grid = self._grid
+        grid = self.grid
         quad_grid = grid['quad_grid']
         dps = grid['dps']
-        logging.debug('quad grid shape: %r' % (str(quad_grid.shape)))
-        logging.debug('dps shape: %r' % (str(dps.shape)))
+        logger.debug('quad grid shape: %r' % (str(quad_grid.shape)))
+        logger.debug('dps shape: %r' % (str(dps.shape)))
         mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
         if 'quad_grid_dps_mask' in grid:
             del grid['quad_grid_dps_mask']
         grid['quad_grid_dps_mask'] = mask
 
     def init_grids(self):
-        logging.debug('init grids, acquire semaphore...')
-        self.is_updating.acquire()
-        del self.grid
+        logger.debug('init grids, acquire semaphore...')
+        self.grid = {}
         time_start = time.time()
-        logging.debug('receiving grids...')
-        self._grid = self.recv_grid(req_port=self.req_port)  # triggers init data
-        self.loaded_model = self._grid['loaded_model']
-        logging.debug('time after receive grid %2f' % (time.time() - time_start))
+        logger.debug('receiving grids...')
+        self.grid = self.recv_grid(req_port=self.req_port)  # triggers init data
+        logger.debug('stopped receiving, now have %s', self.grid.keys())
+        self.loaded_model = self.grid['loaded_model']
+        logger.debug('time after receive grid %2f' % (time.time() - time_start))
         self.update_indices()
-        logging.debug('time after update indices %2f' % (time.time() - time_start))
+        logger.debug('time after update indices %2f' % (time.time() - time_start))
         self.update_grids()
-        logging.debug('time after update grids %2f' % (time.time() - time_start))
-        self.is_updating.release()
+        logger.debug('time after update grids %2f' % (time.time() - time_start))
 
-    def get(self, layer, interpolate='nearest'):
+    def get(self, layer, interpolate='nearest', **kwargs):
         grid = self.grid
-
+        
         time_start = time.time()
+
+        
+        # try to get parameters from request
+
+        srs = kwargs.get("srs")
+        bbox_str = kwargs.get("bbox")
+        if bbox_str:
+            bbox = [float(x) for x in bbox_str.split(",")]
+        else:
+            bbox = None
+        height = int(kwargs.get("height", "0"))
+        width = int(kwargs.get("width", "0"))
+
+        if all([srs, bbox, height, width]):
+            logger.debug("slicing and dicing")
+
+            # TODO rename dst/src to map, slice, grid
+            src_srs = osgeo.osr.SpatialReference()
+            src_srs.ImportFromEPSGA(int(srs.split(':')[1]))
+            dst_srs = osgeo.osr.SpatialReference()
+            dst_srs.ImportFromWkt(grid["wkt"])
+            src2dst = osgeo.osr.CoordinateTransformation(src_srs, dst_srs)
+
+            (xmin, ymin, xmax, ymax) = bbox
+            xmin_dst, ymin_dst, _ = src2dst.TransformPoint(xmin,ymin)
+            xmax_dst, ymax_dst, _ = src2dst.TransformPoint(xmax, ymax)
+
+            # lookup required slice
+            xmin_src, ymin_src = (grid['x0p'], grid['y0p'])
+            xmax_src, ymax_src = (grid['x1p'], grid['y1p'])
+            dx_src, dy_src = (grid['dxp'], grid['dyp'])
+            x_src = np.arange(xmin_src, xmax_src, dx_src)
+            y_src = np.arange(ymin_src, ymax_src, dy_src)
+            # Lookup indices of plotted grid
+            # this can be done faster with a calculation
+            x_start = bisect.bisect(x_src, xmin_dst)
+            x_end = bisect.bisect(x_src, xmax_dst)
+            y_start = bisect.bisect(y_src, ymin_dst)
+            y_end = bisect.bisect(y_src, ymax_dst)
+            # and lookup required resolution
+            x_step = (x_end - x_start) // width
+            y_step = (y_end - y_start) // height
+            S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
+            # Compute transform for sliced grid
+            transform = (
+                grid["x0p"] +dx_src*x_start, dx_src*x_step, 0,
+                grid["y0p"] +grid["dyp"]*y_start, 0, grid["dyp"]*y_step
+            )
+
+        else:
+            logger.debug("couldn't find enough info in %s", kwargs)
+            S = np.s_[:,:]
+            transform = self.transform
+            
+
+
+        
         if layer == 'waterlevel':
-            logging.debug('start waterlevel...')
-            self.is_updating.acquire()
-            dps = grid['dps']
-            quad_grid = grid['quad_grid']
-            mask = grid['quad_grid_dps_mask']
+            logger.debug('start waterlevel...')
+            dps = grid['dps'][S]
+            quad_grid = grid['quad_grid'][S]
+            mask = grid['quad_grid_dps_mask'][S]
             s1 = self.grid['s1']
 
+
             if interpolate == 'nearest':
-                logging.debug('nearest interpolation...')
-                logging.debug('time %2f' % (time.time() - time_start))
+                logger.debug('nearest interpolation...')
+                logger.debug('time %2f', (time.time() - time_start))
                 waterheight = s1[quad_grid.filled(0)]  # 2 seconds (all quads!!)
-                logging.debug('time %2f' % (time.time() - time_start))
-                #logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
+                logger.debug('time %2f', (time.time() - time_start))
+                #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
             else:
-                logging.debug('linear interpolation...')  # slow!
-                logging.debug('time %2f' % (time.time() - time_start))
+                X, Y = self.X[S], self.Y[S]
+                logger.debug('linear interpolation...')  # slow!
+                logger.debug('time %2f', (time.time() - time_start))
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 self.L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 L = self.L
-                waterheight = L(self.X, self.Y) 
+                waterheight = L(X, Y)
                 mask = np.logical_or(np.isnan(waterheight), mask)
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
-                logging.debug('time %2f' % (time.time() - time_start))
-                #logging.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
-             
-            logging.debug('waterlevel...')   
-            logging.debug('time %2f' % (time.time() - time_start))
+                logger.debug('time %2f', (time.time() - time_start))
+                #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
+
+            logger.debug('waterlevel...')
+            logger.debug('time %2f', (time.time() - time_start))
             waterlevel = waterheight - (-dps)  # 0.5 second
-            logging.debug('time %2f' % (time.time() - time_start))
-            #logging.debug("s1  - - dps: {} {}".format(waterlevel.min(), waterlevel.max()))
-            logging.debug('masked array...')   
-            logging.debug('time %2f' % (time.time() - time_start))
+            logger.debug('time %2f', (time.time() - time_start))
+            #logger.debug("s1  - - dps: {} {}".format(waterlevel.min(), waterlevel.max()))
+            logger.debug('masked array...')
+            logger.debug('time %2f', (time.time() - time_start))
             array = np.ma.masked_array(waterlevel, mask = mask)
-            logging.debug('time %2f' % (time.time() - time_start))
-            logging.debug('container...')   
-            logging.debug('time %2f' % (time.time() - time_start))
+            logger.debug('time %2f', (time.time() - time_start))
+            logger.debug('container...')
+            logger.debug('time %2f', (time.time() - time_start))
             container = rasters.NumpyContainer(array, self.transform, self.wkt)
-            logging.debug('time %2f' % (time.time() - time_start))
-            self.is_updating.release()
+            logger.debug('time %2f', (time.time() - time_start))
 
             return container
         elif layer == 'dps':
-            # if 'dps' not in self.grid:
-            #     # temp fix
-            #     self.init_grids()
-            logging.debug('bathymetry')
-            logging.debug('time %2f' % (time.time() - time_start))
+            dps = grid['dps'][S]
+            logger.debug('bathymetry')
+            logger.debug('time %2f', (time.time() - time_start))
             container = rasters.NumpyContainer(
-                grid['dps'], self.transform, self.wkt)
-            logging.debug('time %2f' % (time.time() - time_start))
+                dps, self.transform, self.wkt)
+            logger.debug('time %2f', (time.time() - time_start))
             return container
         elif layer == 'quad_grid':
-            # if 'quad_grid' not in self.grid:
-            #     # temp fix
-            #     self.init_grids()
-            logging.debug('quad_grid')
-            logging.debug('time %2f' % (time.time() - time_start))
+            quad_grid = grid['quad_grid'][S]
+            logger.debug('quad_grid')
+            logger.debug('time %2f', (time.time() - time_start))
             container = rasters.NumpyContainer(
-                self.grid['quad_grid'], self.transform, self.wkt)
-            logging.debug('time %2f' % (time.time() - time_start))
+                quad_grid, self.transform, self.wkt)
+            logger.debug('time %2f', (time.time() - time_start))
             return container
         else:
             raise NotImplemented("working on it")
@@ -253,9 +302,7 @@ class MessageData(object):
         # continuously fill data
         #self.data = {}
         self.loaded_model = None
-        self._grid = {}
-        #self.grid
-
+        self.grid = {}
         # define an interpolation function
         # use update indices to update these variables
         self.L = None
@@ -263,7 +310,8 @@ class MessageData(object):
         self.y = None
         self.X = None
         self.Y = None
-
+        self.thread = None
+        self.make_listener(sub_port) # Listen to model messages
+        # initialize grid data 
         self.init_grids()  # doesn't seem to work?
-        self.make_listener(self, sub_port)
 
