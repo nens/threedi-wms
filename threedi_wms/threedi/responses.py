@@ -336,6 +336,7 @@ def get_response_for_getmap(get_parameters):
 
     # Add velocity on top of depth layer
     if mode == 'velocity':
+        # TODO: does not work yet.
         dynamic_data_x = DynamicData.get(
             layer=layer, time=time, use_cache=use_cache, variable='ucx')
         dynamic_data_y = DynamicData.get(
@@ -350,7 +351,6 @@ def get_response_for_getmap(get_parameters):
         buf = io.BytesIO()
         img.save(buf, 'png')
         content = buf.getvalue()
-
 
     return content, 200, {
         'content-type': 'image/png',
