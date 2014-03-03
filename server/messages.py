@@ -27,6 +27,7 @@ class MessageData(object):
         subsock.connect("tcp://localhost:{port}".format(port=sub_port))
         subsock.setsockopt(zmq.SUBSCRIBE,b'')
         def model_listener(socket, message_data):
+            message_data.init_grids()
             while True:
                 arr, metadata = recv_array(socket)
                 logging.info("got msg {}".format(metadata))
@@ -159,7 +160,7 @@ class MessageData(object):
     def init_grids(self):
         logging.debug('init grids, acquire semaphore...')
         self.is_updating.acquire()
-        del self.grid
+        self.grid = None
         time_start = time.time()
         logging.debug('receiving grids...')
         self._grid = self.recv_grid(req_port=self.req_port)  # triggers init data
@@ -264,6 +265,6 @@ class MessageData(object):
         self.X = None
         self.Y = None
 
-        self.init_grids()  # doesn't seem to work?
+        #self.init_grids()
         self.make_listener(self, sub_port)
 
