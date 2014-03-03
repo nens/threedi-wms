@@ -291,7 +291,8 @@ def get_response_for_getmap(get_parameters):
             # TODO: cleanup bathymetry. Best do substraction before interpolation
             if interpolate == 'linear':
                 # per pixel data is calculated for probably the whole model area --> slow!
-                container = message_data.get("waterlevel", interpolate=interpolate)
+                container = message_data.get(
+                    "waterlevel", **get_parameters)
                 waterlevel, ms = get_data(container, ma=True, **get_parameters)
                 depth = waterlevel
             else:

@@ -10,7 +10,8 @@ import threading
 import numpy as np
 
 import time  # stopwatch
-import osgeo
+import osgeo.osr
+import bisect
 
 from threading import BoundedSemaphore
 
@@ -76,6 +77,8 @@ class MessageData(object):
     def recv_grid(self, req_port=5556, timeout=10000):
         """connect to the socket to get an updated grid
         TODO: not nice that this is different than the listener
+
+        TODO: check timeout
         """
         # We don't have a message format for this yet
         #for i in range(10):
@@ -171,13 +174,15 @@ class MessageData(object):
             logger.debug('init grids failed.')
 
     def get(self, layer, interpolate='nearest', **kwargs):
-        grid = self.grid
         if not self.grid:
             logger.info('Initializing grids (is normally already done, unless some server error)')
-            self.init_grids()
+            new_grid = self.init_grids()
+            if new_grid:
+                self.grid = new_grid
         else:
-            logger.debug('Grids keys %r' % grid.keys())
+            logger.debug('Grids keys %r' % self.grid.keys())
             logger.debug('Kwargs %r' % kwargs)
+        grid = self.grid
         time_start = time.time()
 
         # try to get parameters from request
@@ -198,7 +203,16 @@ class MessageData(object):
             src_srs = osgeo.osr.SpatialReference()
             src_srs.ImportFromEPSGA(int(srs.split(':')[1]))
             dst_srs = osgeo.osr.SpatialReference()
-            dst_srs.ImportFromWkt(grid["wkt"])
+            logger.debug("wkt %r" % grid["wkt"])
+            if 'wkt' in grid and grid['wkt']:
+                dst_srs.ImportFromWkt(grid["wkt"])
+                if dst_srs.GetAuthorityCode("PROJCS") == '28992' and not dst_srs.GetTOWGS84():
+                    logger.error("Check WKT for TOWGS84 string! Je weet tog ;-)")
+            else:
+                logger.warning(
+                    'Something is probably wrong with the wkt (%r), taking default 28992.' % grid['wkt'])
+                dst_srs.ImportFromEPSGA(28992)
+
             src2dst = osgeo.osr.CoordinateTransformation(src_srs, dst_srs)
 
             (xmin, ymin, xmax, ymax) = bbox
@@ -218,19 +232,26 @@ class MessageData(object):
             y_start = bisect.bisect(y_src, ymin_dst)
             y_end = bisect.bisect(y_src, ymax_dst)
             # and lookup required resolution
-            x_step = (x_end - x_start) // width
-            y_step = (y_end - y_start) // height
+            x_step = max((x_end - x_start) // width, 1)
+            y_step = max((y_end - y_start) // height, 1)
+            logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
+                y_start, y_end, y_step, x_start, x_end, x_step, width, height))
             S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
             # Compute transform for sliced grid
             transform = (
-                grid["x0p"] +dx_src*x_start, dx_src*x_step, 0,
-                grid["y0p"] +grid["dyp"]*y_start, 0, grid["dyp"]*y_step
+                grid["x0p"] + dx_src*x_start, 
+                dx_src*x_step, 
+                0,
+                grid["y0p"] + grid["dyp"]*y_start, 
+                0, 
+                grid["dyp"]*y_step
             )
 
         else:
             logger.debug("couldn't find enough info in %s", kwargs)
             S = np.s_[:,:]
             transform = self.transform
+        logger.debug('transform: %s' % str(transform))
             
         if layer == 'waterlevel':
             logger.debug('start waterlevel...')
@@ -238,7 +259,6 @@ class MessageData(object):
             quad_grid = grid['quad_grid'][S]
             mask = grid['quad_grid_dps_mask'][S]
             s1 = self.grid['s1']
-
 
             if interpolate == 'nearest':
                 logger.debug('nearest interpolation...')
@@ -253,8 +273,11 @@ class MessageData(object):
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 self.L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 L = self.L
+                logger.debug('time %2f', (time.time() - time_start))
                 waterheight = L(X, Y)
+                logger.debug('time %2f', (time.time() - time_start))
                 mask = np.logical_or(np.isnan(waterheight), mask)
+                logger.debug('time %2f', (time.time() - time_start))
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
                 logger.debug('time %2f', (time.time() - time_start))
                 #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
@@ -270,16 +293,17 @@ class MessageData(object):
             logger.debug('time %2f', (time.time() - time_start))
             logger.debug('container...')
             logger.debug('time %2f', (time.time() - time_start))
-            container = rasters.NumpyContainer(array, self.transform, self.wkt)
+            container = rasters.NumpyContainer(array, transform, self.wkt)
             logger.debug('time %2f', (time.time() - time_start))
 
             return container
         elif layer == 'dps':
             dps = grid['dps'][S]
             logger.debug('bathymetry')
+            logger.debug('%r' % dps)
             logger.debug('time %2f', (time.time() - time_start))
             container = rasters.NumpyContainer(
-                dps, self.transform, self.wkt)
+                dps, transform, self.wkt)
             logger.debug('time %2f', (time.time() - time_start))
             return container
         elif layer == 'quad_grid':
@@ -287,7 +311,7 @@ class MessageData(object):
             logger.debug('quad_grid')
             logger.debug('time %2f', (time.time() - time_start))
             container = rasters.NumpyContainer(
-                quad_grid, self.transform, self.wkt)
+                quad_grid, transform, self.wkt)
             logger.debug('time %2f', (time.time() - time_start))
             return container
         else:
