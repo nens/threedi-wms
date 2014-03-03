@@ -44,8 +44,9 @@ class Listener(threading.Thread):
                     # New model detected
                     logger.info('New model detected: %r (old=%r)' % (
                         metadata['model'], message_data.loaded_model))
-                    message_data.loaded_model = metadata['model']
-                    message_data.grid = message_data.recv_grid()
+                    #message_data.loaded_model = metadata['model']
+                    #message_data.grid = message_data.recv_grid()
+                    message_data.update_grids()
             if metadata['name'] in message_data.grid:
                 del message_data.grid[metadata['name']]  # saves memory
             message_data.grid[metadata['name']] = arr
