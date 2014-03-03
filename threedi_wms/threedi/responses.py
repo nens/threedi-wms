@@ -259,7 +259,7 @@ def get_response_for_getmap(get_parameters):
     if mode in ['depth', 'grid', 'flood', 'velocity', 'quad_grid']:
         # lookup quads in target coordinate system
         if use_messages:
-            container = message_data.get('quad_grid')
+            container = message_data.get('quad_grid', **get_parameters)
             quads, ms = get_data(container=container,
                                      ma=True, **get_parameters)
         else:
@@ -270,7 +270,7 @@ def get_response_for_getmap(get_parameters):
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
         # lookup bathymetry in target coordiante system
         if use_messages:
-            container = message_data.get('dps')
+            container = message_data.get('dps', **get_parameters)
             dps, ms = get_data(container=container,
                                ma=True, **get_parameters)
             bathymetry = -dps

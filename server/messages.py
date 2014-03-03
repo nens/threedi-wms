@@ -10,6 +10,7 @@ import threading
 import numpy as np
 
 import time  # stopwatch
+import osgeo
 
 from threading import BoundedSemaphore
 
@@ -31,6 +32,7 @@ class Listener(threading.Thread):
     def run(self):
         """run the thread"""
         message_data = self.message_data
+        message_data.init_grids()
         socket = self.socket
         while not self.kill_received:
             arr, metadata = recv_array(socket)
@@ -65,49 +67,45 @@ class MessageData(object):
         thread.start()
         self.thread = thread
         # In a hook of the website: thread.kill_received = True
+
     def stop_listener(self):
         if self.thread and self.thread.isAlive:
             logger.debug("Killing listener in thread {}".format(self.thread))
             self.thread.kill_received = True
-
 
     def recv_grid(self, req_port=5556, timeout=10000):
         """connect to the socket to get an updated grid
         TODO: not nice that this is different than the listener
         """
         # We don't have a message format for this yet
-        for i in range(10):
-            # We could keep this socket open.
-            req = ctx.socket(zmq.REQ)
-            # Blocks until connection is found
-            logger.info("Getting new grid from socket {}".format(req) )
-            req.connect("tcp://localhost:{port}".format(port=req_port))
-            # Wait at most 5 seconds
-            req.setsockopt(zmq.RCVTIMEO, timeout)
-            # try 10 times
-            req.send_json({"action": "send init"})
-            try:
-                grid = req.recv_pyobj()
-                return grid
-            except zmq.error.Again:
-                logger.exception("Grid not received")
-            finally:
-                req.close()
-        else:
-            raise ValueError("Grid not received after 10 tries, giving up")
+        #for i in range(10):
+
+        # We could keep this socket open.
+        req = ctx.socket(zmq.REQ)
+        # Blocks until connection is found
+        logger.info("Getting new grid from socket {}".format(req) )
+        req.connect("tcp://localhost:{port}".format(port=req_port))
+        # Wait at most 5 seconds
+        req.setsockopt(zmq.RCVTIMEO, timeout)
+        # try 10 times
+        req.send_json({"action": "send init"})
+        #grid = req.recv_pyobj()
+        try:
+            grid = req.recv_pyobj()
+            return grid
+        except zmq.error.Again:
+            logger.exception("Grid not received")
+        finally:
+            req.close()
+
+        # else:
+        #     raise ValueError("Grid not received after 10 tries, giving up")
 
     def update_indices(self):
         """create all the indices that we need for performance
 
         These vars probably use a lot of memory.
         """
-
-        del self.L
-        del self.x
-        del self.y
-        del self.X
-        del self.Y
-
         # lookup cell centers
         grid = self.grid
         m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
@@ -154,25 +152,34 @@ class MessageData(object):
         grid['quad_grid_dps_mask'] = mask
 
     def init_grids(self):
-        logger.debug('init grids, acquire semaphore...')
+        logger.debug('init grids...')
         self.grid = {}
         time_start = time.time()
         logger.debug('receiving grids...')
-        self.grid = self.recv_grid(req_port=self.req_port)  # triggers init data
+        new_grid = self.recv_grid(req_port=self.req_port)  # triggers init data
         logger.debug('stopped receiving, now have %s', self.grid.keys())
-        self.loaded_model = self.grid['loaded_model']
-        logger.debug('time after receive grid %2f' % (time.time() - time_start))
-        self.update_indices()
-        logger.debug('time after update indices %2f' % (time.time() - time_start))
-        self.update_grids()
-        logger.debug('time after update grids %2f' % (time.time() - time_start))
+        if new_grid is not None:
+            self.grid = new_grid
+            self.loaded_model = self.grid['loaded_model']
+            logger.debug('time after receive grid %2f' % (time.time() - time_start))
+            self.update_indices()
+            logger.debug('time after update indices %2f' % (time.time() - time_start))
+            self.update_grids()
+            logger.debug('time after update grids %2f' % (time.time() - time_start))
+        else:
+            self.loaded_model = False
+            logger.debug('init grids failed.')
 
     def get(self, layer, interpolate='nearest', **kwargs):
         grid = self.grid
-        
+        if not self.grid:
+            logger.info('Initializing grids (is normally already done, unless some server error)')
+            self.init_grids()
+        else:
+            logger.debug('Grids keys %r' % grid.keys())
+            logger.debug('Kwargs %r' % kwargs)
         time_start = time.time()
 
-        
         # try to get parameters from request
 
         srs = kwargs.get("srs")
@@ -225,9 +232,6 @@ class MessageData(object):
             S = np.s_[:,:]
             transform = self.transform
             
-
-
-        
         if layer == 'waterlevel':
             logger.debug('start waterlevel...')
             dps = grid['dps'][S]
@@ -311,7 +315,5 @@ class MessageData(object):
         self.X = None
         self.Y = None
         self.thread = None
+        print("make listener..")
         self.make_listener(sub_port) # Listen to model messages
-        # initialize grid data 
-        self.init_grids()  # doesn't seem to work?
-

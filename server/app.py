@@ -19,6 +19,9 @@ def build_app(req_port=5556, sub_port=5558):
     global app
     global message_data
 
+    # Setup logging
+    loghelper.setup_logging(logfile_name='server.log')
+
     # App
     app = flask.Flask(__name__)
 
@@ -32,8 +35,6 @@ def build_app(req_port=5556, sub_port=5558):
         url_prefix = '/' + blueprint.name
         app.register_blueprint(blueprint, url_prefix=url_prefix)
 
-    # Setup logging
-    loghelper.setup_logging(logfile_name='server.log')
     # Using print because I don't see logging output on screen while running manually
     print("request port: %d (server should process requests on this port)" % req_port)
     print("subscription port: %d (server should publish on this port)" % sub_port)
