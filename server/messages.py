@@ -262,57 +262,39 @@ class MessageData(object):
 
             if interpolate == 'nearest':
                 logger.debug('nearest interpolation...')
-                logger.debug('time %2f', (time.time() - time_start))
                 waterheight = s1[quad_grid.filled(0)]  # 2 seconds (all quads!!)
-                logger.debug('time %2f', (time.time() - time_start))
                 #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
             else:
                 X, Y = self.X[S], self.Y[S]
                 logger.debug('linear interpolation...')  # slow!
-                logger.debug('time %2f', (time.time() - time_start))
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 self.L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 L = self.L
-                logger.debug('time %2f', (time.time() - time_start))
                 waterheight = L(X, Y)
-                logger.debug('time %2f', (time.time() - time_start))
                 mask = np.logical_or(np.isnan(waterheight), mask)
-                logger.debug('time %2f', (time.time() - time_start))
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
-                logger.debug('time %2f', (time.time() - time_start))
                 #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
 
             logger.debug('waterlevel...')
-            logger.debug('time %2f', (time.time() - time_start))
             waterlevel = waterheight - (-dps)  # 0.5 second
-            logger.debug('time %2f', (time.time() - time_start))
             #logger.debug("s1  - - dps: {} {}".format(waterlevel.min(), waterlevel.max()))
             logger.debug('masked array...')
-            logger.debug('time %2f', (time.time() - time_start))
             array = np.ma.masked_array(waterlevel, mask = mask)
-            logger.debug('time %2f', (time.time() - time_start))
             logger.debug('container...')
-            logger.debug('time %2f', (time.time() - time_start))
             container = rasters.NumpyContainer(array, transform, self.wkt)
-            logger.debug('time %2f', (time.time() - time_start))
 
             return container
         elif layer == 'dps':
             dps = grid['dps'][S]
             logger.debug('bathymetry')
-            logger.debug('%r' % dps)
-            logger.debug('time %2f', (time.time() - time_start))
             container = rasters.NumpyContainer(
                 dps, transform, self.wkt)
-            logger.debug('time %2f', (time.time() - time_start))
             return container
         elif layer == 'quad_grid':
             quad_grid = grid['quad_grid'][S]
             logger.debug('quad_grid')
-            logger.debug('time %2f', (time.time() - time_start))
             container = rasters.NumpyContainer(
                 quad_grid, transform, self.wkt)
-            logger.debug('time %2f', (time.time() - time_start))
             return container
         else:
             raise NotImplemented("working on it")
