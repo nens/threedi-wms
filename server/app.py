@@ -13,6 +13,7 @@ from server.messages import MessageData
 import flask
 
 
+
 def build_app(req_port=5556, sub_port=5558):
     """App is already global and existing"""
     global app
@@ -30,6 +31,8 @@ def build_app(req_port=5556, sub_port=5558):
 
     # this one is global because we only have one event loop that receives messages
     message_data = MessageData(req_port=5556, sub_port=5558)
+    # stop listenin when we tear down the app
+    # flask.appcontext_tearing_down.connect?
 
     # Register the blueprints
     for blueprint in blueprints.get_blueprints():
@@ -43,4 +46,7 @@ def build_app(req_port=5556, sub_port=5558):
 
 # Main
 def run():
-    build_app(req_port=5556, sub_port=5558).run(host='0.0.0.0', debug=True)
+    app = build_app(req_port=5556, sub_port=5558)
+    app.run(host='0.0.0.0', debug=True)
+
+
