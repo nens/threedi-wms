@@ -29,11 +29,7 @@ def build_app(req_port=5556, sub_port=5558):
     app = flask.Flask(__name__)
 
     # this one is global because we only have one event loop that receives messages
-    #try:
     message_data = MessageData(req_port=5556, sub_port=5558)
-    # except:
-    #     message_data = None
-    #     print("Messages not available: Error in initializing messages.")
 
     # Register the blueprints
     for blueprint in blueprints.get_blueprints():
