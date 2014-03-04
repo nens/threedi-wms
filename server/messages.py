@@ -280,7 +280,7 @@ class MessageData(object):
                 volmask = (vol1 == 0)[quad_grid]
                 L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 waterheight = L(X, Y)
-                logger.debug('%r', waterheight)
+                #logger.debug('%r', waterheight)
                 # now mask the waterlevels where we did not compute
                 # or where mask of the
                 mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
