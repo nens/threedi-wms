@@ -170,6 +170,7 @@ class MessageData(object):
             logger.debug('time after update indices %2f' % (time.time() - time_start))
             self.update_grids()
             logger.debug('time after update grids %2f' % (time.time() - time_start))
+            logger.debug('now have keys: %s' % (', '.join(self.grid.keys())))
         else:
             self.loaded_model = False
             logger.debug('init grids failed.')
@@ -275,13 +276,15 @@ class MessageData(object):
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 # scipy interpolate does not deal with masked arrays
                 # so we set waterlevels to nan where volume is 0
-                s1[vol1 == 0] = np.nan
+                #s1[vol1 == 0] = np.nan
+                #s1 = np.where(vol1 == 0, -self.grid['dmax'], s1)
+                volmask = (vol1 == 0)[quad_grid]
                 L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 waterheight = L(X, Y)
                 logger.debug('%r', waterheight)
                 # now mask the waterlevels where we did not compute
                 # or where mask of the
-                mask = np.logical_or(np.isnan(waterheight), mask)
+                mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
                 #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
 
