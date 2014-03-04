@@ -46,7 +46,7 @@ class Listener(threading.Thread):
                         metadata['model'], message_data.loaded_model))
                     #message_data.loaded_model = metadata['model']
                     #message_data.grid = message_data.recv_grid()
-                    message_data.update_grids()
+                    message_data.init_grids()
             if metadata['name'] in message_data.grid:
                 del message_data.grid[metadata['name']]  # saves memory
             message_data.grid[metadata['name']] = arr
@@ -82,8 +82,6 @@ class MessageData(object):
         TODO: check timeout
         """
         # We don't have a message format for this yet
-        #for i in range(10):
-
         # We could keep this socket open.
         req = ctx.socket(zmq.REQ)
         # Blocks until connection is found
@@ -101,9 +99,6 @@ class MessageData(object):
             logger.exception("Grid not received")
         finally:
             req.close()
-
-        # else:
-        #     raise ValueError("Grid not received after 10 tries, giving up")
 
     def update_indices(self):
         """create all the indices that we need for performance
@@ -178,12 +173,13 @@ class MessageData(object):
     def get(self, layer, interpolate='nearest', **kwargs):
         if not self.grid:
             logger.info('Initializing grids (is normally already done, unless some server error)')
-            new_grid = self.init_grids()
-            if new_grid:
-                self.grid = new_grid
-        else:
-            logger.debug('Grids keys %r' % self.grid.keys())
-            logger.debug('Kwargs %r' % kwargs)
+            return None  # Crashes, try again later!
+            # new_grid = self.init_grids()
+            # if new_grid:
+            #     self.grid = new_grid
+        # else:
+        #     logger.debug('Grids keys %r' % self.grid.keys())
+        #     logger.debug('Kwargs %r' % kwargs)
         grid = self.grid
         time_start = time.time()
 
