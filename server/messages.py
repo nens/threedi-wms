@@ -265,14 +265,13 @@ class MessageData(object):
 
             if interpolate == 'nearest':
                 logger.debug('nearest interpolation...')
-                waterheight = s1[quad_grid.filled(0)]  # 2 seconds (all quads!!)
-                #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
+                waterheight = s1[quad_grid.filled(0)]
             else:
                 L = self.L
                 if L is None:
                     logger.warn("Interpolation data not available")
                 X, Y = self.X[S], self.Y[S]
-                logger.debug('linear interpolation...')  # slow!
+                logger.debug('linear interpolation...')
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 # scipy interpolate does not deal with masked arrays
                 # so we set waterlevels to nan where volume is 0
@@ -286,11 +285,9 @@ class MessageData(object):
                 # or where mask of the
                 mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
-                #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
 
             logger.debug('waterlevel...')
-            waterlevel = waterheight - (-dps)  # 0.5 second
-            #logger.debug("s1  - - dps: {} {}".format(waterlevel.min(), waterlevel.max()))
+            waterlevel = waterheight - (-dps)
             logger.debug('masked array...')
             # Gdal does not know about masked arrays, so we transform to an array with 
             #  a nodatavalue
