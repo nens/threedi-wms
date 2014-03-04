@@ -79,7 +79,7 @@ def get_depth_image(masked_array, waves=None, hmin=0, hmax=2):
     rgba = colormap(normalize(arr), bytes=True)
     # Make negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0)] = 0
-
+    rgba[masked_array.mask,3] = 0
     return rgba2image(rgba=rgba)
 
 
