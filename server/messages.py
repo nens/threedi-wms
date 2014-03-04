@@ -75,7 +75,7 @@ class MessageData(object):
             logger.debug("Killing listener in thread {}".format(self.thread))
             self.thread.kill_received = True
 
-    def recv_grid(self, req_port=5556, timeout=10000):
+    def recv_grid(self, req_port=5556, timeout=20000):
         """connect to the socket to get an updated grid
         TODO: not nice that this is different than the listener
 
@@ -259,19 +259,28 @@ class MessageData(object):
             dps = grid['dps'][S]
             quad_grid = grid['quad_grid'][S]
             mask = grid['quad_grid_dps_mask'][S]
-            s1 = self.grid['s1']
+            s1 = self.grid['s1'].copy()
+            vol1 = self.grid['vol1']
 
             if interpolate == 'nearest':
                 logger.debug('nearest interpolation...')
                 waterheight = s1[quad_grid.filled(0)]  # 2 seconds (all quads!!)
                 #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
             else:
+                L = self.L
+                if L is None:
+                    logger.warn("Interpolation data not available")
                 X, Y = self.X[S], self.Y[S]
                 logger.debug('linear interpolation...')  # slow!
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
-                self.L.values = np.ascontiguousarray(s1[:,np.newaxis])
-                L = self.L
+                # scipy interpolate does not deal with masked arrays
+                # so we set waterlevels to nan where volume is 0
+                s1[vol1 == 0] = np.nan
+                L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 waterheight = L(X, Y)
+                logger.debug('%r', waterheight)
+                # now mask the waterlevels where we did not compute
+                # or where mask of the
                 mask = np.logical_or(np.isnan(waterheight), mask)
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
                 #logger.debug("s1 : {} {}".format(waterheight.min(), waterheight.max()))
@@ -280,10 +289,13 @@ class MessageData(object):
             waterlevel = waterheight - (-dps)  # 0.5 second
             #logger.debug("s1  - - dps: {} {}".format(waterlevel.min(), waterlevel.max()))
             logger.debug('masked array...')
-            array = np.ma.masked_array(waterlevel, mask = mask)
+            # Gdal does not know about masked arrays, so we transform to an array with 
+            #  a nodatavalue
+            nodatavalue = 1e10
+            array = np.ma.masked_array(waterlevel, mask = mask).filled(nodatavalue)
             logger.debug('container...')
-            container = rasters.NumpyContainer(array, transform, self.wkt)
-
+            container = rasters.NumpyContainer(array, transform, self.wkt, 
+                                               nodatavalue=nodatavalue)
             return container
         elif layer == 'dps':
             dps = grid['dps'][S]

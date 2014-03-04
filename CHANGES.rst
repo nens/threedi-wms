@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.9 (unreleased)
 ----------------
 
+- Implement volume mask and alpha channel for masked arrays.
+
 - Improved getmap messages.
 
 - Getprofile, gettimeseries now also works with messages. Gettimeseries uses
