@@ -251,7 +251,7 @@ class MessageData(object):
             transform = self.transform
         logger.debug('transform: %s' % str(transform))
             
-        if layer == 'waterlevel':
+        if layer == 'waterlevel' or layer == 'waterheight':
             logger.debug('start waterlevel...')
             dps = grid['dps'][S]
             quad_grid = grid['quad_grid'][S]
@@ -283,7 +283,10 @@ class MessageData(object):
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
 
             logger.debug('waterlevel...')
-            waterlevel = waterheight - (-dps)
+            if layer == 'waterlevel':
+                waterlevel = waterheight - (-dps)
+            elif layer == 'waterheight':
+                waterlevel = waterheight
             logger.debug('masked array...')
             # Gdal does not know about masked arrays, so we transform to an array with 
             #  a nodatavalue

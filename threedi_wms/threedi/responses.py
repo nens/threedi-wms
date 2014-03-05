@@ -599,29 +599,28 @@ def get_response_for_getprofile(get_parameters):
     # get quads, bathymetry, depth
     if use_messages:
         time_start = _time.time()
-        quad_container = message_data.get('quad_grid')
         dps_container = message_data.get('dps')
         logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
-
-        quads, ms = get_data(container=quad_container,
-                                 ma=True, **get_parameters_extra)
-        logging.debug('Got quads in {} ms.'.format(ms))
 
         dps, ms = get_data(container=dps_container,
                                   ma=True, **get_parameters_extra)
         logging.debug('Got dps in {} ms.'.format(ms))
 
-        if interpolate == 'linear':
-            # Not tested, probably very slow!!
-            waterlevel_container = message_data.get("waterlevel", interpolate=interpolate)
-            logging.debug('Got depth container.')
-            waterlevel, ms = get_data(
-                waterlevel_container, ma=True, **get_parameters_extra)
-            depth = waterlevel
-            logging.debug('Got depth.')
-        else:
-            waterlevel = message_data.get_raw('s1')[quads]
-            depth = waterlevel + dps
+        #if interpolate == 'linear':
+        waterlevel_container = message_data.get("waterheight", **get_parameters_extra)
+        logging.debug('Got depth container.')
+        waterlevel, ms = get_data(
+            waterlevel_container, ma=True, **get_parameters_extra)
+        depth = waterlevel + dps  # Not very efficient, but it works fine and fast enough
+        logging.debug('Got depth.')
+        # else:
+        #     quad_container = message_data.get('quad_grid')
+        #     quads, ms = get_data(container=quad_container,
+        #                              ma=True, **get_parameters_extra)
+        #     logging.debug('Got quads in {} ms.'.format(ms))
+
+        #     waterlevel = message_data.get_raw('s1')[quads]
+        #     depth = waterlevel + dps
         bathymetry = -dps  # for later use
     else:
         time_start = _time.time()
