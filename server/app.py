@@ -22,7 +22,8 @@ def build_app(req_port=5556, sub_port=5558):
     app = flask.Flask(__name__)
 
     # this one is global because we only have one event loop that receives messages
-    message_data = MessageData(req_port=5556, sub_port=5558)
+    # message_data = MessageData(req_port=5556, sub_port=5558)
+    message_data = None
 
     # Register the blueprints
     for blueprint in blueprints.get_blueprints():
