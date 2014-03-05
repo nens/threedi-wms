@@ -234,15 +234,16 @@ class MessageData(object):
             y_src = np.arange(ymin_src, ymax_src, dy_src)
             # Lookup indices of plotted grid
             # this can be done faster with a calculation
-            x_start = bisect.bisect(x_src, xmin_dst)
-            x_end = bisect.bisect(x_src, xmax_dst) + 1
-            y_start = bisect.bisect(y_src, ymin_dst)
-            y_end = bisect.bisect(y_src, ymax_dst) + 1
+            dps_shape = self.grid['dps'].shape
+            x_start = min(max(bisect.bisect(x_src, xmin_dst) - 1, 0), dps_shape[1]-1)
+            x_end = min(max(bisect.bisect(x_src, xmax_dst) + 1, 0), dps_shape[1])
+            y_start = min(max(bisect.bisect(y_src, ymin_dst) - 1, 0), dps_shape[0]-1)
+            y_end = min(max(bisect.bisect(y_src, ymax_dst) + 1, 0), dps_shape[0])
             # and lookup required resolution
             x_step = max((x_end - x_start) // width, 1)
             y_step = max((y_end - y_start) // height, 1)
-            # logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
-            #     y_start, y_end, y_step, x_start, x_end, x_step, width, height))
+            logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
+                y_start, y_end, y_step, x_start, x_end, x_step, width, height))
             S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
             # Compute transform for sliced grid
             transform = (
