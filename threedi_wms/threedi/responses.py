@@ -210,12 +210,12 @@ def get_data(container, ma=False, **get_parameters):
 # Responses for various requests
 def get_response_for_getmap(get_parameters):
     """ Return png image. """
-    time_start = _time.time()
+    #time_start = _time.time()
 
     # No global import, celery doesn't want this.
     from server.app import message_data 
 
-    logger.debug('1... %3f' % (_time.time() - time_start))
+    #logger.debug('1... %3f' % (_time.time() - time_start))
 
     # Get the quad and waterlevel data objects
     layer_parameter = get_parameters['layers']
@@ -232,7 +232,7 @@ def get_response_for_getmap(get_parameters):
     else:
         use_cache = True
 
-    logger.debug('2... %3f' % (_time.time() - time_start))
+    #logger.debug('2... %3f' % (_time.time() - time_start))
     interpolate = get_parameters.get('interpolate', 'nearest')
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
@@ -267,7 +267,7 @@ def get_response_for_getmap(get_parameters):
                                      ma=True, **get_parameters)
         logger.debug('Got quads in {} ms.'.format(ms))
 
-    logger.debug('3... %3f' % (_time.time() - time_start))
+    #logger.debug('3... %3f' % (_time.time() - time_start))
 
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
         # lookup bathymetry in target coordiante system
@@ -281,7 +281,7 @@ def get_response_for_getmap(get_parameters):
             bathymetry, ms = get_data(container=static_data.pyramid,
                                       ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
-    logger.debug('4... %3f' % (_time.time() - time_start))
+    #logger.debug('4... %3f' % (_time.time() - time_start))
 
     # The velocity layer has the depth layer beneath it
     if mode in {'depth', 'velocity'}:
@@ -606,7 +606,6 @@ def get_response_for_getprofile(get_parameters):
                                   ma=True, **get_parameters_extra)
         logging.debug('Got dps in {} ms.'.format(ms))
 
-        #if interpolate == 'linear':
         waterlevel_container = message_data.get("waterheight", **get_parameters_extra)
         logging.debug('Got depth container.')
         waterlevel, ms = get_data(

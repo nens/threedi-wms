@@ -191,6 +191,7 @@ class MessageData(object):
             bbox = [float(x) for x in bbox_str.split(",")]
         else:
             bbox = None
+        logger.debug('bbox: %r' % str(bbox))
         height = int(kwargs.get("height", "0"))
         width = int(kwargs.get("width", "0"))
 
