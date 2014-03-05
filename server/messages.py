@@ -275,6 +275,7 @@ class MessageData(object):
                 #logger.debug('nearest interpolation...')
                 waterheight = s1[quad_grid.filled(0)]
             else:
+                # Here comes the 'Martijn interpolatie'.
                 L = self.L
                 if L is None:
                     logger.warn("Interpolation data not available")
