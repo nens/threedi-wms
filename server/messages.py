@@ -215,8 +215,16 @@ class MessageData(object):
             src2dst = osgeo.osr.CoordinateTransformation(src_srs, dst_srs)
 
             (xmin, ymin, xmax, ymax) = bbox
-            xmin_dst, ymin_dst, _ = src2dst.TransformPoint(xmin,ymin)
-            xmax_dst, ymax_dst, _ = src2dst.TransformPoint(xmax, ymax)
+            # Beware: the destination is NOT rectangular, so we need to
+            # recalculate the bbox.
+            x0_dst, y0_dst, _ = src2dst.TransformPoint(xmin, ymin)
+            x1_dst, y1_dst, _ = src2dst.TransformPoint(xmax, ymin)
+            x2_dst, y2_dst, _ = src2dst.TransformPoint(xmin, ymax)
+            x3_dst, y3_dst, _ = src2dst.TransformPoint(xmax, ymax)
+            xmin_dst = min([x0_dst, x1_dst, x2_dst, x3_dst])
+            xmax_dst = max([x0_dst, x1_dst, x2_dst, x3_dst])
+            ymin_dst = min([y0_dst, y1_dst, y2_dst, y3_dst])
+            ymax_dst = max([y0_dst, y1_dst, y2_dst, y3_dst])
 
             # lookup required slice
             xmin_src, ymin_src = (grid['x0p'], grid['y0p'])
@@ -227,9 +235,9 @@ class MessageData(object):
             # Lookup indices of plotted grid
             # this can be done faster with a calculation
             x_start = bisect.bisect(x_src, xmin_dst)
-            x_end = bisect.bisect(x_src, xmax_dst)
+            x_end = bisect.bisect(x_src, xmax_dst) + 1
             y_start = bisect.bisect(y_src, ymin_dst)
-            y_end = bisect.bisect(y_src, ymax_dst)
+            y_end = bisect.bisect(y_src, ymax_dst) + 1
             # and lookup required resolution
             x_step = max((x_end - x_start) // width, 1)
             y_step = max((y_end - y_start) // height, 1)
@@ -253,7 +261,7 @@ class MessageData(object):
         logger.debug('transform: %s' % str(transform))
             
         if layer == 'waterlevel' or layer == 'waterheight':
-            logger.debug('start waterlevel...')
+            logger.debug('waterlevel')
             dps = grid['dps'][S]
             quad_grid = grid['quad_grid'][S]
             mask = grid['quad_grid_dps_mask'][S]
@@ -261,14 +269,14 @@ class MessageData(object):
             vol1 = self.grid['vol1']
 
             if interpolate == 'nearest':
-                logger.debug('nearest interpolation...')
+                #logger.debug('nearest interpolation...')
                 waterheight = s1[quad_grid.filled(0)]
             else:
                 L = self.L
                 if L is None:
                     logger.warn("Interpolation data not available")
                 X, Y = self.X[S], self.Y[S]
-                logger.debug('linear interpolation...')
+                #logger.debug('linear interpolation...')
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 # scipy interpolate does not deal with masked arrays
                 # so we set waterlevels to nan where volume is 0
@@ -283,23 +291,26 @@ class MessageData(object):
                 mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
 
-            logger.debug('waterlevel...')
+            #logger.debug('waterlevel...')
             if layer == 'waterlevel':
                 waterlevel = waterheight - (-dps)
             elif layer == 'waterheight':
                 waterlevel = waterheight
-            logger.debug('masked array...')
+            #logger.debug('masked array...')
             # Gdal does not know about masked arrays, so we transform to an array with 
             #  a nodatavalue
             nodatavalue = 1e10
             array = np.ma.masked_array(waterlevel, mask = mask).filled(nodatavalue)
-            logger.debug('container...')
+            #logger.debug('container...')
             container = rasters.NumpyContainer(array, transform, self.wkt, 
                                                nodatavalue=nodatavalue)
             return container
         elif layer == 'dps':
             dps = grid['dps'][S]
             logger.debug('bathymetry')
+            #logger.debug('min, max %r %r', str(np.amin(dps)), str(np.amax(dps)))
+            #logger.debug('dsnop %r %r', self.grid['dsnop'], np.isclose(dps, -self.grid['dsnop']).sum())
+
             container = rasters.NumpyContainer(
                 dps, transform, self.wkt)
             return container

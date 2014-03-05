@@ -272,12 +272,12 @@ def get_response_for_getmap(get_parameters):
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
         # lookup bathymetry in target coordiante system
         ms = 0
+        if use_messages and mode == 'bathymetry':
+            container = message_data.get('dps', **get_parameters)
+            dps, ms = get_data(container=container,
+                               ma=True, **get_parameters)
+            bathymetry = -dps
         if not use_messages:
-            # container = message_data.get('dps', **get_parameters)
-            # dps, ms = get_data(container=container,
-            #                    ma=True, **get_parameters)
-            # bathymetry = -dps
-        #else:
             bathymetry, ms = get_data(container=static_data.pyramid,
                                       ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
@@ -291,21 +291,11 @@ def get_response_for_getmap(get_parameters):
             waterlevel = dynamic_data.waterlevel[quads]
             depth = waterlevel - bathymetry
         else:
-            # TODO: somehow this is way slower than the DynamicData method.
             # TODO: cleanup bathymetry. Best do substraction before interpolation
-            # if interpolate == 'linear':
-            # per pixel data is calculated for probably the whole model area --> slow!
             container = message_data.get(
                 "waterlevel", **get_parameters)
             waterlevel, ms = get_data(container, ma=True, **get_parameters)
             depth = waterlevel
-            # else:
-            #     # Don't know how it works, but it works and it's fast
-
-            #     # The values of the indices of s1 are mapped on the
-            #     # quad, the quad (now filled with values) is the result.
-            #     waterlevel = message_data.get_raw('s1')[quads]
-            #     depth = waterlevel - bathymetry
 
         # Direct image
         content, img = get_depth_image(
@@ -326,6 +316,7 @@ def get_response_for_getmap(get_parameters):
         content, img  = get_depth_image(masked_array=depth,
                                   hmax=hmax)
     elif mode == 'bathymetry':
+        logging.debug('bathymetry min, max %r %r' % (np.amin(bathymetry), np.amax(bathymetry)))
         limits = map(float, get_parameters['limits'].split(','))
         content, img  = get_bathymetry_image(masked_array=bathymetry,
                                        limits=limits)
@@ -610,9 +601,14 @@ def get_response_for_getprofile(get_parameters):
         logging.debug('Got depth container.')
         waterlevel, ms = get_data(
             waterlevel_container, ma=True, **get_parameters_extra)
-        depth = waterlevel + dps
+
+        bathymetry = -dps
+        logging.debug('bathymetry min, max %r %r' % (np.amin(bathymetry), np.amax(bathymetry)))
+        # max is 9.9990001e+13 !!! filter some bug
+        bathymetry = np.where(bathymetry > 1e10, 0, bathymetry)
+
+        depth = waterlevel - bathymetry #np.where(waterlevel.mask == True, 0, waterlevel+dps) 
         logging.debug('Got depth.')
-        bathymetry = -dps  # for later use
     else:
         time_start = _time.time()
         static_data = StaticData.get(layer=layer)
