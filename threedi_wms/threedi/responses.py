@@ -598,16 +598,16 @@ def get_response_for_getprofile(get_parameters):
         logging.debug('Got dps in {} ms.'.format(ms))
 
         waterlevel_container = message_data.get("waterheight", **get_parameters_extra)
-        logging.debug('Got depth container.')
+        logging.debug('Got waterlevel container.')
+        #import pdb; pdb.set_trace()
         waterlevel, ms = get_data(
             waterlevel_container, ma=True, **get_parameters_extra)
 
         bathymetry = -dps
-        logging.debug('bathymetry min, max %r %r' % (np.amin(bathymetry), np.amax(bathymetry)))
-        # max is 9.9990001e+13 !!! filter some bug
-        bathymetry = np.where(bathymetry > 1e10, 0, bathymetry)
-
-        depth = waterlevel - bathymetry #np.where(waterlevel.mask == True, 0, waterlevel+dps) 
+        depth = waterlevel - bathymetry
+        logging.debug('waterlevel nan %r', (waterlevel == np.nan).sum())
+        logging.debug('waterlevel 0 %r', (waterlevel == 0).sum())
+        #depth = np.where(bathymetry.mask == True, 0, waterlevel+dps) 
         logging.debug('Got depth.')
     else:
         time_start = _time.time()

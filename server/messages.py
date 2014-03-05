@@ -241,8 +241,8 @@ class MessageData(object):
             # and lookup required resolution
             x_step = max((x_end - x_start) // width, 1)
             y_step = max((y_end - y_start) // height, 1)
-            logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
-                y_start, y_end, y_step, x_start, x_end, x_step, width, height))
+            # logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
+            #     y_start, y_end, y_step, x_start, x_end, x_step, width, height))
             S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
             # Compute transform for sliced grid
             transform = (
@@ -258,11 +258,13 @@ class MessageData(object):
             logger.debug("couldn't find enough info in %s", kwargs)
             S = np.s_[:,:]
             transform = self.transform
-        logger.debug('transform: %s' % str(transform))
+        # logger.debug('transform: %s' % str(transform))
             
         if layer == 'waterlevel' or layer == 'waterheight':
-            logger.debug('waterlevel')
-            dps = grid['dps'][S]
+            # logger.debug('waterlevel')
+            nodatavalue = 1e10
+            dps = grid['dps'][S].copy()
+            dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
             quad_grid = grid['quad_grid'][S]
             mask = grid['quad_grid_dps_mask'][S]
             s1 = self.grid['s1'].copy()
@@ -276,7 +278,6 @@ class MessageData(object):
                 if L is None:
                     logger.warn("Interpolation data not available")
                 X, Y = self.X[S], self.Y[S]
-                #logger.debug('linear interpolation...')
                 #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
                 # scipy interpolate does not deal with masked arrays
                 # so we set waterlevels to nan where volume is 0
@@ -285,38 +286,43 @@ class MessageData(object):
                 volmask = (vol1 == 0)[quad_grid]
                 L.values = np.ascontiguousarray(s1[:,np.newaxis])
                 waterheight = L(X, Y)
-                #logger.debug('%r', waterheight)
                 # now mask the waterlevels where we did not compute
                 # or where mask of the
                 mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
                 waterheight = np.ma.masked_array(waterheight, mask=mask)
 
-            #logger.debug('waterlevel...')
             if layer == 'waterlevel':
                 waterlevel = waterheight - (-dps)
+
+                # Gdal does not know about masked arrays, so we transform to an array with 
+                #  a nodatavalue
+                array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
+                container = rasters.NumpyContainer(array, transform, self.wkt, 
+                                                   nodatavalue=nodatavalue)
             elif layer == 'waterheight':
                 waterlevel = waterheight
-            #logger.debug('masked array...')
-            # Gdal does not know about masked arrays, so we transform to an array with 
-            #  a nodatavalue
-            nodatavalue = 1e10
-            array = np.ma.masked_array(waterlevel, mask = mask).filled(nodatavalue)
-            #logger.debug('container...')
-            container = rasters.NumpyContainer(array, transform, self.wkt, 
-                                               nodatavalue=nodatavalue)
+
+                # Strange: nodatavalue becomes 0, which is undesirable for getprofile
+                array = np.ma.masked_array(waterlevel, mask=mask).filled(-dps)
+                container = rasters.NumpyContainer(array, transform, self.wkt, 
+                                                   nodatavalue=nodatavalue)
+
+
             return container
         elif layer == 'dps':
-            dps = grid['dps'][S]
-            logger.debug('bathymetry')
+            dps = grid['dps'][S].copy()
+            # logger.debug('depths')
+
+            nodatavalue = 1e10
+            dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
             #logger.debug('min, max %r %r', str(np.amin(dps)), str(np.amax(dps)))
-            #logger.debug('dsnop %r %r', self.grid['dsnop'], np.isclose(dps, -self.grid['dsnop']).sum())
 
             container = rasters.NumpyContainer(
-                dps, transform, self.wkt)
+                dps, transform, self.wkt, nodatavalue=nodatavalue)
             return container
         elif layer == 'quad_grid':
             quad_grid = grid['quad_grid'][S]
-            logger.debug('quad_grid')
+            # logger.debug('quad_grid')
             container = rasters.NumpyContainer(
                 quad_grid, transform, self.wkt)
             return container
