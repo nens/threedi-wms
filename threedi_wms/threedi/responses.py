@@ -539,7 +539,7 @@ def get_response_for_getprofile(get_parameters):
     # get quads, bathymetry, depth
     if use_messages:
         time_start = _time.time()
-        dps_container = message_data.get('dps')
+        dps_container = message_data.get('dps', **get_parameters_extra)
         logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
 
         dps, ms = get_data(container=dps_container,
