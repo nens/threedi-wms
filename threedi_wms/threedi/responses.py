@@ -18,6 +18,7 @@ from netCDF4 import Dataset
 from netCDF4 import num2date
 from matplotlib import cm
 from matplotlib import colors
+from scipy import ndimage
 
 import numpy as np
 import ogr
@@ -31,27 +32,25 @@ import logging
 import math
 import os
 import shutil
+import time as _time # stop watch
 
 
 cache = {}
 ogr.UseExceptions()
 
+logger = logging.getLogger(__name__)
 
 
-
-def rgba2image(rgba, antialias=1):
+def rgba2image(rgba):
     """ return imagedata. """
-    size = [d // antialias for d in rgba.shape[1::-1]]
-    image = Image.fromarray(rgba).resize(size, Image.ANTIALIAS)
+    image = Image.fromarray(rgba)
 
     buf = io.BytesIO()
     image.save(buf, 'png')
     return buf.getvalue(), image
 
 
-
-
-def get_depth_image(masked_array, waves=None, antialias=1, hmin=0, hmax=2):
+def get_depth_image(masked_array, waves=None, hmin=0, hmax=2):
     """ Return a png image from masked_array. """
     # Hardcode depth limits, until better height data
     normalize = colors.Normalize(vmin=hmin, vmax=hmax)
@@ -80,19 +79,19 @@ def get_depth_image(masked_array, waves=None, antialias=1, hmin=0, hmax=2):
     rgba = colormap(normalize(arr), bytes=True)
     # Make negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0)] = 0
+    rgba[masked_array.mask,3] = 0
+    return rgba2image(rgba=rgba)
 
-    return rgba2image(rgba=rgba, antialias=antialias)
 
-
-def get_bathymetry_image(masked_array, limits, antialias=1):
+def get_bathymetry_image(masked_array, limits):
     """ Return imagedata. """
     normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
     colormap = cm.summer
     rgba = colormap(normalize(masked_array), bytes=True)
-    return rgba2image(rgba=rgba, antialias=antialias)
+    return rgba2image(rgba=rgba)
 
 
-def get_grid_image(masked_array, antialias=1):
+def get_grid_image(masked_array):
     """ Return imagedata. """
     a, b = -1, 8
     kernel = np.array([[a,  a, a],
@@ -104,19 +103,18 @@ def get_grid_image(masked_array, antialias=1):
     index = np.ma.greater(normalize(data), 0.5)
     rgba[index] = (255, 0, 0, 255)
     rgba[~index] = (255, 0, 0, 0)
-    return rgba2image(rgba=rgba, antialias=antialias)
+    return rgba2image(rgba=rgba)
 
 
-
-def get_quad_grid_image(masked_array, antialias=1):
+def get_quad_grid_image(masked_array):
     """ Return imagedata. """
     normalize = colors.Normalize()
     colormap = cm.Set2
     rgba = colormap(normalize(masked_array), bytes=True)
-    return rgba2image(rgba=rgba, antialias=antialias)
+    return rgba2image(rgba=rgba)
 
 
-def get_velocity_image(masked_array, antialias=0, vmin=0, vmax=1.):
+def get_velocity_image(masked_array, vmin=0, vmax=1.):
     """ Return imagedata. """
     # Custom color map
     normalize = colors.Normalize(vmin=vmin, vmax=vmax)
@@ -144,38 +142,7 @@ def get_velocity_image(masked_array, antialias=0, vmin=0, vmax=1.):
     # Only show velocities that matter.
     rgba[..., 3][np.ma.less_equal(masked_array, 0.)] = 0
 
-    return rgba2image(rgba=rgba, antialias=antialias)
-
-
-def get_water_waves(masked_array, anim_frame, antialias=1):
-    """
-    Calculate waves from velocity array
-    """
-    # Animating 'waves'
-    y_shape, x_shape = masked_array.shape
-    x, y = np.mgrid[0:y_shape, 0:x_shape]
-    offset = anim_frame * 0.01
-    period = masked_array.filled(1)
-    amplitude = masked_array.filled(0)
-    waves = (np.sin(np.pi * 64 / period *
-             (offset + x / x_shape + y / y_shape)) * amplitude +
-             np.sin(np.pi * 60 / period *
-             (offset + y / y_shape)) * amplitude)
-
-    # 'Shade' by convolution
-    waves_shade = ndimage.filters.convolve(
-        waves,
-        np.array([[-.2, -0.5, -0.7, -.5, .3],
-                  [-.5, -0.7, -1.5,  .4, .5],
-                  [-.7, -1.5,  0.0, 1.5, .7],
-                  [-.5, -0.4,  1.5,  .7, .5],
-                  [-.3,  0.5,  0.7,  .5, .2]]))
-
-    normalize = colors.Normalize(vmin=0, vmax=24)
-
-    return get_depth_image(masked_array,
-                           antialias=antialias,
-                           waves=normalize(waves_shade))
+    return rgba2image(rgba=rgba)
 
 
 def get_data(container, ma=False, **get_parameters):
@@ -184,12 +151,9 @@ def get_data(container, ma=False, **get_parameters):
     """
     start = datetime.datetime.now()
     # Derive properties from get_paramaters
-    if get_parameters.get('antialias', 'no') == 'yes':
-        antialias = 2
-    else:
-        antialias = 1
-    size = (antialias * int(get_parameters['width']),
-            antialias * int(get_parameters['height']))
+
+    size = (int(get_parameters['width']),
+            int(get_parameters['height']))
     extent = map(float, get_parameters['bbox'].split(','))
     srs = get_parameters['srs']
 
@@ -215,7 +179,6 @@ def get_data(container, ma=False, **get_parameters):
 # Responses for various requests
 def get_response_for_getmap(get_parameters):
     """ Return png image. """
-
     # No global import, celery doesn't want this.
     from server.app import message_data 
 
@@ -229,80 +192,63 @@ def get_response_for_getmap(get_parameters):
         use_messages = True
     else:
         use_messages = False
-    rebuild_static = get_parameters.get('rebuild_static', 'no') == 'yes'
-    if get_parameters.get('antialias', 'no') == 'yes':
-        antialias = 2
-    else:
-        antialias = 1
     if get_parameters.get('nocache', 'no') == 'yes':
         use_cache = False
     else:
         use_cache = True
+
     interpolate = get_parameters.get('interpolate', 'nearest')
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
-    if rebuild_static:
-        logging.debug('Got rebuild_static {}, deleting cache.'.format(layer))
-        # delete var/cache/3di/<model> directory
-        # make sure layer has no directories or whatsoever.
-        cache_path = os.path.join(config.CACHE_DIR, layer.replace('/', ''))
-        shutil.rmtree(cache_path)
-
-    try:
-        static_data = StaticData.get(layer=layer, reload=rebuild_static)
-    except ValueError:
-        return 'Objects not ready, starting preparation.'
-    except rasters.LockError:
-        return 'Objects not ready, preparation in progress.'
+    # Pyramid + monolith, when not using messages
+    if not use_messages:
+        try:
+            static_data = StaticData.get(layer=layer, reload=False)
+        except ValueError:
+            return 'Objects not ready, starting preparation.'
+        except rasters.LockError:
+            return 'Objects not ready, preparation in progress.'
 
     if mode in ['depth', 'grid', 'flood', 'velocity', 'quad_grid']:
         # lookup quads in target coordinate system
-        if use_messages:
-            container = message_data.get('quad_grid')
-            quads, ms = get_data(container=container,
-                                     ma=True, **get_parameters)
-        else:
+        ms = 0
+        if not use_messages:
             quads, ms = get_data(container=static_data.monolith,
                                      ma=True, **get_parameters)
-        logging.debug('Got quads in {} ms.'.format(ms))
+        logger.debug('Got quads in {} ms.'.format(ms))
 
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
         # lookup bathymetry in target coordiante system
-        if use_messages:
-            container = message_data.get('bathymetry')
-            bathymetry, ms = get_data(container=container,
-                                      ma=True, **get_parameters)
-        else:
+        ms = 0
+        if use_messages and mode == 'bathymetry':
+            container = message_data.get('dps', **get_parameters)
+            dps, ms = get_data(container=container,
+                               ma=True, **get_parameters)
+            bathymetry = -dps
+        if not use_messages:
             bathymetry, ms = get_data(container=static_data.pyramid,
                                       ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
+
     # The velocity layer has the depth layer beneath it
     if mode in {'depth', 'velocity'}:
-        if not use_messages:
+        if use_messages:
+            # TODO: cleanup bathymetry. Best do substraction before interpolation
+            container = message_data.get(
+                "waterlevel", **get_parameters)
+            waterlevel, ms = get_data(container, ma=True, **get_parameters)
+            depth = waterlevel
+        else:
             dynamic_data = DynamicData.get(
                 layer=layer, time=time, use_cache=use_cache)
             waterlevel = dynamic_data.waterlevel[quads]
             depth = waterlevel - bathymetry
-        else:
-            # TODO: cleanup bathymetry. Best do substraction before interpolation
-            container = message_data.get("waterlevel", interpolate=interpolate)
-            waterlevel, ms = get_data(container, ma=True, **get_parameters)
-            depth = waterlevel
 
-        if 'anim_frame' in get_parameters:
-            # Add wave animation
-            content = get_water_waves(
-                masked_array=depth,
-                anim_frame=int(get_parameters['anim_frame']),
-                antialias=antialias,
-                hmax=hmax
-            )
-        else:
-            # Direct image
-            content, img = get_depth_image(masked_array=depth,
-                                      antialias=antialias,
-                                      hmax=hmax)
+        # Direct image
+        content, img = get_depth_image(
+            masked_array=depth,
+            hmax=hmax)
     elif mode == 'flood':
         # time is actually the sequence number of the flood
         hmax = get_parameters.get('hmax', 2.0)
@@ -314,46 +260,37 @@ def get_response_for_getmap(get_parameters):
         waterlevel = dynamic_data.waterlevel[quads]
         depth = waterlevel - bathymetry
 
-        if 'anim_frame' in get_parameters:
-            # Add wave animation
-            content = get_water_waves(
-                masked_array=depth,
-                anim_frame=int(get_parameters['anim_frame']),
-                antialias=antialias
-            )
-        else:
-            # Direct image
-            content, img  = get_depth_image(masked_array=depth,
-                                      antialias=antialias,
-                                      hmax=hmax)
+        # Direct image
+        content, img  = get_depth_image(masked_array=depth,
+                                  hmax=hmax)
     elif mode == 'bathymetry':
+        logging.debug('bathymetry min, max %r %r' % (np.amin(bathymetry), np.amax(bathymetry)))
         limits = map(float, get_parameters['limits'].split(','))
         content, img  = get_bathymetry_image(masked_array=bathymetry,
-                                       limits=limits,
-                                       antialias=antialias)
+                                       limits=limits)
     elif mode == 'grid':
-        content, img  = get_grid_image(masked_array=quads,
-                                 antialias=antialias)
+        content, img  = get_grid_image(masked_array=quads)
     elif mode == 'quad_grid':
-        content, img  = get_quad_grid_image(masked_array=quads,
-                                           antialias=antialias)
+        content, img  = get_quad_grid_image(masked_array=quads)
 
     # Add velocity on top of depth layer
     if mode == 'velocity':
-        dynamic_data_x = DynamicData.get(
-            layer=layer, time=time, use_cache=use_cache, variable='ucx')
-        dynamic_data_y = DynamicData.get(
-            layer=layer, time=time, use_cache=use_cache, variable='ucy')
-        u = np.sqrt(dynamic_data_x.waterlevel[quads] ** 2 +
-            dynamic_data_y.waterlevel[quads] ** 2)
+        # TODO: does not work yet.
+        # dynamic_data_x = DynamicData.get(
+        #     layer=layer, time=time, use_cache=use_cache, variable='ucx')
+        # dynamic_data_y = DynamicData.get(
+        #     layer=layer, time=time, use_cache=use_cache, variable='ucy')
+        # u = np.sqrt(dynamic_data_x.waterlevel[quads] ** 2 +
+        #     dynamic_data_y.waterlevel[quads] ** 2)
+        container = message_data.get(
+                "uc", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
 
-        content2, img2  = get_velocity_image(masked_array=u,
-                                     antialias=antialias)
+        content2, img2  = get_velocity_image(masked_array=u)
         img.paste(img2, (0, 0), img2)
         buf = io.BytesIO()
         img.save(buf, 'png')
         content = buf.getvalue()
-
 
     return content, 200, {
         'content-type': 'image/png',
@@ -414,8 +351,23 @@ def get_response_for_gettimeseries(get_parameters):
     options:
     quad=<quadtree index>
     absolute=true (default false): do not subtract height from s1
-    timestep=<max timestep you want to see>
+    messages=true/false -> for height
+    maxpoints=500 -> throw away points if # > maxpoints
     """
+    # No global import, celery doesn't want this.
+    from server.app import message_data 
+
+    if get_parameters.get('messages', 'false') == 'true':
+        use_messages = True
+    else:
+        use_messages = False
+    interpolate = get_parameters.get('interpolate', 'nearest')
+
+    # Option to directly get the value of a quad
+    quad = get_parameters.get('quad', None)
+    if quad is not None:
+        quad = int(quad)
+
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
                          get_parameters['point'].split(','))).reshape(1, 2)
@@ -428,16 +380,8 @@ def get_response_for_gettimeseries(get_parameters):
     timeformat = get_parameters.get('timeformat', 'iso')  # iso or epoch
     maxpoints = get_parameters.get('maxpoints', '500')
     maxpoints = int(maxpoints)
-    # For 1D test
-    quad = get_parameters.get('quad', None)
-    if quad is not None:
-        quad = int(quad)
+
     absolute = get_parameters.get('absolute', 'false')
-    timestep = get_parameters.get('timestep', None)
-    if timestep is not None:
-        timestep = int(timestep)
-        if timestep == 0:
-            timestep = 1  # Or it won't work correctly
 
     # Determine layers
     layer_parameter = get_parameters['layers']
@@ -448,22 +392,42 @@ def get_response_for_gettimeseries(get_parameters):
         layer, mode = layer_parameter, 's1'
 
     # Get height and quad
-    static_data = StaticData.get(layer=layer)
-    quads, ms = get_data(container=static_data.monolith,
-                         ma=True, **get_parameters_extra)
-    if quad is None:
-        quad = int(quads[0, 0])
-        logging.debug('Got quads in {} ms.'.format(ms))
-    logging.debug('Quad = %r' % quad)
+    if use_messages:
+        quad_container = message_data.get('quad_grid')
+        dps_container = message_data.get('dps')
 
-    bathymetry, ms = get_data(container=static_data.pyramid,
-                              ma=True, **get_parameters_extra)
-    height = bathymetry[0, 0]
+        if quad is None:
+            quads, ms = get_data(container=quad_container,
+                                     ma=True, **get_parameters_extra)
+            quad = int(quads[0, 0])
+            logging.debug('Got quads in {} ms.'.format(ms))
+        logging.debug('Got quads in {} ms.'.format(ms))
+
+        dps, ms = get_data(container=dps_container,
+                                  ma=True, **get_parameters_extra)
+        logging.debug('Got dps in {} ms.'.format(ms))
+
+        bathymetry = -dps
+        height = bathymetry[0, 0]  # not needed when absolute=true
+    else:
+        static_data = StaticData.get(layer=layer)
+        if quad is None:
+            quads, ms = get_data(container=static_data.monolith,
+                                 ma=True, **get_parameters_extra)
+            quad = int(quads[0, 0])
+            logging.debug('Got quads in {} ms.'.format(ms))
+        logging.debug('Quad = %r' % quad)
+
+        bathymetry, ms = get_data(container=static_data.pyramid,
+                                  ma=True, **get_parameters_extra)
+        logging.debug('Got bathymetry in {} ms.'.format(ms))
+
+        height = bathymetry[0, 0]
+
     if not height:
-        logging.debug('Got not height.')
+        logging.debug('Got no height.')
         height = 0
     logging.debug('Got height {}.'.format(height))
-    logging.debug('Got bathymetry in {} ms.'.format(ms))
 
     # Read data from netcdf
     path = utils.get_netcdf_path(layer=get_parameters['layers'])
@@ -477,10 +441,7 @@ def get_response_for_gettimeseries(get_parameters):
             if absolute == 'false':
                 depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
             else:
-                if timestep:
-                    depth = v[mode][:timestep, quad]
-                else:
-                    depth = v[mode][:, quad]
+                depth = v[mode][:, quad]
         else:
             #depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
             if absolute == 'true':
@@ -522,7 +483,24 @@ def get_response_for_gettimeseries(get_parameters):
 
 
 def get_response_for_getprofile(get_parameters):
-    """ Return json with profile. """
+    """ Return json with profile. 
+
+    get_parameters(may be incomplete):
+
+    use_messages: 'true' / 'false'
+    line
+    layers
+    """
+
+    # No global import, celery doesn't want this.
+    from server.app import message_data 
+
+    if get_parameters.get('messages', 'false') == 'true':
+        use_messages = True
+    else:
+        use_messages = False
+    interpolate = get_parameters.get('interpolate', 'nearest')
+
     # This request features a point, but an bbox is needed for reprojection.
     # Note that GetEnvelope() returns x1, x2, y1, y2 but bbox is x1, y1, x2, y2
     geometry = ogr.CreateGeometryFromWkt(str(get_parameters['line']))
@@ -532,6 +510,7 @@ def get_response_for_getprofile(get_parameters):
     bbox = ','.join(map(str, bbox_array))
 
     # set longest side to fixed size
+    # Not clear why we need this...
     rastersize = 512
     x_extent = bbox_array[2] - bbox_array[0]
     y_extent = bbox_array[3] - bbox_array[1]
@@ -556,20 +535,45 @@ def get_response_for_getprofile(get_parameters):
     # Get height and quad
     get_parameters_extra = dict(width=width, height=height, bbox=bbox)
     get_parameters_extra.update(get_parameters)
-    static_data = StaticData.get(layer=layer)
-    quads, ms = get_data(container=static_data.monolith,
-                         ma=True, **get_parameters_extra)
-    logging.debug('Got quads in {} ms.'.format(ms))
 
-    bathymetry, ms = get_data(container=static_data.pyramid,
-                              ma=True, **get_parameters_extra)
-    logging.debug('Got bathymetry in {} ms.'.format(ms))
+    # get quads, bathymetry, depth
+    if use_messages:
+        time_start = _time.time()
+        dps_container = message_data.get('dps')
+        logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
 
-    # Determine the waterlevel
-    dynamic_data = DynamicData.get(
-        layer=layer, time=time, use_cache=False)
-    waterlevel = dynamic_data.waterlevel[quads]
-    depth = waterlevel - bathymetry
+        dps, ms = get_data(container=dps_container,
+                                  ma=True, **get_parameters_extra)
+        logging.debug('Got dps in {} ms.'.format(ms))
+
+        waterlevel_container = message_data.get("waterheight", **get_parameters_extra)
+        logging.debug('Got waterlevel container.')
+        waterlevel, ms = get_data(
+            waterlevel_container, ma=True, **get_parameters_extra)
+
+        bathymetry = -dps
+        depth = waterlevel - bathymetry
+        logging.debug('Got depth.')
+    else:
+        time_start = _time.time()
+        static_data = StaticData.get(layer=layer)
+        quad_container = static_data.monolith
+        bathy_container = static_data.pyramid
+        logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
+
+        quads, ms = get_data(container=quad_container,
+                                 ma=True, **get_parameters_extra)
+        logging.debug('Got quads in {} ms.'.format(ms))
+
+        bathymetry, ms = get_data(container=bathy_container,
+                                  ma=True, **get_parameters_extra)
+        logging.debug('Got bathymetry in {} ms.'.format(ms))
+
+        # Determine the waterlevel
+        dynamic_data = DynamicData.get(
+            layer=layer, time=time, use_cache=False)
+        waterlevel = dynamic_data.waterlevel[quads]
+        depth = waterlevel - bathymetry
 
     # Sample the depth using the cellsize
     magicline = vector.MagicLine(np.array(geometry.GetPoints())[:, :2])
@@ -624,7 +628,7 @@ def get_response_for_getquantity(get_parameters):
 
     # Determine layer and time
     layer = get_parameters['layers']
-    time = int(get_parameters['time'])
+    time = int(get_parameters.get('time', 0))
     quantity = get_parameters['quantity']
     try:
         decimals = int(get_parameters['decimals'])
@@ -764,7 +768,6 @@ class DynamicData(object):
             netcdf_path = utils.get_netcdf_path(layer)
         with Dataset(netcdf_path) as dataset:
             waterlevel_variable = dataset.variables[variable]
-            #logging.debug(waterlevel_variable)
 
             # Initialize empty array with one element more than amount of quads
             self.waterlevel = np.ma.array(
@@ -778,6 +781,3 @@ class DynamicData(object):
             else:
                 corrected_time = waterlevel_variable.shape[0] - 1
             self.waterlevel[0:-1] = waterlevel_variable[corrected_time]
-
-# # this one is global because we only have one event loop that receives messages
-# message_data = MessageData()

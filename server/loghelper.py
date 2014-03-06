@@ -15,7 +15,7 @@ from server import config
 
 def _get_logging_dict(logfile_path):
     return {
-        'disable_existing_loggers': True,
+        'disable_existing_loggers': False,
         'version': 1,
         'formatters': {
             'verbose': {

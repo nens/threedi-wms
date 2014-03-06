@@ -13,6 +13,7 @@ install_requires = [
     'Flask',
     'gislib',
     'gunicorn',
+#    'blinker',
     'matplotlib',
     'netCDF4',
     'Pillow',
