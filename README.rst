@@ -9,6 +9,8 @@ The main purpose of the library is visualization of fast and accurate
 3di flooding calculations.
 
 Features:
+    - Memory messages for viewing live 3Di data
+    - NetCDF source for time series
     - Celery worker for long lasting tasks such as building bathymetry pyramids
     - File and only file based configuration
     - Modular setup employing Flask's Blueprint system
@@ -33,6 +35,8 @@ Running
 Production::
 
     $ bin/gunicorn 'server.app:build_app(req_port=5557,sub_port=5558)' -w 1 -b 0.0.0.0:5000
+
+Note: You must have the threedi_server configured at given request/subscribe ports in order to use memory messages.
 
 Development::
 
