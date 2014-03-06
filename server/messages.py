@@ -176,17 +176,10 @@ class MessageData(object):
         if not self.grid:
             logger.info('Initializing grids (is normally already done, unless some server error)')
             return None  # Crashes, try again later!
-            # new_grid = self.init_grids()
-            # if new_grid:
-            #     self.grid = new_grid
-        # else:
-        #     logger.debug('Grids keys %r' % self.grid.keys())
-        #     logger.debug('Kwargs %r' % kwargs)
         grid = self.grid
         time_start = time.time()
 
         # try to get parameters from request
-
         srs = kwargs.get("srs")
         bbox_str = kwargs.get("bbox")
         if bbox_str:
@@ -264,7 +257,6 @@ class MessageData(object):
         # logger.debug('transform: %s' % str(transform))
             
         if layer == 'waterlevel' or layer == 'waterheight':
-            # logger.debug('waterlevel')
             nodatavalue = 1e10
             dps = grid['dps'][S].copy()
             dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
@@ -274,7 +266,6 @@ class MessageData(object):
             vol1 = self.grid['vol1']
 
             if interpolate == 'nearest':
-                #logger.debug('nearest interpolation...')
                 waterheight = s1[quad_grid.filled(0)]
             else:
                 # Here comes the 'Martijn interpolatie'.
@@ -327,18 +318,15 @@ class MessageData(object):
             return container
         elif layer == 'dps':
             dps = grid['dps'][S].copy()
-            # logger.debug('depths')
 
             nodatavalue = 1e10
             dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
-            #logger.debug('min, max %r %r', str(np.amin(dps)), str(np.amax(dps)))
 
             container = rasters.NumpyContainer(
                 dps, transform, self.wkt, nodatavalue=nodatavalue)
             return container
         elif layer == 'quad_grid':
             quad_grid = grid['quad_grid'][S]
-            # logger.debug('quad_grid')
             container = rasters.NumpyContainer(
                 quad_grid, transform, self.wkt)
             return container

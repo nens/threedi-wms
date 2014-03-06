@@ -145,37 +145,6 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     return rgba2image(rgba=rgba)
 
 
-# def get_water_waves(masked_array, anim_frame, antialias=1):
-#     """
-#     Calculate waves from velocity array
-#     """
-#     # Animating 'waves'
-#     y_shape, x_shape = masked_array.shape
-#     x, y = np.mgrid[0:y_shape, 0:x_shape]
-#     offset = anim_frame * 0.01
-#     period = masked_array.filled(1)
-#     amplitude = masked_array.filled(0)
-#     waves = (np.sin(np.pi * 64 / period *
-#              (offset + x / x_shape + y / y_shape)) * amplitude +
-#              np.sin(np.pi * 60 / period *
-#              (offset + y / y_shape)) * amplitude)
-
-#     # 'Shade' by convolution
-#     waves_shade = ndimage.filters.convolve(
-#         waves,
-#         np.array([[-.2, -0.5, -0.7, -.5, .3],
-#                   [-.5, -0.7, -1.5,  .4, .5],
-#                   [-.7, -1.5,  0.0, 1.5, .7],
-#                   [-.5, -0.4,  1.5,  .7, .5],
-#                   [-.3,  0.5,  0.7,  .5, .2]]))
-
-#     normalize = colors.Normalize(vmin=0, vmax=24)
-
-#     return get_depth_image(masked_array,
-#                            antialias=antialias,
-#                            waves=normalize(waves_shade))
-
-
 def get_data(container, ma=False, **get_parameters):
     """
     Return numpy (masked) array from container
@@ -210,12 +179,8 @@ def get_data(container, ma=False, **get_parameters):
 # Responses for various requests
 def get_response_for_getmap(get_parameters):
     """ Return png image. """
-    #time_start = _time.time()
-
     # No global import, celery doesn't want this.
     from server.app import message_data 
-
-    #logger.debug('1... %3f' % (_time.time() - time_start))
 
     # Get the quad and waterlevel data objects
     layer_parameter = get_parameters['layers']
@@ -232,19 +197,9 @@ def get_response_for_getmap(get_parameters):
     else:
         use_cache = True
 
-    #logger.debug('2... %3f' % (_time.time() - time_start))
     interpolate = get_parameters.get('interpolate', 'nearest')
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
-
-    # rebuild_static = get_parameters.get('rebuild_static', 'no') == 'yes'
-    # # TODO: I don't think this is effective. It is also not used.
-    # if rebuild_static:
-    #     logging.debug('Got rebuild_static {}, deleting cache.'.format(layer))
-    #     # delete var/cache/3di/<model> directory
-    #     # make sure layer has no directories or whatsoever.
-    #     cache_path = os.path.join(config.CACHE_DIR, layer.replace('/', ''))
-    #     shutil.rmtree(cache_path)
 
     # Pyramid + monolith, when not using messages
     if not use_messages:
@@ -259,15 +214,9 @@ def get_response_for_getmap(get_parameters):
         # lookup quads in target coordinate system
         ms = 0
         if not use_messages:
-            # container = message_data.get('quad_grid', **get_parameters)
-            # quads, ms = get_data(container=container,
-            #                          ma=True, **get_parameters)
-        #else:
             quads, ms = get_data(container=static_data.monolith,
                                      ma=True, **get_parameters)
         logger.debug('Got quads in {} ms.'.format(ms))
-
-    #logger.debug('3... %3f' % (_time.time() - time_start))
 
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
         # lookup bathymetry in target coordiante system
@@ -281,21 +230,20 @@ def get_response_for_getmap(get_parameters):
             bathymetry, ms = get_data(container=static_data.pyramid,
                                       ma=True, **get_parameters)
         logging.debug('Got bathymetry in {} ms.'.format(ms))
-    #logger.debug('4... %3f' % (_time.time() - time_start))
 
     # The velocity layer has the depth layer beneath it
     if mode in {'depth', 'velocity'}:
-        if not use_messages:
-            dynamic_data = DynamicData.get(
-                layer=layer, time=time, use_cache=use_cache)
-            waterlevel = dynamic_data.waterlevel[quads]
-            depth = waterlevel - bathymetry
-        else:
+        if use_messages:
             # TODO: cleanup bathymetry. Best do substraction before interpolation
             container = message_data.get(
                 "waterlevel", **get_parameters)
             waterlevel, ms = get_data(container, ma=True, **get_parameters)
             depth = waterlevel
+        else:
+            dynamic_data = DynamicData.get(
+                layer=layer, time=time, use_cache=use_cache)
+            waterlevel = dynamic_data.waterlevel[quads]
+            depth = waterlevel - bathymetry
 
         # Direct image
         content, img = get_depth_image(
@@ -600,15 +548,11 @@ def get_response_for_getprofile(get_parameters):
 
         waterlevel_container = message_data.get("waterheight", **get_parameters_extra)
         logging.debug('Got waterlevel container.')
-        #import pdb; pdb.set_trace()
         waterlevel, ms = get_data(
             waterlevel_container, ma=True, **get_parameters_extra)
 
         bathymetry = -dps
         depth = waterlevel - bathymetry
-        logging.debug('waterlevel nan %r', (waterlevel == np.nan).sum())
-        logging.debug('waterlevel 0 %r', (waterlevel == 0).sum())
-        #depth = np.where(bathymetry.mask == True, 0, waterlevel+dps) 
         logging.debug('Got depth.')
     else:
         time_start = _time.time()
@@ -824,8 +768,6 @@ class DynamicData(object):
             netcdf_path = utils.get_netcdf_path(layer)
         with Dataset(netcdf_path) as dataset:
             waterlevel_variable = dataset.variables[variable]
-            # logging.debug("waterlevel_variable shape")
-            # logging.debug(waterlevel_variable.shape)
 
             # Initialize empty array with one element more than amount of quads
             self.waterlevel = np.ma.array(
