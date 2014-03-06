@@ -12,6 +12,8 @@ import numpy as np
 import time  # stopwatch
 import osgeo.osr
 import bisect
+import sys
+import traceback
 
 from threading import BoundedSemaphore
 
@@ -285,13 +287,25 @@ class MessageData(object):
                 # so we set waterlevels to nan where volume is 0
                 #s1[vol1 == 0] = np.nan
                 #s1 = np.where(vol1 == 0, -self.grid['dmax'], s1)
-                volmask = (vol1 == 0)[quad_grid]
-                L.values = np.ascontiguousarray(s1[:,np.newaxis])
-                waterheight = L(X, Y)
-                # now mask the waterlevels where we did not compute
-                # or where mask of the
-                mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
-                waterheight = np.ma.masked_array(waterheight, mask=mask)
+                try:
+                    volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
+                    L.values = np.ascontiguousarray(s1[:,np.newaxis])
+                    waterheight = L(X, Y)
+                    # now mask the waterlevels where we did not compute
+                    # or where mask of the
+                    mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
+                    waterheight = np.ma.masked_array(waterheight, mask=mask)
+                except IndexError:
+                    # Fallback to nearest
+                    # Kaapstad:
+                    # IndexError: index 1085856568 is out of bounds for size 16473
+                    logger.error('Interpolation crashed, falling back to nearest.')
+                    waterheight = s1[quad_grid.filled(0)]
+                    # Log everything
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    for line in traceback.format_exception(
+                        exc_type, exc_value, exc_traceback):
+                        logger.debug(line)
 
             if layer == 'waterlevel':
                 waterlevel = waterheight - (-dps)

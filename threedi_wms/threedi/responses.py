@@ -328,14 +328,15 @@ def get_response_for_getmap(get_parameters):
     # Add velocity on top of depth layer
     if mode == 'velocity':
         # TODO: does not work yet.
-        dynamic_data_x = DynamicData.get(
-            layer=layer, time=time, use_cache=use_cache, variable='ucx')
-        dynamic_data_y = DynamicData.get(
-            layer=layer, time=time, use_cache=use_cache, variable='ucy')
-        u = np.sqrt(dynamic_data_x.waterlevel[quads] ** 2 +
-            dynamic_data_y.waterlevel[quads] ** 2)
+        # dynamic_data_x = DynamicData.get(
+        #     layer=layer, time=time, use_cache=use_cache, variable='ucx')
+        # dynamic_data_y = DynamicData.get(
+        #     layer=layer, time=time, use_cache=use_cache, variable='ucy')
         # u = np.sqrt(dynamic_data_x.waterlevel[quads] ** 2 +
         #     dynamic_data_y.waterlevel[quads] ** 2)
+        container = message_data.get(
+                "uc", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
 
         content2, img2  = get_velocity_image(masked_array=u)
         img.paste(img2, (0, 0), img2)
