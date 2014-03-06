@@ -2,7 +2,13 @@ Changelog of threedi-wms
 ===================================================
 
 
-0.9 (unreleased)
+0.10 (unreleased)
+-----------------
+
+- Nothing changed yet.
+
+
+0.9 (2014-03-06)
 ----------------
 
 - Implement volume mask and alpha channel for masked arrays.
