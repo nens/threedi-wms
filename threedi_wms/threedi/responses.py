@@ -211,7 +211,6 @@ def get_response_for_getmap(get_parameters):
             use_messages = False
             break
 
-
     # Pyramid + monolith, when not using messages
     if not use_messages:
         try:
