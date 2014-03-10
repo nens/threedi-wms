@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.10 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- Added fallback mechanism if memory messages not yet available.
 
 
 0.9 (2014-03-06)
