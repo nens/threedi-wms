@@ -541,25 +541,40 @@ def get_response_for_getprofile(get_parameters):
         time_start = _time.time()
         dps_container = message_data.get('dps', **get_parameters_extra)
         logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
-
         dps, ms = get_data(container=dps_container,
                                   ma=True, **get_parameters_extra)
         logging.debug('Got dps in {} ms.'.format(ms))
+
 
         waterlevel_container = message_data.get("waterheight", **get_parameters_extra)
         logging.debug('Got waterlevel container.')
         waterlevel, ms = get_data(
             waterlevel_container, ma=True, **get_parameters_extra)
 
-        # groundwaterlevel_container = message_data.get("sg", **get_parameters_extra)
-        # logging.debug('Got groundwaterlevel container.')
-        # groundwaterlevel, ms = get_data(
-        #     groundwaterlevel_container, ma=True, **get_parameters_extra)
-
         bathymetry = -dps
         depth = waterlevel - bathymetry
+
+        if 'sg' in message_data.grid:
+            # Got ground water
+            quad_container = message_data.get("quad_grid", **get_parameters_extra)
+            quads, ms = get_data(container=quad_container,
+                                     ma=True, **get_parameters_extra)
+            logging.debug('Got quads in {} ms.'.format(ms))
+            # groundwaterlevel_container = message_data.get("sg", **get_parameters_extra)
+            # logging.debug('Got groundwaterlevel container.')
+            # groundwaterlevel, ms = get_data(
+            #     groundwaterlevel_container, ma=True, **get_parameters_extra)
+            groundwaterlevel = message_data.get_raw('sg')[quads]
+            logger.debug('groundwaterlevel')
+            logger.debug(groundwaterlevel)
+        else:
+            groundwaterlevel = np.zeros(depth.shape)
+
+        #bathymetry_delta = bathymetry - groundwaterlevel
+
         logging.debug('Got depth.')
     else:
+        # Becoming obsolete
         time_start = _time.time()
         static_data = StaticData.get(layer=layer)
         quad_container = static_data.monolith
@@ -580,6 +595,10 @@ def get_response_for_getprofile(get_parameters):
         waterlevel = dynamic_data.waterlevel[quads]
         depth = waterlevel - bathymetry
 
+        # No support for groundwater
+        groundwaterlevel = np.zeros(depth.shape)
+        #bathymetry_delta = bathymetry
+
     # Sample the depth using the cellsize
     magicline = vector.MagicLine(np.array(geometry.GetPoints())[:, :2])
     magicline2 = magicline.pixelize(cellsize)
@@ -593,16 +612,26 @@ def get_response_for_getprofile(get_parameters):
     ).transpose())[::-1]
     depths = np.ma.maximum(depth[indices], 0)
     waterlevel_sampled = np.ma.maximum(waterlevel[indices], -100)
+    groundwaterlevel_sampled = np.ma.maximum(groundwaterlevel[indices], -100)
     bathymetry_sampled = np.ma.maximum(bathymetry[indices], -100)
 
+    # groundwaterlevel higher than the bathymetry is clipped
+    groundwaterlevel_sampled = np.ma.minimum(groundwaterlevel_sampled, bathymetry_sampled)
+
     #bathymetry from 0 up
-    bathymetry_minimum = min(np.ma.amin(bathymetry_sampled, 0), 0)
-    bathymetry_sampled = bathymetry_sampled - bathymetry_minimum
+    # bathymetry_minimum = min(np.ma.amin(bathymetry_sampled, 0), 0)
+    # bathymetry_sampled = bathymetry_sampled - bathymetry_minimum
+    minimum_level = min(
+        np.ma.amin(groundwaterlevel_sampled, 0), 
+        np.ma.amin(bathymetry_sampled, 0))
+    groundwaterlevel_delta_sampled = groundwaterlevel_sampled - minimum_level
+    bathymetry_delta_sampled = bathymetry_sampled - groundwaterlevel_sampled
 
     compressed_depths = depths.filled(0)
     compressed_distances = distances
-    compressed_waterlevels = waterlevel_sampled.filled(0)
-    compressed_bathymetry = bathymetry_sampled.filled(0)
+    # compressed_waterlevels = waterlevel_sampled.filled(0)
+    compressed_bathymetry = bathymetry_delta_sampled.filled(0)
+    compressed_groundwaterlevels = groundwaterlevel_delta_sampled.filled(0)
 
     roundfunc = lambda x: round(x, 5)
     mapped_compressed_distances = map(roundfunc, compressed_distances)
@@ -615,11 +644,14 @@ def get_response_for_getprofile(get_parameters):
         # waterlevel=zip(
         #     mapped_compressed_distances,
         #     map(roundfunc, compressed_waterlevels)),
-        bathymetry=zip(
+        bathymetry_delta=zip(
             mapped_compressed_distances,
             map(roundfunc, compressed_bathymetry)),
-        bias=zip(mapped_compressed_distances,
-            [roundfunc(bathymetry_minimum)]*len(mapped_compressed_distances)),
+        groundwater_delta=zip(
+            mapped_compressed_distances,
+            map(roundfunc, compressed_groundwaterlevels)),
+        offset=zip(mapped_compressed_distances,
+            [roundfunc(minimum_level)]*len(mapped_compressed_distances)),
     ))
 
     return content, 200, {
