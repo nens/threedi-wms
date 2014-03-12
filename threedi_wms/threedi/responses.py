@@ -551,6 +551,11 @@ def get_response_for_getprofile(get_parameters):
         waterlevel, ms = get_data(
             waterlevel_container, ma=True, **get_parameters_extra)
 
+        # groundwaterlevel_container = message_data.get("sg", **get_parameters_extra)
+        # logging.debug('Got groundwaterlevel container.')
+        # groundwaterlevel, ms = get_data(
+        #     groundwaterlevel_container, ma=True, **get_parameters_extra)
+
         bathymetry = -dps
         depth = waterlevel - bathymetry
         logging.debug('Got depth.')

@@ -330,6 +330,15 @@ class MessageData(object):
             container = rasters.NumpyContainer(
                 quad_grid, transform, self.wkt)
             return container
+        elif layer == 'sg':
+            dps = grid['sg'][S].copy()
+
+            nodatavalue = 1e10
+            dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+
+            container = rasters.NumpyContainer(
+                dps, transform, self.wkt, nodatavalue=nodatavalue)
+            return container
         else:
             raise NotImplemented("working on it")
 
