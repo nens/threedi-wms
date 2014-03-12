@@ -7,6 +7,8 @@ Changelog of threedi-wms
 
 - Added ground water in getprofile.
 
+- Added fallback mechanism if memory messages not yet available.
+
 
 0.9 (2014-03-06)
 ----------------

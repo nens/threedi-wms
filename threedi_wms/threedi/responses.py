@@ -201,6 +201,16 @@ def get_response_for_getmap(get_parameters):
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
+    # Check if messages data is ready. If not: fall back to netcdf/pyramid method.
+    for grid_var in ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
+        'loaded_model', 'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
+        'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 't1', 'jmax', 'x0p']:
+        if grid_var not in message_data.grid:
+            logger.debug('Not all vars available yet in message_data (%r)'
+                ', falling back to netcdf.' % grid_var)
+            use_messages = False
+            break
+
     # Pyramid + monolith, when not using messages
     if not use_messages:
         try:
