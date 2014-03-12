@@ -568,7 +568,7 @@ def get_response_for_getprofile(get_parameters):
             logger.debug('groundwaterlevel')
             logger.debug(groundwaterlevel)
         else:
-            groundwaterlevel = np.zeros(depth.shape)
+            groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
 
         #bathymetry_delta = bathymetry - groundwaterlevel
 
