@@ -378,6 +378,8 @@ def get_response_for_gettimeseries(get_parameters):
     if quad is not None:
         quad = int(quad)
 
+    # Fallback doesn't work: netcdf not present yet.
+
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
                          get_parameters['point'].split(','))).reshape(1, 2)
@@ -511,6 +513,8 @@ def get_response_for_getprofile(get_parameters):
         use_messages = False
     interpolate = get_parameters.get('interpolate', 'nearest')
 
+    # Fallback doesn't work: netcdf not present yet.
+
     # This request features a point, but an bbox is needed for reprojection.
     # Note that GetEnvelope() returns x1, x2, y1, y2 but bbox is x1, y1, x2, y2
     geometry = ogr.CreateGeometryFromWkt(str(get_parameters['line']))
@@ -564,7 +568,7 @@ def get_response_for_getprofile(get_parameters):
         bathymetry = -dps
         depth = waterlevel - bathymetry
 
-        if 'sg' in message_data.grid:
+        if 'sg' in message_data.grid and message_data.get_raw('sg') is not None:
             # Got ground water
             quad_container = message_data.get("quad_grid", **get_parameters_extra)
             quads, ms = get_data(container=quad_container,
@@ -575,8 +579,9 @@ def get_response_for_getprofile(get_parameters):
             # groundwaterlevel, ms = get_data(
             #     groundwaterlevel_container, ma=True, **get_parameters_extra)
             groundwaterlevel = message_data.get_raw('sg')[quads]
-            logger.debug('groundwaterlevel')
-            logger.debug(groundwaterlevel)
+            # logging.debug('a')
+            # logging.debug(np.amin(bathymetry))
+            # logging.debug(np.amin(groundwaterlevel))
         else:
             groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
 
@@ -606,7 +611,7 @@ def get_response_for_getprofile(get_parameters):
         depth = waterlevel - bathymetry
 
         # No support for groundwater
-        groundwaterlevel = np.zeros(depth.shape)
+        groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
         #bathymetry_delta = bathymetry
 
     # Sample the depth using the cellsize
