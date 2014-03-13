@@ -413,7 +413,6 @@ def get_response_for_gettimeseries(get_parameters):
                                      ma=True, **get_parameters_extra)
             quad = int(quads[0, 0])
             logging.debug('Got quads in {} ms.'.format(ms))
-        logging.debug('Got quads in {} ms.'.format(ms))
 
         dps, ms = get_data(container=dps_container,
                                   ma=True, **get_parameters_extra)
