@@ -378,6 +378,8 @@ def get_response_for_gettimeseries(get_parameters):
     if quad is not None:
         quad = int(quad)
 
+    # Fallback doesn't work: netcdf not present yet.
+
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
                          get_parameters['point'].split(','))).reshape(1, 2)
@@ -511,6 +513,8 @@ def get_response_for_getprofile(get_parameters):
         use_messages = False
     interpolate = get_parameters.get('interpolate', 'nearest')
 
+    # Fallback doesn't work: netcdf not present yet.
+
     # This request features a point, but an bbox is needed for reprojection.
     # Note that GetEnvelope() returns x1, x2, y1, y2 but bbox is x1, y1, x2, y2
     geometry = ogr.CreateGeometryFromWkt(str(get_parameters['line']))
@@ -551,10 +555,10 @@ def get_response_for_getprofile(get_parameters):
         time_start = _time.time()
         dps_container = message_data.get('dps', **get_parameters_extra)
         logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
-
         dps, ms = get_data(container=dps_container,
                                   ma=True, **get_parameters_extra)
         logging.debug('Got dps in {} ms.'.format(ms))
+
 
         waterlevel_container = message_data.get("waterheight", **get_parameters_extra)
         logging.debug('Got waterlevel container.')
@@ -563,8 +567,22 @@ def get_response_for_getprofile(get_parameters):
 
         bathymetry = -dps
         depth = waterlevel - bathymetry
+
+        if 'sg' in message_data.grid and message_data.get_raw('sg') is not None:
+            # Got ground water
+            quad_container = message_data.get("quad_grid", **get_parameters_extra)
+            quads, ms = get_data(container=quad_container,
+                                     ma=True, **get_parameters_extra)
+            logging.debug('Got quads in {} ms.'.format(ms))
+            groundwaterlevel = message_data.get_raw('sg')[quads]
+        else:
+            groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
+
+        #bathymetry_delta = bathymetry - groundwaterlevel
+
         logging.debug('Got depth.')
     else:
+        # Becoming obsolete
         time_start = _time.time()
         static_data = StaticData.get(layer=layer)
         quad_container = static_data.monolith
@@ -585,6 +603,10 @@ def get_response_for_getprofile(get_parameters):
         waterlevel = dynamic_data.waterlevel[quads]
         depth = waterlevel - bathymetry
 
+        # No support for groundwater
+        groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
+        #bathymetry_delta = bathymetry
+
     # Sample the depth using the cellsize
     magicline = vector.MagicLine(np.array(geometry.GetPoints())[:, :2])
     magicline2 = magicline.pixelize(cellsize)
@@ -598,16 +620,26 @@ def get_response_for_getprofile(get_parameters):
     ).transpose())[::-1]
     depths = np.ma.maximum(depth[indices], 0)
     waterlevel_sampled = np.ma.maximum(waterlevel[indices], -100)
+    groundwaterlevel_sampled = np.ma.maximum(groundwaterlevel[indices], -100)
     bathymetry_sampled = np.ma.maximum(bathymetry[indices], -100)
 
+    # groundwaterlevel higher than the bathymetry is clipped
+    groundwaterlevel_sampled = np.ma.minimum(groundwaterlevel_sampled, bathymetry_sampled)
+
     #bathymetry from 0 up
-    bathymetry_minimum = min(np.ma.amin(bathymetry_sampled, 0), 0)
-    bathymetry_sampled = bathymetry_sampled - bathymetry_minimum
+    # bathymetry_minimum = min(np.ma.amin(bathymetry_sampled, 0), 0)
+    # bathymetry_sampled = bathymetry_sampled - bathymetry_minimum
+    minimum_level = min(
+        np.ma.amin(groundwaterlevel_sampled, 0), 
+        np.ma.amin(bathymetry_sampled, 0))
+    groundwaterlevel_delta_sampled = groundwaterlevel_sampled - minimum_level
+    bathymetry_delta_sampled = bathymetry_sampled - groundwaterlevel_sampled
 
     compressed_depths = depths.filled(0)
     compressed_distances = distances
-    compressed_waterlevels = waterlevel_sampled.filled(0)
-    compressed_bathymetry = bathymetry_sampled.filled(0)
+    # compressed_waterlevels = waterlevel_sampled.filled(0)
+    compressed_bathymetry = bathymetry_delta_sampled.filled(0)
+    compressed_groundwaterlevels = groundwaterlevel_delta_sampled.filled(0)
 
     roundfunc = lambda x: round(x, 5)
     mapped_compressed_distances = map(roundfunc, compressed_distances)
@@ -620,11 +652,14 @@ def get_response_for_getprofile(get_parameters):
         # waterlevel=zip(
         #     mapped_compressed_distances,
         #     map(roundfunc, compressed_waterlevels)),
-        bathymetry=zip(
+        bathymetry_delta=zip(
             mapped_compressed_distances,
             map(roundfunc, compressed_bathymetry)),
-        bias=zip(mapped_compressed_distances,
-            [roundfunc(bathymetry_minimum)]*len(mapped_compressed_distances)),
+        groundwater_delta=zip(
+            mapped_compressed_distances,
+            map(roundfunc, compressed_groundwaterlevels)),
+        offset=zip(mapped_compressed_distances,
+            [roundfunc(minimum_level)]*len(mapped_compressed_distances)),
     ))
 
     return content, 200, {
