@@ -109,6 +109,9 @@ class MessageData(object):
         """
         # lookup cell centers
         grid = self.grid
+        self.wkt = grid['wkt']
+        #logger.info('nodk: %r' % grid['nodk'] )
+        # TODO: handle 1D stuff correctly
         m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
         n = (grid['nodn']-1)*grid['jmaxk'][grid['nodk']-1]
         size = grid['imaxk'][grid['nodk']-1]
@@ -135,7 +138,6 @@ class MessageData(object):
                     0,
                     float(grid['dyp']))
         self.transform = transform
-        self.wkt = grid['wkt']
 
     def update_grids(self):
         """Preprocess some stuff that only needs to be done once.
@@ -162,10 +164,10 @@ class MessageData(object):
         if new_grid is not None:
             self.grid = new_grid
             self.loaded_model = self.grid['loaded_model']
-            logger.debug('time after receive grid %2f' % (time.time() - time_start))
-            self.update_indices()
             logger.debug('time after update indices %2f' % (time.time() - time_start))
             self.update_grids()
+            logger.debug('time after receive grid %2f' % (time.time() - time_start))
+            self.update_indices()
             logger.debug('time after update grids %2f' % (time.time() - time_start))
             logger.debug('now have keys: %s' % (', '.join(self.grid.keys())))
         else:
