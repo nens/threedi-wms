@@ -109,9 +109,20 @@ class MessageData(object):
         """
         # lookup cell centers
         grid = self.grid
-        m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
-        n = (grid['nodn']-1)*grid['jmaxk'][grid['nodk']-1]
-        size = grid['imaxk'][grid['nodk']-1]
+        #logger.info('nodk: %r' % grid['nodk'] )
+        #import pdb; pdb.set_trace()
+
+        # twod_idx is a boolean array to filter out the 2D cells
+        twod_idx = grid['nod_type'] == 1  # TODO: get value out of wrapper
+        imaxk = grid['imaxk'][grid['nodk'][twod_idx]-1]
+        jmaxk = grid['jmaxk'][grid['nodk'][twod_idx]-1]
+        m = (grid['nodm'][twod_idx] - 1)*imaxk
+        n = (grid['nodn'][twod_idx] - 1)*jmaxk
+
+        # TODO: handle 1D stuff correctly
+        #m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
+        #n = (grid['nodn']-1)*grid['jmaxk'][grid['nodk']-1]
+        size = imaxk  # grid['imaxk'][grid['nodk']-1]
         mc = m + size/2.0
         nc = n + size/2.0
 

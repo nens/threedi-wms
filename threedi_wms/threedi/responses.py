@@ -50,7 +50,7 @@ def rgba2image(rgba):
     return buf.getvalue(), image
 
 
-def get_depth_image(masked_array, waves=None, hmin=0, hmax=2):
+def get_depth_image(masked_array, hmin=0, hmax=2):
     """ Return a png image from masked_array. """
     # Hardcode depth limits, until better height data
     normalize = colors.Normalize(vmin=hmin, vmax=hmax)
@@ -73,13 +73,31 @@ def get_depth_image(masked_array, waves=None, hmin=0, hmax=2):
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
     # Apply scaling and colormap
     arr = masked_array
-    #import pdb; pdb.set_trace()
-    if waves is not None:
-        arr += waves
+
     rgba = colormap(normalize(arr), bytes=True)
+    # If matplotlib does not support alpha and you want it anyway:
+    # Use red as alpha, then overwrite the alpha channel
+    # cdict2 = {  # some versions of matplotlib do not have alpha
+    #     'green': ((0.0, 200. / 256, 200. / 256),
+    #               (0.5, 120. / 256, 120. / 256),
+    #               (1.0, 65. / 256, 65. / 256)),
+    #     'blue': ((0.0, 255. / 256, 255. / 256),
+    #              (0.5, 221. / 256, 221. / 256),
+    #              (1.0, 146. / 256, 146. / 256)),
+    #     # alpha!!
+    #     'red': ((0.0, 64. / 256, 64. / 256),
+    #               (0.1, 128. / 256, 128. / 256),
+    #              (0.5, 256. / 256, 256. / 256),
+    #              (1.0, 256. / 256, 256. / 256)),
+    # }
+    #colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
+    #rgba2 = colormap2(normalize(arr), bytes=True)
+    #rgba[..., 3] = rgba2[..., 0]
+
     # Make negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0)] = 0
     rgba[masked_array.mask,3] = 0
+
     return rgba2image(rgba=rgba)
 
 
@@ -140,7 +158,7 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     rgba = colormap(normalize(masked_array), bytes=True)
 
     # Only show velocities that matter.
-    rgba[..., 3][np.ma.less_equal(masked_array, 0.)] = 0
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.)] = 0.
 
     return rgba2image(rgba=rgba)
 
