@@ -77,22 +77,22 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
     rgba = colormap(normalize(arr), bytes=True)
     # If matplotlib does not support alpha and you want it anyway:
     # Use red as alpha, then overwrite the alpha channel
-    # cdict2 = {  # some versions of matplotlib do not have alpha
-    #     'green': ((0.0, 200. / 256, 200. / 256),
-    #               (0.5, 120. / 256, 120. / 256),
-    #               (1.0, 65. / 256, 65. / 256)),
-    #     'blue': ((0.0, 255. / 256, 255. / 256),
-    #              (0.5, 221. / 256, 221. / 256),
-    #              (1.0, 146. / 256, 146. / 256)),
-    #     # alpha!!
-    #     'red': ((0.0, 64. / 256, 64. / 256),
-    #               (0.1, 128. / 256, 128. / 256),
-    #              (0.5, 256. / 256, 256. / 256),
-    #              (1.0, 256. / 256, 256. / 256)),
-    # }
-    #colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
-    #rgba2 = colormap2(normalize(arr), bytes=True)
-    #rgba[..., 3] = rgba2[..., 0]
+    cdict2 = {  # some versions of matplotlib do not have alpha
+        'green': ((0.0, 200. / 256, 200. / 256),
+                  (0.5, 120. / 256, 120. / 256),
+                  (1.0, 65. / 256, 65. / 256)),
+        'blue': ((0.0, 255. / 256, 255. / 256),
+                 (0.5, 221. / 256, 221. / 256),
+                 (1.0, 146. / 256, 146. / 256)),
+        # alpha!!
+        'red': ((0.0, 64. / 256, 64. / 256),
+                  (0.1, 128. / 256, 128. / 256),
+                 (0.5, 256. / 256, 256. / 256),
+                 (1.0, 256. / 256, 256. / 256)),
+    }
+    colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
+    rgba2 = colormap2(normalize(arr), bytes=True)
+    rgba[..., 3] = rgba2[..., 0]
 
     # Make negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0)] = 0
