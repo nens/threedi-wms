@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.10 (unreleased)
 -----------------
 
+- Better messages handling, removed old method.
+
 - Now always having alpha channel.
 
 - Added ground water in getprofile.
