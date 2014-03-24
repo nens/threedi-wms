@@ -24,6 +24,13 @@ logger.setLevel(logging.DEBUG)
 ctx = zmq.Context()
 
 
+UPDATE_INDICES_VARS = [
+    'nod_type', 'imaxk', 'nodk', 'jmaxk', 'nodm', 'nodn',
+    'dxp', 'x0p', 'dyp', 'y0p', 'x1p', 'y1p', 'imax', 'jmax', 'wkt']
+DEPTH_VARS = [
+    'dps', 'quad_grid']
+
+
 class Listener(threading.Thread):
     def __init__(self, socket, message_data, *args, **kwargs):
         self.socket = socket
@@ -35,27 +42,53 @@ class Listener(threading.Thread):
     def run(self):
         """run the thread"""
         message_data = self.message_data
-        message_data.init_grids()
         socket = self.socket
         while not self.kill_received:
             arr, metadata = recv_array(socket)
             logger.info("got msg {}".format(metadata))
-            if 'model' in metadata:
-                restarted = metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1
-                if metadata['model'] != message_data.loaded_model or restarted:
-                    # New model detected
-                    logger.info('New model detected: %r (old=%r)' % (
-                        metadata['model'], message_data.loaded_model))
-                    #message_data.loaded_model = metadata['model']
-                    #message_data.grid = message_data.recv_grid()
-                    message_data.init_grids()
-            if metadata['name'] in message_data.grid:
-                del message_data.grid[metadata['name']]  # saves memory
-            message_data.grid[metadata['name']] = arr
-            logger.debug('I have data for: %r' % message_data.grid.keys())
-            if metadata['name'] == 'dps' or metadata['name'] == 'quad_grid':
-                logger.debug('Update grids after receiving dps or quad_grid...')
-                message_data.update_grids()
+
+            if metadata['action'] == 'reset':
+                logger.debug('Resetting grid data...')
+                message_data.grid = {}
+                message_data.interpolation_ready = False
+            elif metadata['action'] == 'update':
+                logger.debug('Updating grid data [%s]' % metadata['name'])
+                if 'model' in metadata:
+                    restarted = metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1
+                    if metadata['model'] != message_data.loaded_model or restarted:
+                        # New model detected
+                        logger.info('New model detected: %r (old=%r)' % (
+                            metadata['model'], message_data.loaded_model))
+
+                        # Double reset algorithm.
+                        message_data.grid = {}
+                        message_data.interpolation_ready = False
+                        message_data.loaded_model = metadata['model']
+
+                # Update new grid
+                if metadata['name'] in message_data.grid:
+                    del message_data.grid[metadata['name']]  # saves memory
+                if arr.dtype.kind == 'S':
+                    # String, for wkt
+                    message_data.grid[metadata['name']] = ''.join(arr)
+                else:
+                    message_data.grid[metadata['name']] = arr
+
+                if (all([v in message_data.grid for v in DEPTH_VARS]) and 
+                    metadata['name'] in DEPTH_VARS):
+
+                    logger.debug('Update grids after receiving dps or quad_grid...')
+                    message_data.update_grids()
+                    logger.debug('Update grids finished.')
+
+                # check update indices
+                if (all([v in message_data.grid for v in UPDATE_INDICES_VARS]) and 
+                    metadata['name'] in UPDATE_INDICES_VARS):
+
+                    logger.debug('Update indices...')
+                    message_data.update_indices()
+                    logger.debug('Update indices finished.')
+
 
 class MessageData(object):
     """
@@ -76,31 +109,6 @@ class MessageData(object):
         if self.thread and self.thread.isAlive:
             logger.debug("Killing listener in thread {}".format(self.thread))
             self.thread.kill_received = True
-
-    def recv_grid(self, req_port=5556, timeout=20000):
-        """connect to the socket to get an updated grid
-        TODO: not nice that this is different than the listener
-
-        TODO: check timeout
-        """
-        # We don't have a message format for this yet
-        # We could keep this socket open.
-        req = ctx.socket(zmq.REQ)
-        # Blocks until connection is found
-        logger.info("Getting new grid from socket {}".format(req) )
-        req.connect("tcp://localhost:{port}".format(port=req_port))
-        # Wait at most 5 seconds
-        req.setsockopt(zmq.RCVTIMEO, timeout)
-        # try 10 times
-        req.send_json({"action": "send init"})
-        #grid = req.recv_pyobj()
-        try:
-            grid = req.recv_pyobj()
-            return grid
-        except zmq.error.Again:
-            logger.exception("Grid not received")
-        finally:
-            req.close()
 
     def update_indices(self):
         """create all the indices that we need for performance
@@ -147,6 +155,7 @@ class MessageData(object):
                     float(grid['dyp']))
         self.transform = transform
         self.wkt = grid['wkt']
+        self.interpolation_ready = True
 
     def update_grids(self):
         """Preprocess some stuff that only needs to be done once.
@@ -162,26 +171,6 @@ class MessageData(object):
         if 'quad_grid_dps_mask' in grid:
             del grid['quad_grid_dps_mask']
         grid['quad_grid_dps_mask'] = mask
-
-    def init_grids(self):
-        logger.debug('init grids...')
-        self.grid = {}
-        time_start = time.time()
-        logger.debug('receiving grids...')
-        new_grid = self.recv_grid(req_port=self.req_port)  # triggers init data
-        logger.debug('stopped receiving, now have %s', self.grid.keys())
-        if new_grid is not None:
-            self.grid = new_grid
-            self.loaded_model = self.grid['loaded_model']
-            logger.debug('time after receive grid %2f' % (time.time() - time_start))
-            self.update_indices()
-            logger.debug('time after update indices %2f' % (time.time() - time_start))
-            self.update_grids()
-            logger.debug('time after update grids %2f' % (time.time() - time_start))
-            logger.debug('now have keys: %s' % (', '.join(self.grid.keys())))
-        else:
-            self.loaded_model = False
-            logger.debug('init grids failed.')
 
     def get(self, layer, interpolate='nearest', **kwargs):
         if not self.grid:
@@ -365,6 +354,7 @@ class MessageData(object):
         self.y = None
         self.X = None
         self.Y = None
+        self.interpolation_ready = False
 
         self.thread = None
         self.make_listener(sub_port) # Listen to model messages
