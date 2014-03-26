@@ -325,6 +325,11 @@ class MessageData(object):
             container = rasters.NumpyContainer(
                 dps, transform, self.wkt, nodatavalue=nodatavalue)
             return container
+        elif layer == 'uc':
+            uc = grid['uc'][S]
+            container = rasters.NumpyContainer(
+                uc, transform, self.wkt)
+            return container
         elif layer == 'quad_grid':
             quad_grid = grid['quad_grid'][S]
             container = rasters.NumpyContainer(
