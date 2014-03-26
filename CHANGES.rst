@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.10 (unreleased)
 -----------------
 
+- Working groundwater: mode == 'sg', e.g. duifp:sg
+
 - Better messages handling, removed old method.
 
 - Now always having alpha channel.
