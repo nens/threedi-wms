@@ -16,6 +16,7 @@ import sys
 import traceback
 
 from threading import BoundedSemaphore
+from math import trunc
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -189,6 +190,7 @@ class MessageData(object):
         logger.debug('bbox: %r' % str(bbox))
         height = int(kwargs.get("height", "0"))
         width = int(kwargs.get("width", "0"))
+        fast = float(kwargs.get("fast", "1"))  # multiply the slicing stepsize with 'fast'.
 
         if all([srs, bbox, height, width]):
             logger.debug("slicing and dicing")
@@ -236,8 +238,8 @@ class MessageData(object):
             y_end = min(max(bisect.bisect(y_src, ymax_dst) + 1, 0), dps_shape[0])
             # and lookup required resolution
             # /2 is to reduce aliasing=hi quality. *2 is for speed
-            x_step = max((x_end - x_start) // width, 1)
-            y_step = max((y_end - y_start) // height, 1)
+            x_step = max(trunc(fast * (x_end - x_start)) // width, 1)
+            y_step = max(trunc(fast * (y_end - y_start)) // height, 1)
             logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
                 y_start, y_end, y_step, x_start, x_end, x_step, width, height))
             S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
