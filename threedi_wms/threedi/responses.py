@@ -177,29 +177,50 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     return rgba2image(rgba=rgba)
 
 
-def get_groundwater_image(masked_array, vmin=0, vmax=5.):
+def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     """ Return imagedata. """
     # Custom color map
     normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+    normalized_arr = normalize(masked_array)
+    # cdict = {
+    #     'red': ((0.0, 0. / 256, 0. / 256),
+    #             (1, 98. / 256, 98. / 256),
+    #             ),
+    #     'green': ((0.0, 16. / 256, 16. / 256),
+    #               (1, 117. / 256, 117. / 256)),
+    #     'blue': ((0.0, 134. / 256, 134. / 256),
+    #              (1, 255. / 256, 255. / 256),
+    #              ),
+    # }
+    # cdict = {
+    #     'red': ((0., 123. / 256, 123. / 256),
+    #             (1., 255. / 256, 255. / 256),
+    #             ),
+    #     'green': ((0., 47. / 256, 47. / 256),
+    #               (1., 166. / 256, 166. / 256),
+    #               ),
+    #     'blue': ((0., 0. / 256, 0. / 256),
+    #              (1., 110. / 256, 110. / 256),
+    #              ),
+    # }
     cdict = {
-        'red': ((0.0, 65. / 256, 65. / 256),
-                (0.5, 120. / 256, 120. / 256),
-                (1.0, 170. / 256, 170. / 256)),
-        'green': ((0.0, 65. / 256, 65. / 256),
-                  (0.5, 80. / 256, 80. / 256),
-                  (1.0, 120. / 256, 120. / 256)),
-        'blue': ((0.0, 146. / 256, 146. / 256),
-                 (0.5, 170. / 256, 170. / 256),
-                 (1.0, 170. / 256, 170. / 256)),
-        'alpha': ((0.0, 256. / 256, 256. / 256),
-                  (0.5, 256. / 256, 256. / 256),
-                  (0.9, 128. / 256, 128. / 256),
-                  (1.0, 64. / 256, 64. / 256)),
+        'red': ((0.0, 0. / 256, 0. / 256),
+                (0.4, 98. / 256, 98. / 256),
+                (0.65, 255. / 256, 255. / 256),
+                (1.0, 123. / 256, 123. / 256)),
+        'green': ((0.0, 16. / 256, 16. / 256),
+                  (0.4, 117. / 256, 117. / 256),
+                  (0.65, 166. / 256, 166. / 256),
+                  (1.0, 47. / 256, 47. / 256)),
+        'blue': ((0.0, 134. / 256, 134. / 256),
+                 (0.4, 255. / 256, 255. / 256),
+                 (0.65, 110. / 256, 110. / 256),
+                 (1.0, 0. / 256, 0. / 256)),
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
     #colormap = cm.summer
-    rgba = colormap(normalize(masked_array), bytes=True)
+    rgba = colormap(normalized_arr, bytes=True)
 
     cdict2 = {  # some versions of matplotlib do not have alpha
         'green': ((0.0, 200. / 256, 200. / 256),
@@ -212,11 +233,14 @@ def get_groundwater_image(masked_array, vmin=0, vmax=5.):
                 (1.0, 224. / 256, 224. / 256)),
     }
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
-    rgba2 = colormap2(normalize(masked_array), bytes=True)
+    rgba2 = colormap2(normalized_arr, bytes=True)
     rgba[..., 3] = rgba2[..., 0]
 
-    # Only show velocities that matter.
-    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0.
+    # A trick to filter out pixels outside the model, see messages.
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.)] = 0.
+
+    rgba[..., 3][masked_array.mask == True] = 0.
+    #import pdb; pdb.set_trace()
 
     return rgba2image(rgba=rgba)
 
@@ -241,6 +265,7 @@ def get_data(container, ma=False, **get_parameters):
     )
     container.warpinto(dataset)
     array = dataset.ReadAsArray()
+    #import pdb; pdb.set_trace()
 
     # Return array or masked array
     time = 1000 * (datetime.datetime.now() - start).total_seconds()

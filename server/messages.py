@@ -340,8 +340,9 @@ class MessageData(object):
             dps = grid['dps'][S].copy()
             quad_grid = grid['quad_grid'][S]
             sg = grid['sg']
-            groundwater_depth = dps - sg[quad_grid]
-            groundwater_depth[np.ma.less_equal(groundwater_depth, 0.01)] = 0
+            groundwater_depth = -dps - sg[quad_grid]
+            # A trick to hold all depths inside model, 0's are filtered out.
+            groundwater_depth[np.ma.less_equal(groundwater_depth, 0.01)] = 0.01
 
             # Set the Deltares no data value.
             nodatavalue = 1e10
