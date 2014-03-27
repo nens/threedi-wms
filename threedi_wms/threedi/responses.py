@@ -372,11 +372,6 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_velocity_image(masked_array=u)
-        # Merging images
-        # #img.paste(img2, (0, 0), img2)
-        # buf = io.BytesIO()
-        # img.save(buf, 'png')
-        # content = buf.getvalue()
     elif mode == 'sg':  # ground water, only with use_messages
         container = message_data.get(
                 "sg", **get_parameters)
