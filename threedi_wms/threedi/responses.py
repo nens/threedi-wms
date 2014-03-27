@@ -54,6 +54,7 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
     """ Return a png image from masked_array. """
     # Hardcode depth limits, until better height data
     normalize = colors.Normalize(vmin=hmin, vmax=hmax)
+    normalized_arr = normalize(masked_array)
     # Custom color map
     cdict = {
         'red': ((0.0, 170. / 256, 170. / 256),
@@ -74,15 +75,13 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
     # Apply scaling and colormap
     arr = masked_array
 
-    rgba = colormap(normalize(arr), bytes=True)
+    rgba = colormap(normalized_arr, bytes=True)
     # If matplotlib does not support alpha and you want it anyway:
     # Use red as alpha, then overwrite the alpha channel
     cdict2 = {  # some versions of matplotlib do not have alpha
         'green': ((0.0, 200. / 256, 200. / 256),
-                  (0.5, 120. / 256, 120. / 256),
                   (1.0, 65. / 256, 65. / 256)),
         'blue': ((0.0, 255. / 256, 255. / 256),
-                 (0.5, 221. / 256, 221. / 256),
                  (1.0, 146. / 256, 146. / 256)),
         # alpha!!
         'red': ((0.0, 64. / 256, 64. / 256),
@@ -91,11 +90,11 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
                  (1.0, 256. / 256, 256. / 256)),
     }
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
-    rgba2 = colormap2(normalize(arr), bytes=True)
+    rgba2 = colormap2(normalized_arr, bytes=True)
     rgba[..., 3] = rgba2[..., 0]
 
-    # Make negative depths transparent
-    rgba[..., 3][np.ma.less_equal(masked_array, 0)] = 0
+    # Make very small/negative depths transparent
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
     rgba[masked_array.mask,3] = 0
 
     return rgba2image(rgba=rgba)
@@ -136,6 +135,7 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     """ Return imagedata. """
     # Custom color map
     normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+    normalized_arr = normalize(masked_array)
     cdict = {
         'green': ((0.0, 170. / 256, 170. / 256),
                 (0.5, 65. / 256, 65. / 256),
@@ -155,10 +155,73 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
     #colormap = cm.summer
-    rgba = colormap(normalize(masked_array), bytes=True)
+    rgba = colormap(normalized_arr, bytes=True)
+
+    cdict2 = {  # some versions of matplotlib do not have alpha
+        'green': ((0.0, 200. / 256, 200. / 256),
+                  (1.0, 65. / 256, 65. / 256)),
+        'blue': ((0.0, 255. / 256, 255. / 256),
+                 (1.0, 146. / 256, 146. / 256)),
+        # alpha!!
+        'red': ((0.0, 0. / 256, 0. / 256),
+                  (0.1, 64. / 256, 64. / 256),
+                  (0.4, 128. / 256, 128. / 256),
+                 (0.5, 256. / 256, 256. / 256),
+                 (1.0, 256. / 256, 256. / 256)),
+    }
+    colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
+    rgba2 = colormap2(normalized_arr, bytes=True)
+    rgba[..., 3] = rgba2[..., 0]
 
     # Only show velocities that matter.
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0.
+
+    return rgba2image(rgba=rgba)
+
+
+def get_groundwater_image(masked_array, vmin=0, vmax=3.):
+    """ Return imagedata. """
+    # Custom color map
+    normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+    normalized_arr = normalize(masked_array)
+    cdict = {
+        'red': ((0.0, 0. / 256, 0. / 256),
+                (0.4, 98. / 256, 98. / 256),
+                (0.65, 255. / 256, 255. / 256),
+                (1.0, 123. / 256, 123. / 256)),
+        'green': ((0.0, 16. / 256, 16. / 256),
+                  (0.4, 117. / 256, 117. / 256),
+                  (0.65, 166. / 256, 166. / 256),
+                  (1.0, 47. / 256, 47. / 256)),
+        'blue': ((0.0, 134. / 256, 134. / 256),
+                 (0.4, 255. / 256, 255. / 256),
+                 (0.65, 110. / 256, 110. / 256),
+                 (1.0, 0. / 256, 0. / 256)),
+    }
+    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
+
+    #colormap = cm.summer
+    rgba = colormap(normalized_arr, bytes=True)
+
+    cdict2 = {  # some versions of matplotlib do not have alpha
+        'green': ((0.0, 200. / 256, 200. / 256),
+                  (1.0, 65. / 256, 65. / 256)),
+        'blue': ((0.0, 255. / 256, 255. / 256),
+                 (1.0, 146. / 256, 146. / 256)),
+        # alpha!!
+        'red': ((0.0, 224. / 256, 224. / 256),
+                (0.5, 192. / 256, 192. / 256),
+                (1.0, 224. / 256, 224. / 256)),
+    }
+    colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
+    rgba2 = colormap2(normalized_arr, bytes=True)
+    rgba[..., 3] = rgba2[..., 0]
+
+    # A trick to filter out pixels outside the model, see messages.
     rgba[..., 3][np.ma.less_equal(masked_array, 0.)] = 0.
+
+    rgba[..., 3][masked_array.mask == True] = 0.
+    #import pdb; pdb.set_trace()
 
     return rgba2image(rgba=rgba)
 
@@ -183,6 +246,7 @@ def get_data(container, ma=False, **get_parameters):
     )
     container.warpinto(dataset)
     array = dataset.ReadAsArray()
+    #import pdb; pdb.set_trace()
 
     # Return array or masked array
     time = 1000 * (datetime.datetime.now() - start).total_seconds()
@@ -242,13 +306,11 @@ def get_response_for_getmap(get_parameters):
         except rasters.LockError:
             return 'Objects not ready, preparation in progress.'
 
-    if mode in ['depth', 'grid', 'flood', 'velocity', 'quad_grid']:
-        # lookup quads in target coordinate system
-        ms = 0
-        if not use_messages:
+        if mode in ['depth', 'grid', 'flood', 'velocity', 'quad_grid']:
+            # lookup quads in target coordinate system
             quads, ms = get_data(container=static_data.monolith,
                                      ma=True, **get_parameters)
-        logger.debug('Got quads in {} ms.'.format(ms))
+            logger.debug('Got quads in {} ms.'.format(ms))
 
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
         # lookup bathymetry in target coordiante system
@@ -264,7 +326,7 @@ def get_response_for_getmap(get_parameters):
         logging.debug('Got bathymetry in {} ms.'.format(ms))
 
     # The velocity layer has the depth layer beneath it
-    if mode in {'depth', 'velocity'}:
+    if mode == 'depth':
         if use_messages:
             # TODO: cleanup bathymetry. Best do substraction before interpolation
             container = message_data.get(
@@ -304,25 +366,18 @@ def get_response_for_getmap(get_parameters):
         content, img  = get_grid_image(masked_array=quads)
     elif mode == 'quad_grid':
         content, img  = get_quad_grid_image(masked_array=quads)
-
-    # Add velocity on top of depth layer
-    if mode == 'velocity':
-        # TODO: does not work yet.
-        # dynamic_data_x = DynamicData.get(
-        #     layer=layer, time=time, use_cache=use_cache, variable='ucx')
-        # dynamic_data_y = DynamicData.get(
-        #     layer=layer, time=time, use_cache=use_cache, variable='ucy')
-        # u = np.sqrt(dynamic_data_x.waterlevel[quads] ** 2 +
-        #     dynamic_data_y.waterlevel[quads] ** 2)
+    elif mode == 'velocity':
         container = message_data.get(
                 "uc", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content2, img2  = get_velocity_image(masked_array=u)
-        img.paste(img2, (0, 0), img2)
-        buf = io.BytesIO()
-        img.save(buf, 'png')
-        content = buf.getvalue()
+        content, img  = get_velocity_image(masked_array=u)
+    elif mode == 'sg':  # ground water, only with use_messages
+        container = message_data.get(
+                "sg", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_groundwater_image(masked_array=u)
 
     return content, 200, {
         'content-type': 'image/png',

@@ -16,6 +16,7 @@ import sys
 import traceback
 
 from threading import BoundedSemaphore
+from math import trunc
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -189,6 +190,7 @@ class MessageData(object):
         logger.debug('bbox: %r' % str(bbox))
         height = int(kwargs.get("height", "0"))
         width = int(kwargs.get("width", "0"))
+        fast = float(kwargs.get("fast", "1"))  # multiply the slicing stepsize with 'fast'.
 
         if all([srs, bbox, height, width]):
             logger.debug("slicing and dicing")
@@ -235,8 +237,9 @@ class MessageData(object):
             y_start = min(max(bisect.bisect(y_src, ymin_dst) - 1, 0), dps_shape[0]-1)
             y_end = min(max(bisect.bisect(y_src, ymax_dst) + 1, 0), dps_shape[0])
             # and lookup required resolution
-            x_step = max((x_end - x_start) // width, 1)
-            y_step = max((y_end - y_start) // height, 1)
+            # /2 is to reduce aliasing=hi quality. *2 is for speed
+            x_step = max(trunc(fast * (x_end - x_start)) // width, 1)
+            y_step = max(trunc(fast * (y_end - y_start)) // height, 1)
             logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
                 y_start, y_end, y_step, x_start, x_end, x_step, width, height))
             S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
@@ -324,6 +327,31 @@ class MessageData(object):
 
             container = rasters.NumpyContainer(
                 dps, transform, self.wkt, nodatavalue=nodatavalue)
+            return container
+        elif layer == 'uc':
+            quad_grid = grid['quad_grid'][S]
+            uc = grid['uc']
+
+            uc_norm = np.sqrt(np.sum(uc**2, axis=0))
+            assert uc_norm.shape[0] != 2, "wrong sum dimension"
+
+            container = rasters.NumpyContainer(
+                uc_norm[quad_grid], transform, self.wkt)
+            return container
+        elif layer == 'sg':
+            dps = grid['dps'][S].copy()
+            quad_grid = grid['quad_grid'][S]
+            sg = grid['sg']
+            groundwater_depth = -dps - sg[quad_grid]
+            # A trick to hold all depths inside model, 0's are filtered out.
+            groundwater_depth[np.ma.less_equal(groundwater_depth, 0.01)] = 0.01
+
+            # Set the Deltares no data value.
+            nodatavalue = 1e10
+            groundwater_depth[dps == self.grid['dsnop']] = nodatavalue
+
+            container = rasters.NumpyContainer(
+                groundwater_depth, transform, self.wkt, nodatavalue=nodatavalue)
             return container
         elif layer == 'quad_grid':
             quad_grid = grid['quad_grid'][S]

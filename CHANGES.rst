@@ -5,6 +5,13 @@ Changelog of threedi-wms
 0.10 (unreleased)
 -----------------
 
+- Added option fast to getmap: a value of 0.5 will improve the image quality,
+  a value of 2 will make it (a lot) faster.
+
+- Working groundwater: mode == 'sg', e.g. duifp:sg
+
+- Working velocity: mode == 'velocity', e.g. duifp:velocity
+
 - Better messages handling, removed old method.
 
 - Now always having alpha channel.
