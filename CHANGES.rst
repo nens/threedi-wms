@@ -7,6 +7,8 @@ Changelog of threedi-wms
 
 - Working groundwater: mode == 'sg', e.g. duifp:sg
 
+- Working velocity: mode == 'velocity', e.g. duifp:velocity
+
 - Better messages handling, removed old method.
 
 - Now always having alpha channel.
