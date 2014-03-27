@@ -54,6 +54,7 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
     """ Return a png image from masked_array. """
     # Hardcode depth limits, until better height data
     normalize = colors.Normalize(vmin=hmin, vmax=hmax)
+    normalized_arr = normalize(masked_array)
     # Custom color map
     cdict = {
         'red': ((0.0, 170. / 256, 170. / 256),
@@ -74,7 +75,7 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
     # Apply scaling and colormap
     arr = masked_array
 
-    rgba = colormap(normalize(arr), bytes=True)
+    rgba = colormap(normalized_arr, bytes=True)
     # If matplotlib does not support alpha and you want it anyway:
     # Use red as alpha, then overwrite the alpha channel
     cdict2 = {  # some versions of matplotlib do not have alpha
@@ -89,7 +90,7 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
                  (1.0, 256. / 256, 256. / 256)),
     }
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
-    rgba2 = colormap2(normalize(arr), bytes=True)
+    rgba2 = colormap2(normalized_arr, bytes=True)
     rgba[..., 3] = rgba2[..., 0]
 
     # Make very small/negative depths transparent
@@ -134,6 +135,7 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     """ Return imagedata. """
     # Custom color map
     normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+    normalized_arr = normalize(masked_array)
     cdict = {
         'green': ((0.0, 170. / 256, 170. / 256),
                 (0.5, 65. / 256, 65. / 256),
@@ -153,7 +155,7 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
     #colormap = cm.summer
-    rgba = colormap(normalize(masked_array), bytes=True)
+    rgba = colormap(normalized_arr, bytes=True)
 
     cdict2 = {  # some versions of matplotlib do not have alpha
         'green': ((0.0, 200. / 256, 200. / 256),
@@ -168,7 +170,7 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
                  (1.0, 256. / 256, 256. / 256)),
     }
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
-    rgba2 = colormap2(normalize(masked_array), bytes=True)
+    rgba2 = colormap2(normalized_arr, bytes=True)
     rgba[..., 3] = rgba2[..., 0]
 
     # Only show velocities that matter.
@@ -182,27 +184,6 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     # Custom color map
     normalize = colors.Normalize(vmin=vmin, vmax=vmax)
     normalized_arr = normalize(masked_array)
-    # cdict = {
-    #     'red': ((0.0, 0. / 256, 0. / 256),
-    #             (1, 98. / 256, 98. / 256),
-    #             ),
-    #     'green': ((0.0, 16. / 256, 16. / 256),
-    #               (1, 117. / 256, 117. / 256)),
-    #     'blue': ((0.0, 134. / 256, 134. / 256),
-    #              (1, 255. / 256, 255. / 256),
-    #              ),
-    # }
-    # cdict = {
-    #     'red': ((0., 123. / 256, 123. / 256),
-    #             (1., 255. / 256, 255. / 256),
-    #             ),
-    #     'green': ((0., 47. / 256, 47. / 256),
-    #               (1., 166. / 256, 166. / 256),
-    #               ),
-    #     'blue': ((0., 0. / 256, 0. / 256),
-    #              (1., 110. / 256, 110. / 256),
-    #              ),
-    # }
     cdict = {
         'red': ((0.0, 0. / 256, 0. / 256),
                 (0.4, 98. / 256, 98. / 256),
