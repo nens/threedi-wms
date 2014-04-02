@@ -439,6 +439,18 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_green_image(masked_array=u, hmax=.20)
+    elif mode == 'soil':
+        container = message_data.get(
+                "soil", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_green_image(masked_array=u, hmax=22)
+    elif mode == 'crop':
+        container = message_data.get(
+                "crop", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_green_image(masked_array=u, hmax=16)
 
     return content, 200, {
         'content-type': 'image/png',

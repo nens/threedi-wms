@@ -5,6 +5,10 @@ Changelog of threedi-wms
 0.10 (unreleased)
 -----------------
 
+- Added crop and soil layers for getmap (TODO: colors).
+
+- Added infiltration and interception layers for getmap.
+
 - Added option fast to getmap: a value of 0.5 will improve the image quality,
   a value of 2 will make it (a lot) faster.
 

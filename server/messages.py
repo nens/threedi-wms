@@ -378,6 +378,26 @@ class MessageData(object):
             container = rasters.NumpyContainer(
                 g, transform, self.wkt, nodatavalue=nodatavalue)
             return container
+        elif layer == 'soil':
+            dps = grid['dps'][S].copy()
+            g = grid['soiltype'][S].copy()
+
+            nodatavalue = 1e10
+            g[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+
+            container = rasters.NumpyContainer(
+                g, transform, self.wkt, nodatavalue=nodatavalue)
+            return container
+        elif layer == 'crop':
+            dps = grid['dps'][S].copy()
+            g = grid['croptype'][S].copy()
+
+            nodatavalue = 1e10
+            g[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+
+            container = rasters.NumpyContainer(
+                g, transform, self.wkt, nodatavalue=nodatavalue)
+            return container
         else:
             raise NotImplemented("working on it")
 
