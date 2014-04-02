@@ -84,8 +84,57 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
         'blue': ((0.0, 255. / 256, 255. / 256),
                  (1.0, 146. / 256, 146. / 256)),
         # alpha!!
-        'red': ((0.0, 64. / 256, 64. / 256),
-                  (0.1, 128. / 256, 128. / 256),
+        'red': ((0.0, 0. / 256, 0. / 256),
+                (0.03, 32. / 256, 32. / 256),
+                (0.07, 64. / 256, 64. / 256),
+                (0.2, 128. / 256, 128. / 256),
+                 (0.5, 256. / 256, 256. / 256),
+                 (1.0, 256. / 256, 256. / 256)),
+    }
+    colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
+    rgba2 = colormap2(normalized_arr, bytes=True)
+    rgba[..., 3] = rgba2[..., 0]
+
+    # Make very small/negative depths transparent
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
+    rgba[masked_array.mask,3] = 0
+
+    return rgba2image(rgba=rgba)
+
+
+def get_green_image(masked_array, hmin=0, hmax=2):
+    """ Return a png image from masked_array. """
+    # Hardcode depth limits, until better height data
+    normalize = colors.Normalize(vmin=hmin, vmax=hmax)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    cdict = {
+        'red': ((0.0, 167. / 256, 167. / 256),
+                (1.0, 14. / 256, 14. / 256)),
+        'green': ((0.0, 192. / 256, 192. / 256),
+                 (1.0, 118. / 256, 118. / 256)),
+        'blue': ((0.0, 163. / 256, 163. / 256),
+                  (1.0, 0. / 256, 0. / 256)),
+        'alpha': ((0.0, 64. / 256, 64. / 256),
+                 (1.0, 256. / 256, 256. / 256)),
+    }
+    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
+    # Apply scaling and colormap
+    arr = masked_array
+
+    rgba = colormap(normalized_arr, bytes=True)
+    # If matplotlib does not support alpha and you want it anyway:
+    # Use red as alpha, then overwrite the alpha channel
+    cdict2 = {  # some versions of matplotlib do not have alpha
+        'green': ((0.0, 200. / 256, 200. / 256),
+                  (1.0, 65. / 256, 65. / 256)),
+        'blue': ((0.0, 255. / 256, 255. / 256),
+                 (1.0, 146. / 256, 146. / 256)),
+        # alpha!!
+        'red': ((0.0, 0. / 256, 0. / 256),
+                (0.03, 32. / 256, 32. / 256),
+                (0.07, 64. / 256, 64. / 256),
+                (0.2, 128. / 256, 128. / 256),
                  (0.5, 256. / 256, 256. / 256),
                  (1.0, 256. / 256, 256. / 256)),
     }
@@ -378,6 +427,18 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_groundwater_image(masked_array=u)
+    elif mode == 'infiltration':
+        container = message_data.get(
+                "infiltration", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_depth_image(masked_array=u, hmax=1000)
+    elif mode == 'interception':
+        container = message_data.get(
+                "interception", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_green_image(masked_array=u, hmax=.20)
 
     return content, 200, {
         'content-type': 'image/png',
