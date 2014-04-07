@@ -168,10 +168,14 @@ class MessageData(object):
         dps = grid['dps']
         logger.debug('quad grid shape: %r' % (str(quad_grid.shape)))
         logger.debug('dps shape: %r' % (str(dps.shape)))
-        mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
-        if 'quad_grid_dps_mask' in grid:
-            del grid['quad_grid_dps_mask']
-        grid['quad_grid_dps_mask'] = mask
+        try:
+            mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
+            if 'quad_grid_dps_mask' in grid:
+                del grid['quad_grid_dps_mask']
+            grid['quad_grid_dps_mask'] = mask
+        except ValueError:
+            # In rare cases, we get an ValueError. Origin unknown
+            logger.error('ValueError in messages.py. TODO: investigate')
 
     def get(self, layer, interpolate='nearest', **kwargs):
         if not self.grid:
