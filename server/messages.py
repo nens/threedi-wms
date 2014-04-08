@@ -112,7 +112,8 @@ class MessageData(object):
             self.thread.kill_received = True
 
     def update_indices(self):
-        """create all the indices that we need for performance
+        """
+        create all the indices that we need for performance
 
         These vars probably use a lot of memory.
         """
@@ -146,7 +147,7 @@ class MessageData(object):
             grid['y0p']:grid['y1p']:complex(0,grid['jmax']),
             grid['x0p']:grid['x1p']:complex(0,grid['imax'])
         ]
-        self.x, self.y = np.ogrid[s]
+        #self.x, self.y = np.ogrid[s]
         self.Y , self.X = np.mgrid[s]
         transform= (float(grid['x0p']),  # xmin
                     float(grid['dxp']), # xmax
@@ -246,7 +247,8 @@ class MessageData(object):
             y_step = max(trunc(fast * (y_end - y_start)) // height, 1)
             logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
                 y_start, y_end, y_step, x_start, x_end, x_step, width, height))
-            S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
+            #S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
+            S = np.s_[:,:]
             # Compute transform for sliced grid
             transform = (
                 grid["x0p"] + dx_src*x_start, 
@@ -402,6 +404,130 @@ class MessageData(object):
             container = rasters.NumpyContainer(
                 g, transform, self.wkt, nodatavalue=nodatavalue)
             return container
+        elif layer == 'maxdepth':
+            # TODO: fill real max depth
+            from netCDF4 import Dataset
+            path_nc = '/home/user/git/nens/threedi-server/test_hhnk/subgrid_map.nc'
+            path_dem = '/home/user/git/nens/threedi-server/test_hhnk/dem_hhnk.tif'
+
+            with Dataset(path_nc) as dataset:
+                #import pdb; pdb.set_trace()
+                s1_max = dataset.variables['s1'][:].max(0)
+
+            ###########testttt
+
+            nodatavalue = 1e10
+            dps = grid['dps'][S].copy()
+            dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            quad_grid = grid['quad_grid'][S]
+            mask = grid['quad_grid_dps_mask'][S]
+            s1 = s1_max.filled(-9999)
+            vol1 = self.grid['vol1']
+
+            #import pdb; pdb.set_trace()
+
+            if interpolate == 'nearest':
+                waterheight = s1[quad_grid.filled(0)]
+            else:
+                # Here comes the 'Martijn interpolatie'.
+                L = self.L
+                if L is None:
+                    logger.warn("Interpolation data not available")
+                X, Y = self.X[S], self.Y[S]
+                #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
+                # scipy interpolate does not deal with masked arrays
+                # so we set waterlevels to nan where volume is 0
+                #s1[vol1 == 0] = np.nan
+                #s1 = np.where(vol1 == 0, -self.grid['dmax'], s1)
+                try:
+                    volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
+                    L.values = np.ascontiguousarray(s1[:,np.newaxis])
+                    waterheight = L(X, Y)
+                    # now mask the waterlevels where we did not compute
+                    # or where mask of the
+                    mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
+                    waterheight = np.ma.masked_array(waterheight, mask=mask)
+                except IndexError:
+                    # Fallback to nearest
+                    # Kaapstad:
+                    # IndexError: index 1085856568 is out of bounds for size 16473
+                    logger.error('Interpolation crashed, falling back to nearest.')
+                    waterheight = s1[quad_grid.filled(0)]
+                    # Log everything
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    for line in traceback.format_exception(
+                        exc_type, exc_value, exc_traceback):
+                        logger.debug(line)
+
+            waterlevel = waterheight - (-dps)
+
+            # Gdal does not know about masked arrays, so we transform to an array with 
+            #  a nodatavalue
+            array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
+            container = rasters.NumpyContainer(array, transform, self.wkt, 
+                                               nodatavalue=nodatavalue)
+
+
+            return container
+
+
+            # dps = grid['dps'][S].copy()
+
+            # nodatavalue = 1e10
+            # dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+
+            # container = rasters.NumpyContainer(
+            #     dps, transform, self.wkt, nodatavalue=nodatavalue)
+        elif layer == 'arrival':
+
+            nodatavalue = 1e10
+            dps = grid['dps'][S].copy()
+            dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            quad_grid = grid['quad_grid'][S]
+            mask = grid['quad_grid_dps_mask'][S]
+            vol1 = self.grid['vol1']
+
+            L = self.L
+            if L is None:
+                logger.warn("Interpolation data not available")
+            X, Y = self.X[S], self.Y[S]
+
+            from netCDF4 import Dataset
+            path_nc = '/home/user/git/nens/threedi-server/test_hhnk/subgrid_map.nc'
+            path_dem = '/home/user/git/nens/threedi-server/test_hhnk/dem_hhnk.tif'
+            result_array = None
+
+            with Dataset(path_nc) as dataset:
+                #ranges = np.arange(t.max() // 3600 + 1) * 3600
+                #ranges_indices
+                #
+                #import pdb; pdb.set_trace()
+                s1 = dataset.variables['s1'][:].filled(-9999)
+                time_array = np.ones(grid['dps'][S].shape) * -9999
+
+                for i, s1_time in enumerate(s1):
+
+                    # Here comes the 'Martijn interpolatie'.
+                    L.values = np.ascontiguousarray(s1_time[:,np.newaxis])
+                    waterheight = L(X, Y)
+                    # now mask the waterlevels where we did not compute
+                    # or where mask of the
+                    mask = np.logical_or.reduce([np.isnan(waterheight), mask])
+                    waterheight = np.ma.masked_array(waterheight, mask=mask)
+
+                    waterlevel = waterheight - (-dps)
+
+                    # Gdal does not know about masked arrays, so we transform to an array with 
+                    #  a nodatavalue
+                    array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
+                    time_array[np.logical_and(time_array==-9999, array>0)] = i
+                    print('i: %d' % i)
+
+            container = rasters.NumpyContainer(time_array, transform, self.wkt, 
+                                               nodatavalue=nodatavalue)
+
+            return container
+
         else:
             raise NotImplemented("working on it")
 

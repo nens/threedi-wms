@@ -333,14 +333,26 @@ def get_response_for_getmap(get_parameters):
     time = int(get_parameters.get('time', 0))
 
     # Check if messages data is ready. If not: fall back to netcdf/pyramid method.
-    for grid_var in ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
-        'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
-        'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']:
-        if grid_var not in message_data.grid:
-            logger.debug('Not all vars available yet in message_data (%r)'
-                ', falling back to netcdf.' % grid_var)
-            use_messages = False
-            break
+    if mode == 'maxdepth':
+        required_message_vars = []  #'maxdepth']
+    else:
+        required_message_vars = ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
+            'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
+            'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']
+    if not set(required_message_vars).issubset(set(message_data.grid.keys())):
+        logger.debug('Not all vars available yet in message_data (missing: %r)'
+            ', falling back to netcdf.' % (
+                set(required_message_vars) - set(message_data.grid.keys())))
+        use_messages = False
+
+    # for grid_var in ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
+    #     'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
+    #     'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']:
+    #     if grid_var not in message_data.grid:
+    #         logger.debug('Not all vars available yet in message_data (%r)'
+    #             ', falling back to netcdf.' % grid_var)
+    #         use_messages = False
+    #         break
     if not message_data.interpolation_ready:
         logger.debug('Interpolation not ready in message_data'
             ', falling back to netcdf.')
@@ -451,6 +463,22 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_green_image(masked_array=u, hmax=16)
+    elif mode == 'maxdepth':
+        container = message_data.get(
+                "maxdepth", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_depth_image(
+            masked_array=u,
+            hmax=hmax)
+
+    elif mode == 'arrival':
+        container = message_data.get(
+                "arrival", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_depth_image(
+            masked_array=u, hmax=139)
 
     return content, 200, {
         'content-type': 'image/png',
