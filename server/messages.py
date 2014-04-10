@@ -89,6 +89,10 @@ class Listener(threading.Thread):
                     logger.debug('Update indices...')
                     message_data.update_indices()
                     logger.debug('Update indices finished.')
+            elif metadata['action'] == 'postprocess':
+                logger.debug('Post processing...')
+            else:
+                logger.debug('Got an unknown message: %r' % metadata)
 
 
 class MessageData(object):
@@ -535,8 +539,8 @@ class MessageData(object):
         """testing"""
         return self.grid[layer]
 
-    def __init__(self, req_port=5556, sub_port=5558):
-        self.req_port = req_port
+    def __init__(self, sub_port=5558):
+        #self.req_port = req_port
         self.sub_port = sub_port
         self.is_updating = BoundedSemaphore(1)  # When updating, let 'get' function wait
 
