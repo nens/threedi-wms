@@ -52,5 +52,6 @@ setup(name='threedi-wms',
               'flask=server.app:run',
               'sandbox=threedi_wms.sandbox:main',
               'build_pyramids=threedi_wms.build_pyramids:main',
+              'process_threedi_result=threedi_wms.process_threedi_result:main',
           ]},
       )
