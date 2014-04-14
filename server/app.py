@@ -23,14 +23,14 @@ def build_app(req_port=5556, sub_port=5558):
     # Setup logging
     loghelper.setup_logging(logfile_name='server.log')
     # Using print because I don't see logging output on screen while running manually
-    print("request port: %d (server should process requests on this port)" % req_port)
+    # print("request port: %d (server should process requests on this port)" % req_port)
     print("subscription port: %d (server should publish on this port)" % sub_port)
 
     # App
     app = flask.Flask(__name__)
 
     # this one is global because we only have one event loop that receives messages
-    message_data = MessageData(req_port=req_port, sub_port=sub_port)
+    message_data = MessageData(sub_port=sub_port)
     # stop listenin when we tear down the app
     # flask.appcontext_tearing_down.connect?
 
@@ -46,7 +46,7 @@ def build_app(req_port=5556, sub_port=5558):
 
 # Main
 def run():
-    app = build_app(req_port=5556, sub_port=5558)
+    app = build_app(sub_port=5558)
     app.run(host='0.0.0.0', debug=True)
 
 

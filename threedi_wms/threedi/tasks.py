@@ -89,3 +89,13 @@ def make_monolith(layer):
         logging.info('Monolith busy for {}'.format(layer))
         return
     logging.info('Monolith completed for {}'.format(layer))
+
+
+@app.task 
+def process_threedi_result(input_folder, output_folder):
+    logger.info('Processing threedi result (%s)...' % result_slug)
+    # TODO: read subgrid_map.nc
+    # read subgrid_map.nc
+    # read interpolation.nc  # contains interpolation data as well as dps
+    # generate max_depth map -> 
+    # generate arrival map ->
