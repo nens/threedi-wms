@@ -247,8 +247,8 @@ class MessageData(object):
             y_step = max(trunc(fast * (y_end - y_start)) // height, 1)
             logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
                 y_start, y_end, y_step, x_start, x_end, x_step, width, height))
-            #S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
-            S = np.s_[:,:]
+            S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
+            #S = np.s_[:,:]
             # Compute transform for sliced grid
             transform = (
                 grid["x0p"] + dx_src*x_start, 
@@ -505,23 +505,41 @@ class MessageData(object):
                 s1 = dataset.variables['s1'][:].filled(-9999)
                 time_array = np.ones(grid['dps'][S].shape) * -9999
 
-                for i, s1_time in enumerate(s1):
+                s1_agg = [
+                    s1[0:31, :].max(0),
+                    s1[31:61, :].max(0),
+                    s1[61:91, :].max(0),
+                    s1[91:121, :].max(0),
+                    s1[121:151, :].max(0),
+                    s1[151:181, :].max(0),
+                ]
+
+                for i, s1_time in enumerate(s1_agg):
+                    print('i: %d' % i)
+                    start_time = time.time()
 
                     # Here comes the 'Martijn interpolatie'.
                     L.values = np.ascontiguousarray(s1_time[:,np.newaxis])
+                    print('1: %f' % (time.time() - start_time))
                     waterheight = L(X, Y)
+                    print('2: %f' % (time.time() - start_time))
                     # now mask the waterlevels where we did not compute
                     # or where mask of the
                     mask = np.logical_or.reduce([np.isnan(waterheight), mask])
+                    print('3: %f' % (time.time() - start_time))
                     waterheight = np.ma.masked_array(waterheight, mask=mask)
+                    print('4: %f' % (time.time() - start_time))
 
                     waterlevel = waterheight - (-dps)
+                    print('5: %f' % (time.time() - start_time))
 
                     # Gdal does not know about masked arrays, so we transform to an array with 
                     #  a nodatavalue
                     array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
-                    time_array[np.logical_and(time_array==-9999, array>0)] = i
-                    print('i: %d' % i)
+                    print('6: %f' % (time.time() - start_time))
+
+                    time_array[np.logical_and(time_array==-9999, array>0)] = i + 1
+                    print('7: %f' % (time.time() - start_time))
 
             container = rasters.NumpyContainer(time_array, transform, self.wkt, 
                                                nodatavalue=nodatavalue)
