@@ -465,7 +465,7 @@ def get_response_for_getmap(get_parameters):
         content, img  = get_green_image(masked_array=u, hmax=16)
     elif mode == 'maxdepth':
         container = message_data.get(
-                "maxdepth", **get_parameters)
+                "maxdepth", from_disk=True, **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_depth_image(
@@ -474,7 +474,7 @@ def get_response_for_getmap(get_parameters):
 
     elif mode == 'arrival':
         container = message_data.get(
-                "arrival", **get_parameters)
+                "arrival", from_disk=True, **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_depth_image(

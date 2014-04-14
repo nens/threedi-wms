@@ -14,7 +14,7 @@ import flask
 
 
 
-def build_app(req_port=5556, sub_port=5558):
+def build_app(sub_port=5558, **kwargs):
     """App is already global and existing"""
     global app
     global message_data

@@ -99,3 +99,9 @@ def process_threedi_result(input_folder, output_folder):
     # read interpolation.nc  # contains interpolation data as well as dps
     # generate max_depth map -> 
     # generate arrival map ->
+
+
+# @app.task
+# def dump_memory(output_folder):
+#     # TODO: dump all arrays in memory to netcdf
+#     pass
