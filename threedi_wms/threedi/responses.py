@@ -478,7 +478,7 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_depth_image(
-            masked_array=u, hmax=6)
+            masked_array=u, hmax=7)
 
     return content, 200, {
         'content-type': 'image/png',

@@ -239,68 +239,87 @@ class Listener(threading.Thread):
 
                     nc_dump.dump_nc('dsnop', 'f4', (), '-')
                     nc_dump.dump_nc('dps', 'f4', ('x', 'y', ), '-')
-                    nc_dump.dump_nc('quad_grid', 'i4', ('x', 'y', ), '-')
-                    nc_dump.dump_nc('quad_grid_dps_mask', 'i1', ('x', 'y', ), '-')
-                    nc_dump.dump_nc('vol1', 'f4', ('nFlowElem2', ), '-')
+                    #nc_dump.dump_nc('quad_grid', 'i4', ('x', 'y', ), '-')
+                    #nc_dump.dump_nc('quad_grid_dps_mask', 'i1', ('x', 'y', ), '-')
+                    #nc_dump.dump_nc('vol1', 'f4', ('nFlowElem2', ), '-')
+
+                    #nc_dump.dump_nc('nt', 'f8', (), '-')  #testing
 
                     if os.path.exists(path_nc):
 
+                        grid = message_data.grid
                         L = message_data.L
                         X, Y = message_data.X, message_data.Y
-                        grid = message_data.grid
-                        with Dataset(path_nc) as dataset:
-                            # Max waterlevel
-                            s1_max = dataset.variables['s1'][:].max(0)
-                            nc_dump.dump_nc('maxlevel', 'f8', ('nFlowElem1', ), 'm', s1_max)
 
-                            # Arrival times
+                        with Dataset(path_nc) as dataset:
+
+                            # Set base variables
                             nodatavalue = 1e10
                             dps = grid['dps'].copy()
                             dps[dps == grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
-                            quad_grid = grid['quad_grid']
+                            quad_grid = grid['quad_grid']  #.filled(0)  # Temp fix error for from_disk
                             mask = grid['quad_grid_dps_mask']
                             vol1 = grid['vol1']
+
+
+                            # Arrival times
+                            nt = grid['nt'].item()  # this timestep
+                            dt = grid['dt'].item()  # timestep size
 
                             s1 = dataset.variables['s1'][:].filled(-9999)
                             time_array = np.ones(grid['dps'].shape) * -9999
 
-                            s1_agg = [
-                                s1[0:31, :].max(0),
-                                s1[31:61, :].max(0),
-                                s1[61:91, :].max(0),
-                                s1[91:121, :].max(0),
-                                s1[121:151, :].max(0),
-                                s1[151:181, :].max(0),
-                            ]
+                            arrival_times = [0, 3600, 3600*2, 3600*3, 3600*4, 3600*5]
+                            #import pdb; pdb.set_trace()
+                            s1_agg = []
+                            for i, arrival_time in enumerate(arrival_times[:-1]):
+                                if nt > arrival_times[i] // dt:
+                                    logger.debug('adding %r..' % arrival_times[i])
+                                    s1_agg.append(s1[arrival_times[i]//dt:min(arrival_times[i+1]//dt, nt), :].max(0))
+                            if nt > arrival_times[-1]:
+                                s1_agg.append(s1[arrival_times[-1]:nt, :].max(0))
+                            #logger.debug('nt: %r' % len(nt))
+                            logger.debug('s1 agg: %r' % len(s1_agg))
 
                             for i, s1_time in enumerate(s1_agg):
-                                print('i: %d' % i)
+                                logger.debug(' processing s1 time interval: %d' % i)
                                 start_time = time.time()
 
                                 # Here comes the 'Martijn interpolatie'.
                                 L.values = np.ascontiguousarray(s1_time[:,np.newaxis])
-                                print('1: %f' % (time.time() - start_time))
-                                waterheight = L(X, Y)
-                                print('2: %f' % (time.time() - start_time))
+                                s1_waterlevel = L(X, Y)
                                 # now mask the waterlevels where we did not compute
                                 # or where mask of the
-                                mask = np.logical_or.reduce([np.isnan(waterheight), mask])
-                                print('3: %f' % (time.time() - start_time))
-                                waterheight = np.ma.masked_array(waterheight, mask=mask)
-                                print('4: %f' % (time.time() - start_time))
+                                s1_mask = np.logical_or.reduce([np.isnan(s1_waterlevel), mask])
+                                s1_waterlevel = np.ma.masked_array(s1_waterlevel, mask=s1_mask)
 
-                                waterlevel = waterheight - (-dps)
-                                print('5: %f' % (time.time() - start_time))
+                                s1_waterdepth = s1_waterlevel - (-dps)
 
                                 # Gdal does not know about masked arrays, so we transform to an array with 
                                 #  a nodatavalue
-                                array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
-                                print('6: %f' % (time.time() - start_time))
+                                array = np.ma.masked_array(s1_waterlevel, mask=s1_mask).filled(nodatavalue)
 
                                 time_array[np.logical_and(time_array==-9999, array>0)] = i + 1
-                                print('7: %f' % (time.time() - start_time))
 
                             nc_dump.dump_nc('arrival', 'f4', ('x', 'y'), 'm', time_array)
+
+
+                            # Max waterlevel. Somehow this part influences
+                            # "Arrival times". So do not move.
+                            s1_max = dataset.variables['s1'][:].max(0)
+                            #s1_max = s1_max.filled(-9999)
+
+                            volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
+                            L.values = np.ascontiguousarray(s1_max[:,np.newaxis])
+                            waterlevel = L(X, Y)
+                            # now mask the waterlevels where we did not compute
+                            # or where mask of the
+                            mask = np.logical_or.reduce([np.isnan(waterlevel), mask, volmask])
+                            waterlevel = np.ma.masked_array(waterlevel, mask=mask)
+
+                            maxdepth = waterlevel - (-dps)
+                            #maxdepth = np.ma.masked_array(maxdepth, mask=mask)
+                            nc_dump.dump_nc('maxdepth', 'f4', ('x', 'y'), 'm', maxdepth)
 
                     else:
                         logger.error('No subgrid_map file found at %r, skipping' % path_nc)
@@ -422,14 +441,15 @@ class MessageData(object):
             nc = Dataset(grid_path, 'r', format='NETCDF3_CLASSIC')
             grid = {}
             grid['dsnop'] = nc.variables['dsnop'].getValue()[0]
-            grid['quad_grid_dps_mask'] = nc.variables['quad_grid_dps_mask'][:]
-            grid['quad_grid'] = np.ma.masked_array(
-                nc.variables['quad_grid'][:], 
-                mask=grid['quad_grid_dps_mask'])
-            grid['vol1'] = nc.variables['vol1'][:]
+            # grid['quad_grid_dps_mask'] = nc.variables['quad_grid_dps_mask'][:]
+            # grid['quad_grid'] = np.ma.masked_array(
+            #     nc.variables['quad_grid'][:], 
+            #     mask=grid['quad_grid_dps_mask'])
+            # grid['vol1'] = nc.variables['vol1'][:]
             grid['dps'] = nc.variables['dps'][:]
             grid['wkt'] = ''.join(nc.variables['wkt'])
-            grid['maxlevel'] = nc.variables['maxlevel'][:]
+            #grid['maxlevel'] = nc.variables['maxlevel'][:]
+            grid['maxdepth'] = nc.variables['maxdepth'][:]
             grid['arrival'] = nc.variables['arrival'][:]
 
             grid['x0p'] = nc.variables['x0p'].getValue()[0]
@@ -439,15 +459,18 @@ class MessageData(object):
             grid['dxp'] = nc.variables['dxp'].getValue()[0]
             grid['dyp'] = nc.variables['dyp'].getValue()[0]
 
-            grid['imax'] = nc.variables['imax'][:]
-            grid['jmax'] = nc.variables['jmax'][:]
-            grid['imaxk'] = nc.variables['imaxk'][:]
-            grid['jmaxk'] = nc.variables['jmaxk'][:]
+            # grid['imax'] = nc.variables['imax'][:]
+            # grid['jmax'] = nc.variables['jmax'][:]
+            # grid['imaxk'] = nc.variables['imaxk'][:]
+            # grid['jmaxk'] = nc.variables['jmaxk'][:]
 
-            grid['nodm'] = nc.variables['nodm'][:]
-            grid['nodn'] = nc.variables['nodn'][:]
-            grid['nodk'] = nc.variables['nodk'][:]
-            grid['nod_type'] = nc.variables['nod_type'][:]
+            # grid['nodm'] = nc.variables['nodm'][:]
+            # grid['nodn'] = nc.variables['nodn'][:]
+            # grid['nodk'] = nc.variables['nodk'][:]
+            # grid['nod_type'] = nc.variables['nod_type'][:]
+
+            # # testing
+            # grid['nt'] = nc.variables['nt'].getValue()[0]
 
         if grid is None:
             if not self.grid:
@@ -680,118 +703,69 @@ class MessageData(object):
                 g, transform, self.wkt, nodatavalue=nodatavalue)
             return container
         elif layer == 'maxdepth':
-            nodatavalue = 1e10
+            if not from_disk:
+                return None  # does not work!
+
+            a = grid['maxdepth'][S].copy()
             dps = grid['dps'][S].copy()
-            dps[dps == grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
-            quad_grid = grid['quad_grid'][S].filled(0)  # Temp fix error for from_disk
-            mask = grid['quad_grid_dps_mask'][S]
-            s1 = grid['maxlevel'].filled(-9999)  # from_disk only
-            vol1 = grid['vol1']
+            wkt = grid['wkt']
 
-            # Here comes the 'Martijn interpolatie'.
-            if from_disk:
-                X_, Y_, L = self.calc_indices(grid)
-                X = X_[S]
-                Y = Y_[S]
-            else:
-                L = self.L
-                if L is None:
-                    logger.warn("Interpolation data not available")
-                X, Y = self.X[S], self.Y[S]
+            nodatavalue = 1e10
+            a[dps == grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
 
-            # Error from_disk
-            volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
-            L.values = np.ascontiguousarray(s1[:,np.newaxis])
-            waterheight = L(X, Y)
-            # now mask the waterlevels where we did not compute
-            # or where mask of the
-            mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
-            waterheight = np.ma.masked_array(waterheight, mask=mask)
+            # Strange stuff: no data value is not handled correctly in preprocessing
+            a[a > 10000] = nodatavalue  
+            nc.close()
 
-            if from_disk:
-                nc.close()
-
-            waterlevel = waterheight - (-dps)
-
-            # Gdal does not know about masked arrays, so we transform to an array with 
-            #  a nodatavalue
-            array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
-            container = rasters.NumpyContainer(array, transform, self.wkt, 
-                                               nodatavalue=nodatavalue)
-
-
+            container = rasters.NumpyContainer(
+                a, transform, wkt, nodatavalue=nodatavalue)
             return container
+            # nodatavalue = 1e10
+            # dps = grid['dps'][S].copy()
+            # dps[dps == grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            # quad_grid = grid['quad_grid'][S].filled(0)  # Temp fix error for from_disk
+            # mask = grid['quad_grid_dps_mask'][S]
+            # s1 = grid['maxlevel'].filled(-9999)  # from_disk only
+            # vol1 = grid['vol1']
 
-        # elif layer == 'maxdepth_test':
-        #     # TODO: fill real max depth
-        #     #from netCDF4 import Dataset
-        #     path_nc = '/home/user/git/nens/threedi-server/test_hhnk/subgrid_map.nc'
-        #     path_dem = '/home/user/git/nens/threedi-server/test_hhnk/dem_hhnk.tif'
+            # # Here comes the 'Martijn interpolatie'.
+            # if from_disk:
+            #     X_, Y_, L = self.calc_indices(grid)
+            #     X = X_[S]
+            #     Y = Y_[S]
+            # else:
+            #     L = self.L
+            #     if L is None:
+            #         logger.warn("Interpolation data not available")
+            #     X, Y = self.X[S], self.Y[S]
 
-        #     with Dataset(path_nc) as dataset:
-        #         #import pdb; pdb.set_trace()
-        #         s1_max = dataset.variables['s1'][:].max(0)
+            # # Error from_disk
+            # volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
+            # L.values = np.ascontiguousarray(s1[:,np.newaxis])
+            # waterheight = L(X, Y)
+            # # now mask the waterlevels where we did not compute
+            # # or where mask of the
+            # mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
+            # waterheight = np.ma.masked_array(waterheight, mask=mask)
 
-        #     ###########testttt
+            # if from_disk:
+            #     nc.close()
 
-        #     nodatavalue = 1e10
-        #     dps = grid['dps'][S].copy()
-        #     dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
-        #     quad_grid = grid['quad_grid'][S]
-        #     mask = grid['quad_grid_dps_mask'][S]
-        #     s1 = s1_max.filled(-9999)
-        #     vol1 = self.grid['vol1']
+            # waterlevel = waterheight - (-dps)
 
-        #     #import pdb; pdb.set_trace()
-
-        #     if interpolate == 'nearest':
-        #         waterheight = s1[quad_grid.filled(0)]
-        #     else:
-        #         # Here comes the 'Martijn interpolatie'.
-        #         L = self.L
-        #         if L is None:
-        #             logger.warn("Interpolation data not available")
-        #         X, Y = self.X[S], self.Y[S]
-        #         #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
-        #         # scipy interpolate does not deal with masked arrays
-        #         # so we set waterlevels to nan where volume is 0
-        #         #s1[vol1 == 0] = np.nan
-        #         #s1 = np.where(vol1 == 0, -self.grid['dmax'], s1)
-        #         try:
-        #             volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
-        #             L.values = np.ascontiguousarray(s1[:,np.newaxis])
-        #             waterheight = L(X, Y)
-        #             # now mask the waterlevels where we did not compute
-        #             # or where mask of the
-        #             mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
-        #             waterheight = np.ma.masked_array(waterheight, mask=mask)
-        #         except IndexError:
-        #             # Fallback to nearest
-        #             # Kaapstad:
-        #             # IndexError: index 1085856568 is out of bounds for size 16473
-        #             logger.error('Interpolation crashed, falling back to nearest.')
-        #             waterheight = s1[quad_grid.filled(0)]
-        #             # Log everything
-        #             exc_type, exc_value, exc_traceback = sys.exc_info()
-        #             for line in traceback.format_exception(
-        #                 exc_type, exc_value, exc_traceback):
-        #                 logger.debug(line)
-
-        #     waterlevel = waterheight - (-dps)
-
-        #     # Gdal does not know about masked arrays, so we transform to an array with 
-        #     #  a nodatavalue
-        #     array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
-        #     container = rasters.NumpyContainer(array, transform, self.wkt, 
-        #                                        nodatavalue=nodatavalue)
+            # # Gdal does not know about masked arrays, so we transform to an array with 
+            # #  a nodatavalue
+            # array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
+            # container = rasters.NumpyContainer(array, transform, self.wkt, 
+            #                                    nodatavalue=nodatavalue)
 
 
-        #     return container
-
+            # return container
 
         elif layer == 'arrival':
             if not from_disk:
                 return None  # does not work!
+
             a = grid['arrival'][S].copy()
             dps = grid['dps'][S].copy()
             wkt = grid['wkt']
@@ -801,76 +775,172 @@ class MessageData(object):
             nc.close()
 
             container = rasters.NumpyContainer(
-                dps, transform, wkt, nodatavalue=nodatavalue)
+                a, transform, wkt, nodatavalue=nodatavalue)
             return container
 
-        elif layer == 'arrival_test':
+        # elif layer == 'arrival_test':
 
-            nodatavalue = 1e10
-            dps = grid['dps'][S].copy()
-            dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
-            quad_grid = grid['quad_grid'][S]
-            mask = grid['quad_grid_dps_mask'][S]
-            vol1 = self.grid['vol1']
+        #     nodatavalue = 1e10
+        #     dps = grid['dps'].copy()
+        #     dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+        #     quad_grid = grid['quad_grid']
+        #     mask = grid['quad_grid_dps_mask']
+        #     vol1 = grid['vol1']
+        #     nt = grid['nt']
 
-            L = self.L
-            if L is None:
-                logger.warn("Interpolation data not available")
-            X, Y = self.X[S], self.Y[S]
+        #     L = self.L
+        #     if L is None:
+        #         logger.warn("Interpolation data not available")
+        #     X, Y = self.X, self.Y
 
-            #from netCDF4 import Dataset
-            path_nc = '/home/user/git/nens/threedi-server/test_hhnk/subgrid_map.nc'
-            path_dem = '/home/user/git/nens/threedi-server/test_hhnk/dem_hhnk.tif'
-            result_array = None
+        #     #from netCDF4 import Dataset
+        #     #path_nc = '/home/user/git/nens/threedi-server/src/threedi_wms/var/data/3di/delfland-gebiedsbreed-delfland_gebiedsbreed/subgrid_map.nc'
+        #     path_nc = '/home/user/git/nens/threedi-server/src/threedi-wms/var/data/3di/delfland-gebiedsbreed-delfland_gebiedsbreed/subgrid_map.nc'
+        #     #path_dem = '/home/user/git/nens/threedi-server/test_hhnk/dem_hhnk.tif'
+        #     result_array = None
 
-            with Dataset(path_nc) as dataset:
-                #ranges = np.arange(t.max() // 3600 + 1) * 3600
-                #ranges_indices
-                #
-                #import pdb; pdb.set_trace()
-                s1 = dataset.variables['s1'][:].filled(-9999)
-                time_array = np.ones(grid['dps'][S].shape) * -9999
+        #     with Dataset(path_nc) as dataset:
+        #         #ranges = np.arange(t.max() // 3600 + 1) * 3600
+        #         #ranges_indices
+        #         #
+        #         #import pdb; pdb.set_trace()
+        #         s1 = dataset.variables['s1'][:].filled(-9999)
+        #         time_array = np.ones(grid['dps'].shape) * -9999
 
-                s1_agg = [
-                    s1[0:31, :].max(0),
-                    s1[31:61, :].max(0),
-                    s1[61:91, :].max(0),
-                    s1[91:121, :].max(0),
-                    s1[121:151, :].max(0),
-                    s1[151:181, :].max(0),
-                ]
+        #         # s1_agg = [
+        #         #     s1[0:31, :].max(0),
+        #         #     s1[31:61, :].max(0),
+        #         #     # s1[61:91, :].max(0),
+        #         #     # s1[91:121, :].max(0),
+        #         #     # s1[121:151, :].max(0),
+        #         #     # s1[151:181, :].max(0),
+        #         # ]
+        #         arrival_times = [0, 30, 60, 90, 120, 150]
+        #         s1_agg = []
+        #         for i, arrival_time in enumerate(arrival_times[:-1]):
+        #             if nt >= arrival_times[i] and nt < arrival_times[i+1]:
+        #                 s1_agg.append(s1[arrival_times[i]:arrival_times[i+1], :].max(0))
+        #         if nt > arrival_times[-1]:
+        #             s1_agg.append(s1[arrival_times[-1]:nt, :].max(0))
+        #         logger.debug('%r' % str(s1_agg))
 
-                for i, s1_time in enumerate(s1_agg):
-                    print('i: %d' % i)
-                    start_time = time.time()
+        #         for i, s1_time in enumerate(s1_agg):
+        #             print('i: %d' % i)
+        #             start_time = time.time()
 
-                    # Here comes the 'Martijn interpolatie'.
-                    L.values = np.ascontiguousarray(s1_time[:,np.newaxis])
-                    print('1: %f' % (time.time() - start_time))
-                    waterheight = L(X, Y)
-                    print('2: %f' % (time.time() - start_time))
-                    # now mask the waterlevels where we did not compute
-                    # or where mask of the
-                    mask = np.logical_or.reduce([np.isnan(waterheight), mask])
-                    print('3: %f' % (time.time() - start_time))
-                    waterheight = np.ma.masked_array(waterheight, mask=mask)
-                    print('4: %f' % (time.time() - start_time))
+        #             # Here comes the 'Martijn interpolatie'.
+        #             L.values = np.ascontiguousarray(s1_time[:,np.newaxis])
+        #             print('1: %f' % (time.time() - start_time))
+        #             waterheight = L(X, Y)
+        #             print('2: %f' % (time.time() - start_time))
+        #             # now mask the waterlevels where we did not compute
+        #             # or where mask of the
+        #             mask = np.logical_or.reduce([np.isnan(waterheight), mask])
+        #             print('3: %f' % (time.time() - start_time))
+        #             waterheight = np.ma.masked_array(waterheight, mask=mask)
+        #             print('4: %f' % (time.time() - start_time))
 
-                    waterlevel = waterheight - (-dps)
-                    print('5: %f' % (time.time() - start_time))
+        #             waterlevel = waterheight - (-dps)
+        #             print('5: %f' % (time.time() - start_time))
 
-                    # Gdal does not know about masked arrays, so we transform to an array with 
-                    #  a nodatavalue
-                    array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
-                    print('6: %f' % (time.time() - start_time))
+        #             # Gdal does not know about masked arrays, so we transform to an array with 
+        #             #  a nodatavalue
+        #             array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
+        #             print('6: %f' % (time.time() - start_time))
 
-                    time_array[np.logical_and(time_array==-9999, array>0)] = i + 1
-                    print('7: %f' % (time.time() - start_time))
+        #             time_array[np.logical_and(time_array==-9999, array>0)] = i + 1
+        #             print('7: %f' % (time.time() - start_time))
 
-            container = rasters.NumpyContainer(time_array, transform, self.wkt, 
-                                               nodatavalue=nodatavalue)
+        #         logger.debug(len(time_array[time_array == -9999]))
+        #         logger.debug(len(time_array[time_array == 1]))
+        #         logger.debug(len(time_array[time_array == 2]))
 
-            return container
+        #     container = rasters.NumpyContainer(time_array, transform, self.wkt, 
+        #                                        nodatavalue=nodatavalue)
+
+        #     return container
+
+        # elif layer == 'arrival_test2':
+
+        #     nodatavalue = 1e10
+        #     dps = grid['dps'][S].copy()
+        #     dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+        #     quad_grid = grid['quad_grid'][S]
+        #     mask = grid['quad_grid_dps_mask'][S]
+        #     vol1 = grid['vol1']
+        #     nt = grid['nt']
+
+        #     L = self.L
+        #     if L is None:
+        #         logger.warn("Interpolation data not available")
+        #     X, Y = self.X[S], self.Y[S]
+
+        #     #from netCDF4 import Dataset
+        #     #path_nc = '/home/user/git/nens/threedi-server/src/threedi_wms/var/data/3di/delfland-gebiedsbreed-delfland_gebiedsbreed/subgrid_map.nc'
+        #     path_nc = '/home/user/git/nens/threedi-server/src/threedi-wms/var/data/3di/delfland-gebiedsbreed-delfland_gebiedsbreed/subgrid_map.nc'
+        #     #path_dem = '/home/user/git/nens/threedi-server/test_hhnk/dem_hhnk.tif'
+        #     result_array = None
+
+        #     with Dataset(path_nc) as dataset:
+        #         #ranges = np.arange(t.max() // 3600 + 1) * 3600
+        #         #ranges_indices
+        #         #
+        #         #import pdb; pdb.set_trace()
+        #         s1 = dataset.variables['s1'][:].filled(-9999)
+        #         time_array = np.ones(grid['dps'][S].shape) * -9999
+
+        #         # s1_agg = [
+        #         #     s1[0:31, :].max(0),
+        #         #     s1[31:61, :].max(0),
+        #         #     # s1[61:91, :].max(0),
+        #         #     # s1[91:121, :].max(0),
+        #         #     # s1[121:151, :].max(0),
+        #         #     # s1[151:181, :].max(0),
+        #         # ]
+        #         arrival_times = [0, 30, 60, 90, 120, 150]
+        #         s1_agg = []
+        #         for i, arrival_time in enumerate(arrival_times[:-1]):
+        #             if nt >= arrival_times[i] and nt < arrival_times[i+1]:
+        #                 s1_agg.append(s1[arrival_times[i]:arrival_times[i+1], :].max(0))
+        #         if nt > arrival_times[-1]:
+        #             s1_agg.append(s1[arrival_times[-1]:nt, :].max(0))
+        #         logger.debug('%r' % str(s1_agg))
+
+        #         for i, s1_time in enumerate(s1_agg):
+        #             print('i: %d' % i)
+        #             start_time = time.time()
+
+        #             # Here comes the 'Martijn interpolatie'.
+        #             L.values = np.ascontiguousarray(s1_time[:,np.newaxis])
+        #             print('1: %f' % (time.time() - start_time))
+        #             waterheight = L(X, Y)
+        #             print('2: %f' % (time.time() - start_time))
+        #             # now mask the waterlevels where we did not compute
+        #             # or where mask of the
+        #             mask = np.logical_or.reduce([np.isnan(waterheight), mask])
+        #             print('3: %f' % (time.time() - start_time))
+        #             waterheight = np.ma.masked_array(waterheight, mask=mask)
+        #             print('4: %f' % (time.time() - start_time))
+
+        #             waterlevel = waterheight - (-dps)
+        #             print('5: %f' % (time.time() - start_time))
+
+        #             # Gdal does not know about masked arrays, so we transform to an array with 
+        #             #  a nodatavalue
+        #             array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
+        #             print('6: %f' % (time.time() - start_time))
+
+        #             time_array[np.logical_and(time_array==-9999, array>0)] = i + 1
+        #             print('7: %f' % (time.time() - start_time))
+
+        #         logger.debug(len(time_array[time_array == -9999]))
+        #         logger.debug(len(time_array[time_array == 1]))
+        #         logger.debug(len(time_array[time_array == 2]))
+
+        #     container = rasters.NumpyContainer(time_array, transform, self.wkt, 
+        #                                        nodatavalue=nodatavalue)
+
+        #     return container
 
         else:
             raise NotImplemented("working on it")
