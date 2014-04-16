@@ -323,6 +323,8 @@ def get_response_for_getmap(get_parameters):
         use_messages = True
     else:
         use_messages = False
+    if mode == 'maxdepth' or mode == 'arrival':
+        use_messages = True  # Always use_messages = True
     if get_parameters.get('nocache', 'no') == 'yes':
         use_cache = False
     else:
@@ -333,8 +335,8 @@ def get_response_for_getmap(get_parameters):
     time = int(get_parameters.get('time', 0))
 
     # Check if messages data is ready. If not: fall back to netcdf/pyramid method.
-    if mode == 'maxdepth':
-        required_message_vars = []  #'maxdepth']
+    if mode == 'maxdepth' or mode == 'arrival':
+        required_message_vars = []
     else:
         required_message_vars = ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
             'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
@@ -344,16 +346,9 @@ def get_response_for_getmap(get_parameters):
             ', falling back to netcdf.' % (
                 set(required_message_vars) - set(message_data.grid.keys())))
         use_messages = False
-
-    # for grid_var in ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
-    #     'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
-    #     'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']:
-    #     if grid_var not in message_data.grid:
-    #         logger.debug('Not all vars available yet in message_data (%r)'
-    #             ', falling back to netcdf.' % grid_var)
-    #         use_messages = False
-    #         break
-    if not message_data.interpolation_ready:
+    if (use_messages and mode != 'maxdepth' and mode != 'arrival' and 
+        not message_data.interpolation_ready):
+    
         logger.debug('Interpolation not ready in message_data'
             ', falling back to netcdf.')
         use_messages = False
