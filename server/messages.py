@@ -399,43 +399,54 @@ class MessageData(object):
         grid = None
         if from_disk:
             logger.debug('Memory from file...')
-            #grid = self.grid
             layer_slug = kwargs['layers'].split(':')[0]
             logger.debug(layer_slug)
-            grid_path = os.path.join(config.DATA_DIR, '3di', layer_slug, 'grids.nc')
-            nc = Dataset(grid_path, 'r', format='NETCDF3_CLASSIC')
-            grid = {}
-            grid['dsnop'] = nc.variables['dsnop'].getValue()[0]
-            # grid['quad_grid_dps_mask'] = nc.variables['quad_grid_dps_mask'][:]
-            # grid['quad_grid'] = np.ma.masked_array(
-            #     nc.variables['quad_grid'][:], 
-            #     mask=grid['quad_grid_dps_mask'])
-            # grid['vol1'] = nc.variables['vol1'][:]
-            grid['dps'] = nc.variables['dps'][:]
-            grid['wkt'] = ''.join(nc.variables['wkt'])
-            #grid['maxlevel'] = nc.variables['maxlevel'][:]
-            grid['maxdepth'] = nc.variables['maxdepth'][:]
-            grid['arrival'] = nc.variables['arrival'][:]
 
-            grid['x0p'] = nc.variables['x0p'].getValue()[0]
-            grid['y0p'] = nc.variables['y0p'].getValue()[0]
-            grid['x1p'] = nc.variables['x1p'].getValue()[0]
-            grid['y1p'] = nc.variables['y1p'].getValue()[0]
-            grid['dxp'] = nc.variables['dxp'].getValue()[0]
-            grid['dyp'] = nc.variables['dyp'].getValue()[0]
+            if 'file-memory' in self.grid and self.grid['file-memory'] == layer_slug:
+                # already loaded
+                # if a new file is placed in the same location, it is not detected!!
+                logger.debug('already loaded from file into memory')
+                grid = self.grid
+            else:
+                # load file into memory
+                logger.debug('loading file into memory')
+                grid_path = os.path.join(config.DATA_DIR, '3di', layer_slug, 'grids.nc')
+                nc = Dataset(grid_path, 'r', format='NETCDF3_CLASSIC')
+                grid = {}
+                grid['dsnop'] = nc.variables['dsnop'].getValue()[0]
+                # grid['quad_grid_dps_mask'] = nc.variables['quad_grid_dps_mask'][:]
+                # grid['quad_grid'] = np.ma.masked_array(
+                #     nc.variables['quad_grid'][:], 
+                #     mask=grid['quad_grid_dps_mask'])
+                # grid['vol1'] = nc.variables['vol1'][:]
+                grid['wkt'] = ''.join(nc.variables['wkt'])
+                grid['dps'] = nc.variables['dps'][:].copy()
+                #grid['maxlevel'] = nc.variables['maxlevel'][:]
+                grid['maxdepth'] = nc.variables['maxdepth'][:].copy()
+                grid['arrival'] = nc.variables['arrival'][:].copy()
 
-            # grid['imax'] = nc.variables['imax'][:]
-            # grid['jmax'] = nc.variables['jmax'][:]
-            # grid['imaxk'] = nc.variables['imaxk'][:]
-            # grid['jmaxk'] = nc.variables['jmaxk'][:]
+                grid['x0p'] = nc.variables['x0p'].getValue()[0]
+                grid['y0p'] = nc.variables['y0p'].getValue()[0]
+                grid['x1p'] = nc.variables['x1p'].getValue()[0]
+                grid['y1p'] = nc.variables['y1p'].getValue()[0]
+                grid['dxp'] = nc.variables['dxp'].getValue()[0]
+                grid['dyp'] = nc.variables['dyp'].getValue()[0]
 
-            # grid['nodm'] = nc.variables['nodm'][:]
-            # grid['nodn'] = nc.variables['nodn'][:]
-            # grid['nodk'] = nc.variables['nodk'][:]
-            # grid['nod_type'] = nc.variables['nod_type'][:]
+                grid['file-memory'] = layer_slug
+                self.grid = grid
+                # grid['imax'] = nc.variables['imax'][:]
+                # grid['jmax'] = nc.variables['jmax'][:]
+                # grid['imaxk'] = nc.variables['imaxk'][:]
+                # grid['jmaxk'] = nc.variables['jmaxk'][:]
 
-            # # testing
-            # grid['nt'] = nc.variables['nt'].getValue()[0]
+                # grid['nodm'] = nc.variables['nodm'][:]
+                # grid['nodn'] = nc.variables['nodn'][:]
+                # grid['nodk'] = nc.variables['nodk'][:]
+                # grid['nod_type'] = nc.variables['nod_type'][:]
+
+                # # testing
+                # grid['nt'] = nc.variables['nt'].getValue()[0]
+                nc.close()
 
         if grid is None:
             if not self.grid:
@@ -454,7 +465,7 @@ class MessageData(object):
         logger.debug('bbox: %r' % str(bbox))
         height = int(kwargs.get("height", "0"))
         width = int(kwargs.get("width", "0"))
-        fast = float(kwargs.get("fast", "1"))  # multiply the slicing stepsize with 'fast'.
+        fast = float(kwargs.get("fast", "1.4"))  # multiply the slicing stepsize with 'fast'.
 
         if all([srs, bbox, height, width]):
             logger.debug("slicing and dicing")
@@ -680,7 +691,6 @@ class MessageData(object):
 
             # Strange stuff: no data value is not handled correctly in preprocessing
             a[a > 10000] = nodatavalue  
-            nc.close()
 
             container = rasters.NumpyContainer(
                 a, transform, wkt, nodatavalue=nodatavalue)
@@ -690,13 +700,14 @@ class MessageData(object):
             if not from_disk:
                 return None  # does not work!
 
+            logger.debug(np.amin(a))
+            logger.debug(np.amax(a))
             a = grid['arrival'][S].copy()
             dps = grid['dps'][S].copy()
             wkt = grid['wkt']
 
             nodatavalue = 1e10
             a[dps == grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
-            nc.close()
 
             container = rasters.NumpyContainer(
                 a, transform, wkt, nodatavalue=nodatavalue)
