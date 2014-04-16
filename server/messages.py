@@ -401,13 +401,20 @@ class MessageData(object):
 
         TODO: disk cache when using from_disk
         """
+        def generate_hash(path, layer_slug):
+            return '%r-%r-%r' % (
+                layer_slug, os.path.getctime(path), os.path.getmtime(path))
+
         grid = None
         if from_disk:
             logger.debug('Memory from file...')
             layer_slug = kwargs['layers'].split(':')[0]
             logger.debug(layer_slug)
+            grid_path = os.path.join(config.DATA_DIR, '3di', layer_slug, 'grids.nc')
 
-            if 'file-memory' in self.grid and self.grid['file-memory'] == layer_slug:
+            if 'file-memory' in self.grid and self.grid['file-memory'] == generate_hash(
+                grid_path, layer_slug):
+
                 # already loaded
                 # if a new file is placed in the same location, it is not detected!!
                 logger.debug('already loaded from file into memory')
@@ -415,7 +422,6 @@ class MessageData(object):
             else:
                 # load file into memory
                 logger.debug('loading file into memory')
-                grid_path = os.path.join(config.DATA_DIR, '3di', layer_slug, 'grids.nc')
                 nc = Dataset(grid_path, 'r', format='NETCDF3_CLASSIC')
                 grid = {}
                 grid['dsnop'] = nc.variables['dsnop'].getValue()[0]
@@ -437,7 +443,7 @@ class MessageData(object):
                 grid['dxp'] = nc.variables['dxp'].getValue()[0]
                 grid['dyp'] = nc.variables['dyp'].getValue()[0]
 
-                grid['file-memory'] = layer_slug
+                grid['file-memory'] = generate_hash(grid_path, layer_slug)
                 self.grid = grid
                 # grid['imax'] = nc.variables['imax'][:]
                 # grid['jmax'] = nc.variables['jmax'][:]
