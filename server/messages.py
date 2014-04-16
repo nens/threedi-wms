@@ -735,8 +735,8 @@ class MessageData(object):
             if not from_disk:
                 return None  # does not work!
 
-            logger.debug(np.amin(a))
-            logger.debug(np.amax(a))
+            logger.debug(np.amin(grid['arrival']))
+            logger.debug(np.amax(grid['arrival']))
             a = grid['arrival'][S].copy()
             dps = grid['dps'][S].copy()
             wkt = grid['wkt']
