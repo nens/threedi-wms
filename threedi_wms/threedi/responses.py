@@ -148,6 +148,32 @@ def get_green_image(masked_array, hmin=0, hmax=2):
     return rgba2image(rgba=rgba)
 
 
+def get_arrival_image(masked_array, hmin=0, hmax=7):
+    """ Return a png image from masked_array. """
+    normalize = colors.Normalize(vmin=hmin, vmax=hmax)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    cdict = {
+        'red': ((0.0, 255. / 256, 255. / 256),
+                (1.0, 255. / 256, 255. / 256)),
+        'green': ((0.0, 0. / 256, 0. / 256),
+                 (1.0, 255. / 256, 255. / 256)),
+        'blue': ((0.0, 0. / 256, 0. / 256),
+                  (1.0, 0. / 256, 0. / 256)),
+    }
+    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
+    # Apply scaling and colormap
+    arr = masked_array
+
+    rgba = colormap(normalized_arr, bytes=True)
+
+    # Make very small/negative depths transparent
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
+    rgba[masked_array.mask,3] = 0
+
+    return rgba2image(rgba=rgba)
+
+
 def get_bathymetry_image(masked_array, limits):
     """ Return imagedata. """
     normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
@@ -471,7 +497,7 @@ def get_response_for_getmap(get_parameters):
                 "arrival", from_disk=True, **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_depth_image(
+        content, img  = get_arrival_image(
             masked_array=u, hmax=7)
 
     return content, 200, {

@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.10 (unreleased)
 -----------------
 
+- Added getmap and file-messages for maxdepth and arrival maps.
+
 - Temp fix for rare crashes in messages.py.
 
 - Added crop and soil layers for getmap (TODO: colors).
