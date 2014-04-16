@@ -141,7 +141,9 @@ class Listener(threading.Thread):
 
             if metadata['action'] == 'reset':
                 logger.debug('Resetting grid data...')
-                message_data.grid = {}
+                #message_data.grid = {}
+                for k in message_data.grid.keys():
+                    del message_data.grid[k]  # try to save memory
                 message_data.interpolation_ready = False
             elif metadata['action'] == 'update':
                 logger.debug('Updating grid data [%s]' % metadata['name'])
@@ -220,6 +222,8 @@ class Listener(threading.Thread):
                         L = message_data.L
                         X, Y = message_data.X, message_data.Y
 
+                        #X, Y, L = message_data.calc_indices()
+
                         with Dataset(path_nc) as dataset:
 
                             # Set base variables
@@ -230,27 +234,27 @@ class Listener(threading.Thread):
                             mask = grid['quad_grid_dps_mask']
                             vol1 = grid['vol1']
 
-
                             # Arrival times
-                            nt = grid['nt'].item()  # this timestep
-                            dt = grid['dt'].item()  # timestep size
+                            nt = int(grid['nt'].item())  # this timestep
+                            dt = int(grid['dt'].item())  # timestep size seconds
 
                             s1 = dataset.variables['s1'][:].filled(-9999)
-                            time_array = np.ones(grid['dps'].shape) * -9999
+                            time_array = np.ones(grid['dps'].shape) * -9999  # Init
 
                             arrival_times = [0, 3600, 3600*2, 3600*3, 3600*4, 3600*5]
                             s1_agg = []
                             for i, arrival_time in enumerate(arrival_times[:-1]):
                                 if nt > arrival_times[i] // dt:
-                                    logger.debug('adding %r..' % arrival_times[i])
+                                    logger.debug('adding %r (%r:%r)..' % (
+                                        arrival_times[i], arrival_times[i]//dt, min(arrival_times[i+1]//dt, nt)))
                                     s1_agg.append(s1[arrival_times[i]//dt:min(arrival_times[i+1]//dt, nt), :].max(0))
                             if nt > arrival_times[-1]:
+                                logger.debug('adding max...')
                                 s1_agg.append(s1[arrival_times[-1]:nt, :].max(0))
                             logger.debug('s1 agg: %r' % len(s1_agg))
 
                             for i, s1_time in enumerate(s1_agg):
                                 logger.debug(' processing s1 time interval: %d' % i)
-                                start_time = time.time()
 
                                 # Here comes the 'Martijn interpolatie'.
                                 L.values = np.ascontiguousarray(s1_time[:,np.newaxis])
@@ -259,17 +263,16 @@ class Listener(threading.Thread):
                                 # or where mask of the
                                 s1_mask = np.logical_or.reduce([np.isnan(s1_waterlevel), mask])
                                 s1_waterlevel = np.ma.masked_array(s1_waterlevel, mask=s1_mask)
-
+                                
                                 s1_waterdepth = s1_waterlevel - (-dps)
 
                                 # Gdal does not know about masked arrays, so we transform to an array with 
                                 #  a nodatavalue
-                                array = np.ma.masked_array(s1_waterlevel, mask=s1_mask).filled(nodatavalue)
+                                array = np.ma.masked_array(s1_waterdepth, mask=s1_mask).filled(nodatavalue)
 
                                 time_array[np.logical_and(time_array==-9999, array>0)] = i + 1
-
+                                
                             nc_dump.dump_nc('arrival', 'f4', ('x', 'y'), 'm', time_array)
-
 
                             # Max waterlevel. Somehow this part influences
                             # "Arrival times". So do not move.
@@ -278,6 +281,7 @@ class Listener(threading.Thread):
                             volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
                             L.values = np.ascontiguousarray(s1_max[:,np.newaxis])
                             waterlevel = L(X, Y)
+
                             # now mask the waterlevels where we did not compute
                             # or where mask of the
                             mask = np.logical_or.reduce([np.isnan(waterlevel), mask, volmask])
@@ -290,6 +294,7 @@ class Listener(threading.Thread):
                         logger.error('No subgrid_map file found at %r, skipping' % path_nc)
 
                     nc_dump.close()  
+                    os.remove(output_filename + '.busy')  # So others can see we are finished.
             else:
                 logger.debug('Got an unknown message: %r' % metadata)
 
@@ -474,7 +479,7 @@ class MessageData(object):
             src_srs = osgeo.osr.SpatialReference()
             src_srs.ImportFromEPSGA(int(srs.split(':')[1]))
             dst_srs = osgeo.osr.SpatialReference()
-            logger.debug("wkt %r" % grid["wkt"])
+            #logger.debug("wkt %r" % grid["wkt"])
             if 'wkt' in grid and grid['wkt']:
                 dst_srs.ImportFromWkt(grid["wkt"])
                 if dst_srs.GetAuthorityCode("PROJCS") == '28992' and not dst_srs.GetTOWGS84():
@@ -502,9 +507,9 @@ class MessageData(object):
             xmin_src, ymin_src = (grid['x0p'], grid['y0p'])
             xmax_src, ymax_src = (grid['x1p'], grid['y1p'])
             dx_src, dy_src = (grid['dxp'], grid['dyp'])
-            logger.debug(xmin_src)
-            logger.debug(xmax_src)
-            logger.debug(dx_src)
+            # logger.debug(xmin_src)
+            # logger.debug(xmax_src)
+            # logger.debug(dx_src)
             x_src = np.arange(xmin_src, xmax_src, dx_src)
             y_src = np.arange(ymin_src, ymax_src, dy_src)
             # Lookup indices of plotted grid
@@ -700,8 +705,6 @@ class MessageData(object):
             if not from_disk:
                 return None  # does not work!
 
-            logger.debug(np.amin(grid['arrival']))
-            logger.debug(np.amax(grid['arrival']))
             a = grid['arrival'][S].copy()
             dps = grid['dps'][S].copy()
             wkt = grid['wkt']
