@@ -23,7 +23,6 @@ from scipy import ndimage
 import numpy as np
 import ogr
 
-
 import collections
 import datetime
 import io
@@ -141,6 +140,32 @@ def get_green_image(masked_array, hmin=0, hmax=2):
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
     rgba2 = colormap2(normalized_arr, bytes=True)
     rgba[..., 3] = rgba2[..., 0]
+
+    # Make very small/negative depths transparent
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
+    rgba[masked_array.mask,3] = 0
+
+    return rgba2image(rgba=rgba)
+
+
+def get_arrival_image(masked_array, hmin=0, hmax=7):
+    """ Return a png image from masked_array. """
+    normalize = colors.Normalize(vmin=hmin, vmax=hmax)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    cdict = {
+        'red': ((0.0, 255. / 256, 255. / 256),
+                (1.0, 255. / 256, 255. / 256)),
+        'green': ((0.0, 0. / 256, 0. / 256),
+                 (1.0, 255. / 256, 255. / 256)),
+        'blue': ((0.0, 0. / 256, 0. / 256),
+                  (1.0, 0. / 256, 0. / 256)),
+    }
+    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
+    # Apply scaling and colormap
+    arr = masked_array
+
+    rgba = colormap(normalized_arr, bytes=True)
 
     # Make very small/negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
@@ -323,6 +348,8 @@ def get_response_for_getmap(get_parameters):
         use_messages = True
     else:
         use_messages = False
+    if mode == 'maxdepth' or mode == 'arrival':
+        use_messages = True  # Always use_messages = True
     if get_parameters.get('nocache', 'no') == 'yes':
         use_cache = False
     else:
@@ -333,15 +360,20 @@ def get_response_for_getmap(get_parameters):
     time = int(get_parameters.get('time', 0))
 
     # Check if messages data is ready. If not: fall back to netcdf/pyramid method.
-    for grid_var in ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
-        'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
-        'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']:
-        if grid_var not in message_data.grid:
-            logger.debug('Not all vars available yet in message_data (%r)'
-                ', falling back to netcdf.' % grid_var)
-            use_messages = False
-            break
-    if not message_data.interpolation_ready:
+    if mode == 'maxdepth' or mode == 'arrival':
+        required_message_vars = []
+    else:
+        required_message_vars = ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
+            'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
+            'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']
+    if not set(required_message_vars).issubset(set(message_data.grid.keys())):
+        logger.debug('Not all vars available yet in message_data (missing: %r)'
+            ', falling back to netcdf.' % (
+                set(required_message_vars) - set(message_data.grid.keys())))
+        use_messages = False
+    if (use_messages and mode != 'maxdepth' and mode != 'arrival' and 
+        not message_data.interpolation_ready):
+    
         logger.debug('Interpolation not ready in message_data'
             ', falling back to netcdf.')
         use_messages = False
@@ -451,6 +483,22 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_green_image(masked_array=u, hmax=16)
+    elif mode == 'maxdepth':
+        container = message_data.get(
+                "maxdepth", from_disk=True, **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_depth_image(
+            masked_array=u,
+            hmax=hmax)
+
+    elif mode == 'arrival':
+        container = message_data.get(
+                "arrival", from_disk=True, **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+
+        content, img  = get_arrival_image(
+            masked_array=u, hmax=7)
 
     return content, 200, {
         'content-type': 'image/png',
