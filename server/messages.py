@@ -97,37 +97,6 @@ class NCDump(object):
             self.message_data.grid['nFlowElem1dBounds'] +
             self.message_data.grid['nFlowElem2d'] +
             self.message_data.grid['nFlowElem2dBounds'])  # Apparently WITH boundary nodes
-        # flow_elem_dim = self.ncfile.createDimension(
-        #     'nFlowElem', self.message_data.grid['s1'].shape[0]) 
-
-        # logger.debug(self.message_data.grid['nmax'])
-        # logger.debug(self.message_data.grid['mmax'])
-        # logger.debug(self.message_data.grid['nFlowElem1d'])
-        # logger.debug(self.message_data.grid['nFlowElem1dBounds'])
-        # logger.debug(self.message_data.grid['nFlowElem2d'])
-        # logger.debug(self.message_data.grid['nFlowElem2dBounds'])
-        #flow_link_dim = ncfile.createDimension('nFlowLink', ) 
-
-        # y0p = ncfile.createVariable('y0p','f4',('flowElem', ))
-        # y0p.units = '-'
-        # y0p.standard_name = 'y0p'
-        # logger.debug('Assigning...')
-        # y0p[:] = message_data.grid['y0p']
-        # for k, v in self.message_data.grid.items():
-        #     try:
-        #         logger.debug(message_data.grid[k].shape)
-        #     except AttributeError:
-        #         #string
-        #         pass
-
-        #self.dump_nc('wkt', 'S1', (), '-')
-        #self.dump_nc('dps', 'f4', ('x', 'y', ), '-mMSL')
-
-        # dps = ncfile.createVariable('dps','f4',('x', 'y', ))
-        # dps.units = '-mMSL'
-        # dps.standard_name = 'dps'
-        # dps[:, :] = self.message_data.grid['dps']
-
 
     def dump_nc(self, var_name, var_type, dimensions, unit, values=None):
         logger.debug('dumping %s...' % var_name)
@@ -270,7 +239,6 @@ class Listener(threading.Thread):
                             time_array = np.ones(grid['dps'].shape) * -9999
 
                             arrival_times = [0, 3600, 3600*2, 3600*3, 3600*4, 3600*5]
-                            #import pdb; pdb.set_trace()
                             s1_agg = []
                             for i, arrival_time in enumerate(arrival_times[:-1]):
                                 if nt > arrival_times[i] // dt:
@@ -278,7 +246,6 @@ class Listener(threading.Thread):
                                     s1_agg.append(s1[arrival_times[i]//dt:min(arrival_times[i+1]//dt, nt), :].max(0))
                             if nt > arrival_times[-1]:
                                 s1_agg.append(s1[arrival_times[-1]:nt, :].max(0))
-                            #logger.debug('nt: %r' % len(nt))
                             logger.debug('s1 agg: %r' % len(s1_agg))
 
                             for i, s1_time in enumerate(s1_agg):
@@ -307,7 +274,6 @@ class Listener(threading.Thread):
                             # Max waterlevel. Somehow this part influences
                             # "Arrival times". So do not move.
                             s1_max = dataset.variables['s1'][:].max(0)
-                            #s1_max = s1_max.filled(-9999)
 
                             volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
                             L.values = np.ascontiguousarray(s1_max[:,np.newaxis])
@@ -318,7 +284,6 @@ class Listener(threading.Thread):
                             waterlevel = np.ma.masked_array(waterlevel, mask=mask)
 
                             maxdepth = waterlevel - (-dps)
-                            #maxdepth = np.ma.masked_array(maxdepth, mask=mask)
                             nc_dump.dump_nc('maxdepth', 'f4', ('x', 'y'), 'm', maxdepth)
 
                     else:
