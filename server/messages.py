@@ -241,7 +241,7 @@ class Listener(threading.Thread):
                             s1 = dataset.variables['s1'][:].filled(-9999)
                             time_array = np.ones(grid['dps'].shape) * -9999  # Init
 
-                            arrival_times = [0, 3600, 3600*2, 3600*3, 3600*4, 3600*5]
+                            arrival_times = [0, 3600, 3600*2, 3600*3, 3600*5, 3600*10]
                             s1_agg = []
                             for i, arrival_time in enumerate(arrival_times[:-1]):
                                 if nt > arrival_times[i] // dt:
