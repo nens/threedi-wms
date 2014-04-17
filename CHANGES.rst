@@ -2,7 +2,7 @@ Changelog of threedi-wms
 ===================================================
 
 
-0.10 (unreleased)
+0.10 (2014-04-17)
 -----------------
 
 - Added getmap and file-messages for maxdepth and arrival maps.
