@@ -248,9 +248,9 @@ class Listener(threading.Thread):
                                     logger.debug('adding %r (%r:%r)..' % (
                                         arrival_times[i], arrival_times[i]//dt, min(arrival_times[i+1]//dt, nt)))
                                     s1_agg.append(s1[arrival_times[i]//dt:min(arrival_times[i+1]//dt, nt), :].max(0))
-                            if nt > arrival_times[-1]:
+                            if nt > arrival_times[-1]//dt:
                                 logger.debug('adding max...')
-                                s1_agg.append(s1[arrival_times[-1]:nt, :].max(0))
+                                s1_agg.append(s1[arrival_times[-1]//dt:nt, :].max(0))
                             logger.debug('s1 agg: %r' % len(s1_agg))
 
                             for i, s1_time in enumerate(s1_agg):
