@@ -236,7 +236,7 @@ class Listener(threading.Thread):
 
                             # Arrival times
                             nt = int(grid['nt'].item())  # this timestep
-                            dt = int(grid['dt'].item())  # timestep size seconds
+                            dt = int(grid['dtmax'].item())  # timestep size seconds
 
                             s1 = dataset.variables['s1'][:].filled(-9999)
                             time_array = np.ones(grid['dps'].shape) * -9999  # Init

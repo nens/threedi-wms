@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- Use dtmax instead of dt in 'dump', requires threedi-server 0.43 or newer.
 
 
 0.10 (2014-04-17)
