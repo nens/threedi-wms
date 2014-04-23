@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Tuned messages 'lookup resolution': tuned for better performance with big hd images.
+
 - Use dtmax instead of dt in 'dump', requires threedi-server 0.43 or newer.
 
 

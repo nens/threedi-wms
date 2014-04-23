@@ -525,12 +525,12 @@ class MessageData(object):
             x_end = min(max(bisect.bisect(x_src, xmax_dst) + 1, 0), dps_shape[1])
             y_start = min(max(bisect.bisect(y_src, ymin_dst) - 1, 0), dps_shape[0]-1)
             y_end = min(max(bisect.bisect(y_src, ymax_dst) + 1, 0), dps_shape[0])
-            # and lookup required resolution
-            # /2 is to reduce aliasing=hi quality. *2 is for speed
-            x_step = max(trunc(fast * (x_end - x_start)) // width, 1)
-            y_step = max(trunc(fast * (y_end - y_start)) // height, 1)
-            logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d' % (
-                y_start, y_end, y_step, x_start, x_end, x_step, width, height))
+            # lookup resolution: restricted to make it faster for big images
+            x_step = max(trunc(fast * (x_end - x_start)) // min(width, 1200), 1)
+            y_step = max(trunc(fast * (y_end - y_start)) // min(height, 800), 1)
+            num_pixels = (y_end - y_start) // y_step * (x_end - x_start) // x_step
+            logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d, pixels=%d' % (
+                y_start, y_end, y_step, x_start, x_end, x_step, width, height, num_pixels))
             S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
             #S = np.s_[:,:]
             # Compute transform for sliced grid
