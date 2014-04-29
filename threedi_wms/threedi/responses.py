@@ -320,7 +320,6 @@ def get_data(container, ma=False, **get_parameters):
     )
     container.warpinto(dataset)
     array = dataset.ReadAsArray()
-    #import pdb; pdb.set_trace()
 
     # Return array or masked array
     time = 1000 * (datetime.datetime.now() - start).total_seconds()
