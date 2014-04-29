@@ -318,6 +318,11 @@ def get_data(container, ma=False, **get_parameters):
         datatype=container.datatype,
         projection=srs,
     )
+
+    band = dataset.GetRasterBand(1)
+    band_array = band.ReadAsArray()
+    band_array.fill(container.nodatavalue)
+    band.WriteArray(band_array)
     container.warpinto(dataset)
     array = dataset.ReadAsArray()
 
