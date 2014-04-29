@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
-- Added soil color map.
+- Added soil and crop color map.
 
 - Fixed no data value being picked up from memory read map.
 
