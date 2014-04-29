@@ -147,6 +147,82 @@ def get_green_image(masked_array, hmin=0, hmax=2):
 
     return rgba2image(rgba=rgba)
 
+def get_soil_image(masked_array, hmin=0, hmax=7):
+    """ Return a png image from masked_array. """
+    colormap = colors.ListedColormap([
+        '#FFFFFF', # empty, starts at 1
+        '#F2BF24', # Veengrond met veraarde bovengrond
+        '#8F793C', # Veengrond met veraarde bovengrond, zand
+        '#63160D', # Veengrond met kleidek
+        '#14208C', # Veengrond met kleidek op zand
+        '#9943E6', # Veengrond met zanddek op zand
+        '#29FA11', # Veengrond op ongerijpte klei
+        '#F2F5A9', # Stuifzand
+        '#09701A', # Podzol (Leemarm, fijn zand)
+        '#309AE6', # Podzol (zwak lemig, fijn zand)
+        '#1FED86', # Podzol (zwak lemig, fijn zand op grof zand
+        '#A3E014', # Podzol (lemig keileem)
+        '#363154', # Enkeerd (zwak lemig, fijn zand)
+        '#F7C6EA', # Beekeerd (lemig fijn zand)
+        '#25F7F0', # Podzol (grof zand)
+        '#C75B63', # Zavel
+        '#3613E8', # Lichte klei 
+        '#DB0E07', # Zware klei
+        '#D1680D', # Klei op veen
+        '#275C51', # Klei op zand
+        '#8A084B', # Klei op grof zand
+        '#886A08', # Leem 
+        ])
+    bounds = range(22)
+    normalize = colors.BoundaryNorm(bounds, colormap.N)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    # Apply scaling and colormap
+    arr = masked_array
+
+    rgba = colormap(normalized_arr, bytes=True)
+
+    # Make very small/negative depths transparent
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
+    rgba[masked_array.mask,3] = 0
+
+    return rgba2image(rgba=rgba)
+
+def get_crop_image(masked_array, hmin=0, hmax=7):
+    """ Return a png image from masked_array. """
+    colormap = colors.ListedColormap([
+        '#FFFFFF', # empty, starts at 1
+        '#76CD2F', # ' . grass ', & rgb(118, 205, 47)
+        '#F1C40F', # ' . corn ', & rgb(241, 196, 15)
+        '#F39C12', # ' . potatoes ', & rgb(243, 156, 18)
+        '#CD2FAD', # ' . sugarbeet ', & rgb(205, 47, 173)
+        '#FDFF41', # ' . grain ', & rgb(253, 255, 65)
+        '#2ECC71', # ' . miscellaneous ', & rgb(46, 204, 113)
+        '#886A08', # ' . non-arable land', & rgb(136, 106, 8)
+        '#0489B1', # ' . greenhouse area', & rgb(4, 137, 177)
+        '#173B0B', # ' . orchard ', & rgb(23, 59, 11)
+        '#B45F04', # '. bulbous plants ', & rgb(180, 95, 4)
+        '#2F5A00', # '. foliage forest ', & rgb (47, 90, 0)
+        '#38610B', # '. pine forest ', & rgb(56, 97, 11)
+        '#16A085', # '. nature ', & rgb(22, 160, 133)
+        '#61380B', # '. fallow ', & rgb(97, 56, 11)
+        '#16A085', # '. vegetables ', & rgb(22, 160, 133)
+        '#9B59B6', # '. flowers '/) rgb(155, 89, 182)
+        ])
+    bounds = range(17)
+    normalize = colors.BoundaryNorm(bounds, colormap.N)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    # Apply scaling and colormap
+    arr = masked_array
+
+    rgba = colormap(normalized_arr, bytes=True)
+
+    # Make very small/negative depths transparent
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
+    rgba[masked_array.mask,3] = 0
+
+    return rgba2image(rgba=rgba)
 
 def get_arrival_image(masked_array, hmin=0, hmax=7):
     """ Return a png image from masked_array. """
@@ -479,14 +555,22 @@ def get_response_for_getmap(get_parameters):
         container = message_data.get(
                 "soil", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
+        # funky value coming back from get_data
+        # with no_data_value 1410065408 not being picked up by mask
+        fix_mask = u == 1410065408
+        u.mask = fix_mask
 
-        content, img  = get_green_image(masked_array=u, hmax=22)
+        content, img  = get_soil_image(masked_array=u, hmax=22)
     elif mode == 'crop':
         container = message_data.get(
                 "crop", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
+        # funky value coming back from get_data
+        # with no_data_value 1410065408 not being picked up by mask
+        fix_mask = u == 1410065408
+        u.mask = fix_mask
 
-        content, img  = get_green_image(masked_array=u, hmax=16)
+        content, img  = get_crop_image(masked_array=u, hmax=16)
     elif mode == 'maxdepth':
         container = message_data.get(
                 "maxdepth", from_disk=True, **get_parameters)
