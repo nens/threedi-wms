@@ -147,6 +147,46 @@ def get_green_image(masked_array, hmin=0, hmax=2):
 
     return rgba2image(rgba=rgba)
 
+def get_soil_image(masked_array, hmin=0, hmax=7):
+    """ Return a png image from masked_array. """
+    colormap = colors.ListedColormap([
+        '#FFFFFF',
+        '#F2BF24',
+        '#8F793C',
+        '#63160D',
+        '#14208C',
+        '#9943E6',
+        '#29FA11',
+        '#F2F5A9',
+        '#09701A',
+        '#309AE6',
+        '#1FED86',
+        '#A3E014',
+        '#363154',
+        '#F7C6EA',
+        '#25F7F0',
+        '#C75B63',
+        '#3613E8',
+        '#DB0E07',
+        '#D1680D',
+        '#275C51',
+        '#8A084B',
+        '#886A08',
+        ])
+    bounds = range(22)
+    normalize = colors.BoundaryNorm(bounds, colormap.N)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    # Apply scaling and colormap
+    arr = masked_array
+
+    rgba = colormap(normalized_arr, bytes=True)
+
+    # Make very small/negative depths transparent
+    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
+    rgba[masked_array.mask,3] = 0
+
+    return rgba2image(rgba=rgba)
 
 def get_arrival_image(masked_array, hmin=0, hmax=7):
     """ Return a png image from masked_array. """
@@ -479,8 +519,12 @@ def get_response_for_getmap(get_parameters):
         container = message_data.get(
                 "soil", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
+        # funky value coming back from get_data
+        # with no_data_value 1410065408 not being picked up by mask
+        fix_mask = u == 1410065408
+        u.mask = fix_mask
 
-        content, img  = get_green_image(masked_array=u, hmax=22)
+        content, img  = get_soil_image(masked_array=u, hmax=22)
     elif mode == 'crop':
         container = message_data.get(
                 "crop", **get_parameters)
