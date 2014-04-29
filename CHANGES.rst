@@ -5,6 +5,10 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Added soil color map.
+
+- Fixed no data value being picked up from memory read map.
+
 - Tuned messages 'lookup resolution': tuned for better performance with big hd images.
 
 - Use dtmax instead of dt in 'dump', requires threedi-server 0.43 or newer.
