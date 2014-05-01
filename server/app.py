@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+    # -*- coding: utf-8 -*-
 # (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
 
 from __future__ import print_function
@@ -10,7 +10,14 @@ from server import blueprints
 from server import loghelper
 from server.messages import MessageData
 
+try:
+    from server import localsettings
+    # For sentry dsn.
+except ImportError:
+    pass
+
 import flask
+from raven.contrib.flask import Sentry
 
 
 
@@ -28,6 +35,10 @@ def build_app(sub_port=5558, **kwargs):
 
     # App
     app = flask.Flask(__name__)
+
+    if localsettings is not None:
+        app.config['SENTRY_DSN'] = (localsettings.SENTRY_DSN)
+        sentry = Sentry(app)
 
     # this one is global because we only have one event loop that receives messages
     message_data = MessageData(sub_port=sub_port)
