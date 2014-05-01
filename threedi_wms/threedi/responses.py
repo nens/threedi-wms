@@ -554,23 +554,31 @@ def get_response_for_getmap(get_parameters):
     elif mode == 'soil':
         container = message_data.get(
                 "soil", **get_parameters)
-        u, ms = get_data(container, ma=True, **get_parameters)
-        # funky value coming back from get_data
-        # with no_data_value 1410065408 not being picked up by mask
-        fix_mask = u == 1410065408
-        u.mask = fix_mask
+        if container is None:
+            logging.info('WMS not ready for mode: {}'.format(mode))
+            content = ''
+        else:
+            u, ms = get_data(container, ma=True, **get_parameters)
+            # funky value coming back from get_data
+            # with no_data_value 1410065408 not being picked up by mask
+            fix_mask = u == 1410065408
+            u.mask = fix_mask
 
-        content, img  = get_soil_image(masked_array=u, hmax=22)
+            content, img  = get_soil_image(masked_array=u, hmax=22)
     elif mode == 'crop':
         container = message_data.get(
                 "crop", **get_parameters)
-        u, ms = get_data(container, ma=True, **get_parameters)
-        # funky value coming back from get_data
-        # with no_data_value 1410065408 not being picked up by mask
-        fix_mask = u == 1410065408
-        u.mask = fix_mask
+        if container is None:
+            logging.info('WMS not ready for mode: {}'.format(mode))
+            content = ''
+        else:
+            u, ms = get_data(container, ma=True, **get_parameters)
+            # funky value coming back from get_data
+            # with no_data_value 1410065408 not being picked up by mask
+            fix_mask = u == 1410065408
+            u.mask = fix_mask
 
-        content, img  = get_crop_image(masked_array=u, hmax=16)
+            content, img  = get_crop_image(masked_array=u, hmax=16)
     elif mode == 'maxdepth':
         container = message_data.get(
                 "maxdepth", from_disk=True, **get_parameters)

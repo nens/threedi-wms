@@ -22,6 +22,8 @@ install_requires = [
     'setuptools',
     'SQLAlchemy',
     'Shapely',
+    'raven',
+    'blinker',
     'mmi'
     ],
 
