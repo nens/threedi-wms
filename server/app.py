@@ -14,7 +14,7 @@ try:
     from server import localsettings
     # For sentry dsn.
 except ImportError:
-    pass
+    localsettings = None
 
 import flask
 from raven.contrib.flask import Sentry
