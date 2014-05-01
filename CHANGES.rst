@@ -13,6 +13,8 @@ Changelog of threedi-wms
 
 - Use dtmax instead of dt in 'dump', requires threedi-server 0.43 or newer.
 
+- Added sentry/raven connection for service/maintenance team.
+
 
 0.10 (2014-04-17)
 -----------------
