@@ -333,8 +333,9 @@ class MessageData(object):
 
         # twod_idx is a boolean array to filter out the 2D cells
         twod_idx = grid['nod_type'] == 1  # TODO: get value out of wrapper
-        imaxk = grid['imaxk'][grid['nodk'][twod_idx]-1]
-        jmaxk = grid['jmaxk'][grid['nodk'][twod_idx]-1]
+        maxk_idx = grid['nodk'][twod_idx]-1
+        imaxk = grid['imaxk'][maxk_idx]
+        jmaxk = grid['jmaxk'][maxk_idx]
         m = (grid['nodm'][twod_idx] - 1)*imaxk
         n = (grid['nodn'][twod_idx] - 1)*jmaxk
 

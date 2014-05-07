@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Splitted imaxk index for easier debugging.
+
 - Added soil and crop color map.
 
 - Fixed no data value being picked up from memory read map.
