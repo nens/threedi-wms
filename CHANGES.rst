@@ -17,6 +17,9 @@ Changelog of threedi-wms
 
 - Added sentry/raven connection for service/maintenance team.
 
+- Return empty image when unsupported map is requested using getmap (an error
+  will notify Sentry and takes about 300ms).
+
 
 0.10 (2014-04-17)
 -----------------

@@ -424,6 +424,7 @@ def get_response_for_getmap(get_parameters):
         layer, mode = layer_parameter.split(':')
     else:
         layer, mode = layer_parameter, 'depth'
+
     if get_parameters.get('messages', 'false') == 'true':
         use_messages = True
     else:
@@ -595,6 +596,10 @@ def get_response_for_getmap(get_parameters):
 
         content, img  = get_arrival_image(
             masked_array=u, hmax=7)
+    else:
+        logger.error('Unsupported map requested: %s' % mode)
+        rgba = np.zeros( (1,1,4), dtype=np.uint8)
+        content, img = rgba2image(rgba)
 
     return content, 200, {
         'content-type': 'image/png',
