@@ -443,16 +443,43 @@ def get_response_for_getmap(get_parameters):
     # Check if messages data is ready. If not: fall back to netcdf/pyramid method.
     if mode == 'maxdepth' or mode == 'arrival':
         required_message_vars = []
+        messaging_required = True  # Is it required to use the message method?
+    elif mode == 'soil':
+        required_message_vars = ['soiltype', ]
+        messaging_required = True
+    elif mode == 'crop':
+        required_message_vars = ['croptype', ]
+        messaging_required = True
+    elif mode == 'infiltration':
+        required_message_vars = ['infiltrationrate', ]
+        messaging_required = True
+    elif mode == 'interception':
+        required_message_vars = ['maxinterception', ]
+        messaging_required = True
     else:
         required_message_vars = ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
             'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
             'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']
+        messaging_required = False
     if not set(required_message_vars).issubset(set(message_data.grid.keys())):
-        logger.debug('Not all vars available yet in message_data (missing: %r)'
-            ', falling back to netcdf.' % (
-                set(required_message_vars) - set(message_data.grid.keys())))
-        use_messages = False
-    if (use_messages and mode != 'maxdepth' and mode != 'arrival' and 
+        missing_vars = (set(required_message_vars) - set(message_data.grid.keys()))
+        if messaging_required:
+            logger.error('Required vars not available in message_data (mode: %s, missing: %r)' % 
+                (mode, str(missing_vars)))
+            # We cannot do anything for you...
+            rgba = np.zeros( (1,1,4), dtype=np.uint8)
+            content, img = rgba2image(rgba)
+
+            return content, 200, {
+                'content-type': 'image/png',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET'}
+        else:
+            logger.debug('Not all vars available yet in message_data (missing: %r)'
+                ', falling back to netcdf.' % str(missing_vars))
+            use_messages = False
+
+    if (use_messages and not messaging_required and 
         not message_data.interpolation_ready):
     
         logger.debug('Interpolation not ready in message_data'

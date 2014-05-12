@@ -20,6 +20,8 @@ Changelog of threedi-wms
 - Return empty image when unsupported map is requested using getmap (an error
   will notify Sentry and takes about 300ms).
 
+- Return empty image for getmap when required data is not available in messages.
+
 
 0.10 (2014-04-17)
 -----------------
