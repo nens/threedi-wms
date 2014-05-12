@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Added Listener thread master fail-safe try/except loop.
+
 - Splitted imaxk index for easier debugging.
 
 - Added soil and crop color map.
