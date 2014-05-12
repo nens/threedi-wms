@@ -131,7 +131,14 @@ class Listener(threading.Thread):
         # A flag to notify the thread that it should finish up and exit
         self.kill_received = False
 
-    def run(self):
+    def reset_grid_data(self):
+        logger.debug('Resetting grid data...')
+        #message_data.grid = {}
+        for k in self.message_data.grid.keys():
+            del self.message_data.grid[k]  # try to save memory
+        self.message_data.interpolation_ready = False
+
+    def _run(self):
         """run the thread"""
         message_data = self.message_data
         socket = self.socket
@@ -140,11 +147,12 @@ class Listener(threading.Thread):
             logger.info("got msg {}".format(metadata))
 
             if metadata['action'] == 'reset':
-                logger.debug('Resetting grid data...')
-                #message_data.grid = {}
-                for k in message_data.grid.keys():
-                    del message_data.grid[k]  # try to save memory
-                message_data.interpolation_ready = False
+                # logger.debug('Resetting grid data...')
+                # #message_data.grid = {}
+                # for k in message_data.grid.keys():
+                #     del message_data.grid[k]  # try to save memory
+                # message_data.interpolation_ready = False
+                self.reset_grid_data()
             elif metadata['action'] == 'update':
                 logger.debug('Updating grid data [%s]' % metadata['name'])
                 if 'model' in metadata:
@@ -297,6 +305,23 @@ class Listener(threading.Thread):
                     os.remove(output_filename + '.busy')  # So others can see we are finished.
             else:
                 logger.debug('Got an unknown message: %r' % metadata)
+
+    def run(self):
+        """Run the thread fail-safe"""
+        while not self.kill_received:
+            try:
+                self._run()
+            except:
+                logger.error('An unknown severe error occured.')
+                # Log everything
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                for line in traceback.format_exception(
+                    exc_type, exc_value, exc_traceback):
+                    logger.error(line)
+
+                # Throw away existing data: can be corrupt.
+                # you have to restart a model or 'beam to wms'.
+                self.reset_grid_data()
 
 
 class MessageData(object):
