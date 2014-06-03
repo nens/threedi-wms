@@ -445,7 +445,7 @@ def get_response_for_getmap(get_parameters):
 
     if config.USE_CACHE:
         # layers, width, height, time, hmax, bbox, srs
-        cache_key = str(hash('%r' % (get_parameters)))
+        cache_key = '%s-%s' % (config.CACHE_PREFIX, str(hash('%r' % (get_parameters))))
         cached_content = cache.get(cache_key)
         if cached_content is not None:
             logger.info('Data from cache')
