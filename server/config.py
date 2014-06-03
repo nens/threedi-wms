@@ -26,8 +26,15 @@ LOG_DIR = os.path.join(BUILDOUT_DIR, 'var', 'log')
 # Celery
 CELERY_DB = os.path.join(CELERY_DIR, 'celerydb.sqlite')
 
+# Defaultsettings, overriden on server by localsettings
+USE_CACHE = False  # memcached, requires python-memcached
+MEMCACHED_ADDRESS = '127.0.0.1:11211'
+CACHE_PREFIX = 'subgrid:10000'
+
+SENTRY_DSN = None  # TODO: fill
+
 # Import local settings
 try:
-    from threedi_server.localconfig import *
+    from server.localsettings import *
 except ImportError:
     pass

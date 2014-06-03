@@ -33,6 +33,7 @@ import os
 import shutil
 import time as _time # stop watch
 
+from werkzeug.contrib.cache import MemcachedCache
 
 cache = {}
 ogr.UseExceptions()
@@ -417,6 +418,8 @@ def get_response_for_getmap(get_parameters):
     """ Return png image. """
     # No global import, celery doesn't want this.
     from server.app import message_data 
+    if config.USE_CACHE:
+        cache = MemcachedCache([config.MEMCACHED_ADDRESS])
 
     # Get the quad and waterlevel data objects
     layer_parameter = get_parameters['layers']
@@ -439,6 +442,17 @@ def get_response_for_getmap(get_parameters):
     interpolate = get_parameters.get('interpolate', 'nearest')
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
+
+    if config.USE_CACHE:
+        # layers, width, height, time, hmax, bbox, srs
+        cache_key = str(hash('%r' % (get_parameters)))
+        cached_content = cache.get(cache_key)
+        if cached_content is not None:
+            logger.info('Data from cache')
+            return cached_content, 200, {
+                'content-type': 'image/png',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET'}
 
     # Check if messages data is ready. If not: fall back to netcdf/pyramid method.
     if mode == 'maxdepth' or mode == 'arrival':
@@ -628,6 +642,8 @@ def get_response_for_getmap(get_parameters):
         rgba = np.zeros( (1,1,4), dtype=np.uint8)
         content, img = rgba2image(rgba)
 
+    if config.USE_CACHE:
+        cache.set(cache_key, content, timeout=30)
     return content, 200, {
         'content-type': 'image/png',
         'Access-Control-Allow-Origin': '*',

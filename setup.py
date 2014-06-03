@@ -24,7 +24,8 @@ install_requires = [
     'Shapely',
     'raven',
     'blinker',
-    'mmi'
+    'mmi',
+    'python-memcached',
     ],
 
 tests_require = [
