@@ -431,10 +431,10 @@ def get_response_for_getmap(get_parameters):
         use_messages = False
     if mode == 'maxdepth' or mode == 'arrival':
         use_messages = True  # Always use_messages = True
-    if get_parameters.get('nocache', 'no') == 'yes':
-        use_cache = False
-    else:
-        use_cache = True
+    # if get_parameters.get('nocache', 'no') == 'yes':
+    #     use_cache = False
+    # else:
+    #     use_cache = True
 
     interpolate = get_parameters.get('interpolate', 'nearest')
     hmax = get_parameters.get('hmax', 2.0)
@@ -524,7 +524,7 @@ def get_response_for_getmap(get_parameters):
             depth = waterlevel
         else:
             dynamic_data = DynamicData.get(
-                layer=layer, time=time, use_cache=use_cache)
+                layer=layer, time=time)
             waterlevel = dynamic_data.waterlevel[quads]
             depth = waterlevel - bathymetry
 
@@ -537,7 +537,7 @@ def get_response_for_getmap(get_parameters):
         hmax = get_parameters.get('hmax', 2.0)
         time = int(get_parameters['time'])
         dynamic_data = DynamicData.get(
-            layer=layer, time=time, use_cache=use_cache, variable='floodfill',
+            layer=layer, time=time, variable='floodfill',
             netcdf_path=utils.get_netcdf_path_flood(layer)
         )
         waterlevel = dynamic_data.waterlevel[quads]
@@ -924,7 +924,7 @@ def get_response_for_getprofile(get_parameters):
 
         # Determine the waterlevel
         dynamic_data = DynamicData.get(
-            layer=layer, time=time, use_cache=False)
+            layer=layer, time=time)
         waterlevel = dynamic_data.waterlevel[quads]
         depth = waterlevel - bathymetry
 
@@ -1108,7 +1108,7 @@ class DynamicData(object):
     Container for only the waterlevel data from the netcdf.
     """
     @classmethod
-    def get(cls, layer, time, use_cache, variable='s1', netcdf_path=None):
+    def get(cls, layer, time, variable='s1', netcdf_path=None):
         """
         Return instance from cache if possible, new instance otherwise.
         """
@@ -1117,19 +1117,10 @@ class DynamicData(object):
             'DynamicDataKey', ['layer', 'time', 'variable', 'netcdf_path'],
         )(layer=layer, time=time, variable=variable, netcdf_path=netcdf_path)
         # Return object
-        if use_cache:
-            try:
-                return cache[key]
-            except KeyError:
-                value = cls(layer=layer, time=time, variable=variable,
-                            netcdf_path=netcdf_path)
-                cache[key] = value
-                return value
-        else:
-            value = cls(layer=layer, time=time, variable=variable,
-                        netcdf_path=netcdf_path)
-            cache[key] = value
-            return value
+        value = cls(layer=layer, time=time, variable=variable,
+                    netcdf_path=netcdf_path)
+        cache[key] = value
+        return value
 
     def __init__(self, layer, time, variable='s1', netcdf_path=None):
         """ Load data from netcdf. """
