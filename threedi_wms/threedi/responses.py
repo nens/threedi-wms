@@ -35,7 +35,6 @@ import time as _time # stop watch
 
 from werkzeug.contrib.cache import MemcachedCache
 
-cache = {}
 ogr.UseExceptions()
 
 logger = logging.getLogger(__name__)
@@ -1021,6 +1020,19 @@ def get_response_for_getquantity(get_parameters):
     except KeyError:
         decimals = None
 
+    if config.USE_CACHE:
+        cache = MemcachedCache([config.MEMCACHED_ADDRESS])
+        # layers, width, height, time, hmax, bbox, srs
+        cache_key = '%s-%s' % (config.CACHE_PREFIX, str(hash('%r' % (get_parameters))))
+        cached_content = cache.get(cache_key)
+        logger.info('getquantity')
+        if cached_content is not None:
+            logger.info('Data from cache')
+            return cached_content, 200, {'content-type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Methods': 'GET'}
+
+
     # Load quantity from netcdf
     netcdf_path = utils.get_netcdf_path(layer)
     with Dataset(netcdf_path) as dataset:
@@ -1034,6 +1046,9 @@ def get_response_for_getquantity(get_parameters):
     else:
         data = dict(enumerate(ma.filled().round(decimals).tolist()))
     content = json.dumps(dict(nodatavalue=nodatavalue, data=data))
+
+    if config.USE_CACHE:
+        cache.set(cache_key, content, timeout=30)
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
                           'Access-Control-Allow-Methods': 'GET'}
@@ -1073,16 +1088,16 @@ class StaticData(object):
 
         if reload:
             value = cls(layer=layer, reload=reload)
-            cache[key] = value
+            #cache[key] = value
             return value
 
         # Return object
-        try:
-            return cache[key]
-        except KeyError:
-            value = cls(layer=layer)
-            cache[key] = value
-            return value
+        # try:
+        #     return cache[key]
+        # except KeyError:
+        value = cls(layer=layer)
+        #    cache[key] = value
+        return value
 
     def __init__(self, layer, reload=False):
         """ Init pyramid and monolith, and order creation if necessary. """
@@ -1135,7 +1150,7 @@ class DynamicData(object):
         # Return object
         value = cls(layer=layer, time=time, variable=variable,
                     netcdf_path=netcdf_path)
-        cache[key] = value
+        #cache[key] = value
         return value
 
     def __init__(self, layer, time, variable='s1', netcdf_path=None):
