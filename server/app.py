@@ -16,6 +16,11 @@ from flask.ext.cache import Cache
 from raven.contrib.flask import Sentry
 
 
+# For celery
+_app = flask.Flask(__name__)
+cache = Cache(_app, config={'CACHE_TYPE': 'null', })
+
+
 def build_app(sub_port=5558, **kwargs):
     """App is already global and existing"""
     global app
