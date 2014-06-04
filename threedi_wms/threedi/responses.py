@@ -1056,15 +1056,9 @@ class StaticData(object):
 
         if reload:
             value = cls(layer=layer, reload=reload)
-            #cache[key] = value
             return value
 
-        # Return object
-        # try:
-        #     return cache[key]
-        # except KeyError:
         value = cls(layer=layer)
-        #    cache[key] = value
         return value
 
     def __init__(self, layer, reload=False):
@@ -1118,7 +1112,6 @@ class DynamicData(object):
         # Return object
         value = cls(layer=layer, time=time, variable=variable,
                     netcdf_path=netcdf_path)
-        #cache[key] = value
         return value
 
     def __init__(self, layer, time, variable='s1', netcdf_path=None):
