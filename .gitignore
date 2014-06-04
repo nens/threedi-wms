@@ -40,3 +40,5 @@ etc/*.logrotate
 
 # vim swp file
 *.swp
+
+server/localsettings.py
