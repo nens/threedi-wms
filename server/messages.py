@@ -99,10 +99,17 @@ class NCDump(object):
             self.message_data.grid['nFlowElem2dBounds'])  # Apparently WITH boundary nodes
 
     def dump_nc(self, var_name, var_type, dimensions, unit, values=None):
+        """In some weird cases, this function can crash with a RuntimeError from NETCDF:
+        RuntimeError: NetCDF: Operation not allowed in define mode
+
+        Thus it is preferred that the function runs in a try/except.
+        """
         logger.debug('dumping %s...' % var_name)
         if values is None:
             values = self.message_data.grid[var_name]
         self.v = self.ncfile.createVariable(var_name, var_type, dimensions)
+        logger.info('dimensions %s' % dimensions)
+        logger.info('len(unit) %d' % len(unit))
         if len(unit) == 0:
             self.v[:] = values
         elif len(unit) == 1:

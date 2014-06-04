@@ -24,7 +24,9 @@ install_requires = [
     'Shapely',
     'raven',
     'blinker',
-    'mmi'
+    'mmi',
+    'flask-cache',
+    'redis',
     ],
 
 tests_require = [
