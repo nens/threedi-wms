@@ -33,9 +33,7 @@ import os
 import shutil
 import time as _time # stop watch
 
-#from werkzeug.contrib.cache import MemcachedCache
-if config.USE_CACHE:
-    from server.app import cache
+from server.app import cache
 
 ogr.UseExceptions()
 
