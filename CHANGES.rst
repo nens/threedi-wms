@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
-- Removed use_cache option.
+- Added redis cache using flask-cache.
 
 - Added Listener thread master fail-safe try/except loop.
 
@@ -20,6 +20,8 @@ Changelog of threedi-wms
 - Use dtmax instead of dt in 'dump', requires threedi-server 0.43 or newer.
 
 - Added sentry/raven connection for service/maintenance team.
+
+- Removed old use_cache option.
 
 - Return empty image when unsupported map is requested using getmap (an error
   will notify Sentry and takes about 300ms).
