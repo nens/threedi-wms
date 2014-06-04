@@ -9,22 +9,26 @@ from __future__ import division
 from server import blueprints
 from server import loghelper
 from server.messages import MessageData
+from server import config
 
-try:
-    from server import localsettings
-    # For sentry dsn.
-except ImportError:
-    localsettings = None
+# try:
+#     from server import localsettings
+#     # For sentry dsn.
+# except ImportError:
+#     localsettings = None
 
 import flask
 from raven.contrib.flask import Sentry
 
+#from flask_cache import Cache
+from flask.ext.cache import Cache
 
 
 def build_app(sub_port=5558, **kwargs):
     """App is already global and existing"""
     global app
     global message_data
+    global cache
 
     print("Starting threedi-wms...")
     # Setup logging
@@ -35,9 +39,19 @@ def build_app(sub_port=5558, **kwargs):
 
     # App
     app = flask.Flask(__name__)
+    if config.USE_CACHE:
+        cache_config = {
+            'CACHE_TYPE': 'redis', 
+            'CACHE_KEY_PREFIX': config.CACHE_PREFIX,
+            'CACHE_REDIS_DB': 3,
+            }
+    else:
+        cache_config = {
+            'CACHE_TYPE': 'null', }
+    cache = Cache(app, config=cache_config)
 
-    if localsettings is not None:
-        app.config['SENTRY_DSN'] = (localsettings.SENTRY_DSN)
+    if hasattr(config, 'SENTRY_DSN'):
+        app.config['SENTRY_DSN'] = (config.SENTRY_DSN)
         sentry = Sentry(app)
 
     # this one is global because we only have one event loop that receives messages

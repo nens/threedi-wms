@@ -33,7 +33,9 @@ import os
 import shutil
 import time as _time # stop watch
 
-from werkzeug.contrib.cache import MemcachedCache
+#from werkzeug.contrib.cache import MemcachedCache
+if config.USE_CACHE:
+    from server.app import cache
 
 ogr.UseExceptions()
 
@@ -413,12 +415,11 @@ def get_data(container, ma=False, **get_parameters):
 
 
 # Responses for various requests
+@cache.memoize(timeout=30)
 def get_response_for_getmap(get_parameters):
     """ Return png image. """
     # No global import, celery doesn't want this.
     from server.app import message_data 
-    if config.USE_CACHE:
-        cache = MemcachedCache([config.MEMCACHED_ADDRESS])
 
     # Get the quad and waterlevel data objects
     layer_parameter = get_parameters['layers']
@@ -433,25 +434,10 @@ def get_response_for_getmap(get_parameters):
         use_messages = False
     if mode == 'maxdepth' or mode == 'arrival':
         use_messages = True  # Always use_messages = True
-    # if get_parameters.get('nocache', 'no') == 'yes':
-    #     use_cache = False
-    # else:
-    #     use_cache = True
 
     interpolate = get_parameters.get('interpolate', 'nearest')
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
-
-    if config.USE_CACHE:
-        # layers, width, height, time, hmax, bbox, srs
-        cache_key = '%s-%s' % (config.CACHE_PREFIX, str(hash('%r' % (get_parameters))))
-        cached_content = cache.get(cache_key)
-        if cached_content is not None:
-            logger.info('Data from cache')
-            return cached_content, 200, {
-                'content-type': 'image/png',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET'}
 
     # Check if messages data is ready. If not: fall back to netcdf/pyramid method.
     if mode == 'maxdepth' or mode == 'arrival':
@@ -641,8 +627,6 @@ def get_response_for_getmap(get_parameters):
         rgba = np.zeros( (1,1,4), dtype=np.uint8)
         content, img = rgba2image(rgba)
 
-    if config.USE_CACHE:
-        cache.set(cache_key, content, timeout=30)
     return content, 200, {
         'content-type': 'image/png',
         'Access-Control-Allow-Origin': '*',
@@ -1008,6 +992,7 @@ def get_response_for_getprofile(get_parameters):
         'Access-Control-Allow-Methods': 'GET'}
 
 
+@cache.memoize(timeout=30)
 def get_response_for_getquantity(get_parameters):
     """ Return json with quantity for all calculation cells. """
 
@@ -1019,19 +1004,6 @@ def get_response_for_getquantity(get_parameters):
         decimals = int(get_parameters['decimals'])
     except KeyError:
         decimals = None
-
-    if config.USE_CACHE:
-        cache = MemcachedCache([config.MEMCACHED_ADDRESS])
-        # layers, width, height, time, hmax, bbox, srs
-        cache_key = '%s-%s' % (config.CACHE_PREFIX, str(hash('%r' % (get_parameters))))
-        cached_content = cache.get(cache_key)
-        logger.info('getquantity')
-        if cached_content is not None:
-            logger.info('Data from cache')
-            return cached_content, 200, {'content-type': 'application/json',
-                          'Access-Control-Allow-Origin': '*',
-                          'Access-Control-Allow-Methods': 'GET'}
-
 
     # Load quantity from netcdf
     netcdf_path = utils.get_netcdf_path(layer)
@@ -1047,8 +1019,6 @@ def get_response_for_getquantity(get_parameters):
         data = dict(enumerate(ma.filled().round(decimals).tolist()))
     content = json.dumps(dict(nodatavalue=nodatavalue, data=data))
 
-    if config.USE_CACHE:
-        cache.set(cache_key, content, timeout=30)
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
                           'Access-Control-Allow-Methods': 'GET'}

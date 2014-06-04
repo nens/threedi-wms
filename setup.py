@@ -25,7 +25,8 @@ install_requires = [
     'raven',
     'blinker',
     'mmi',
-    'python-memcached',
+    'flask-cache',
+    'redis',
     ],
 
 tests_require = [
