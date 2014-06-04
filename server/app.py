@@ -11,17 +11,9 @@ from server import loghelper
 from server.messages import MessageData
 from server import config
 
-# try:
-#     from server import localsettings
-#     # For sentry dsn.
-# except ImportError:
-#     localsettings = None
-
 import flask
-from raven.contrib.flask import Sentry
-
-#from flask_cache import Cache
 from flask.ext.cache import Cache
+from raven.contrib.flask import Sentry
 
 
 def build_app(sub_port=5558, **kwargs):
