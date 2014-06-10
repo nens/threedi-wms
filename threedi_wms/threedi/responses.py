@@ -22,6 +22,7 @@ from scipy import ndimage
 
 import numpy as np
 import ogr
+import redis
 
 import collections
 import datetime
@@ -990,7 +991,7 @@ def get_response_for_getprofile(get_parameters):
         'Access-Control-Allow-Methods': 'GET'}
 
 
-@cache.memoize(timeout=30)
+# @cache.memoize(timeout=30)
 def get_response_for_getquantity(get_parameters):
     """ Return json with quantity for all calculation cells. """
 
@@ -1015,7 +1016,18 @@ def get_response_for_getquantity(get_parameters):
         data = dict(enumerate(ma.filled().tolist()))
     else:
         data = dict(enumerate(ma.filled().round(decimals).tolist()))
-    content = json.dumps(dict(nodatavalue=nodatavalue, data=data))
+    # get the link_numbers table from redis
+    rc = redis.Redis(db=2)
+    # TODO make the redis key prefix work
+    # use something like subgrid:10000:model_slug:link_numbers
+    link_numbers = rc.smembers('link_numbers')
+    # TODO: for optimalization figure out how to directly do a dataset query
+    # with these link numbers
+    filtered_data = {}
+    for k, v in data.items():
+        if str(k) in link_numbers:
+            filtered_data[k] = v
+    content = json.dumps(dict(nodatavalue=nodatavalue, data=filtered_data))
 
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
