@@ -22,6 +22,7 @@ from scipy import ndimage
 
 import numpy as np
 import ogr
+import redis
 
 import collections
 import datetime
@@ -38,6 +39,8 @@ from server.app import cache
 ogr.UseExceptions()
 
 logger = logging.getLogger(__name__)
+
+rc = redis.Redis(db=2)
 
 
 def rgba2image(rgba):
@@ -990,7 +993,6 @@ def get_response_for_getprofile(get_parameters):
         'Access-Control-Allow-Methods': 'GET'}
 
 
-@cache.memoize(timeout=30)
 def get_response_for_getquantity(get_parameters):
     """ Return json with quantity for all calculation cells. """
 
@@ -1002,6 +1004,12 @@ def get_response_for_getquantity(get_parameters):
         decimals = int(get_parameters['decimals'])
     except KeyError:
         decimals = None
+
+    # get the flow link numbers from redis; N.B. link numbers are returned
+    # as strings from redis
+    loaded_model = utils.get_loaded_model()
+    link_numbers = rc.smembers('%s:%s:link_numbers' %
+                               (config.CACHE_PREFIX, loaded_model))
 
     # Load quantity from netcdf
     netcdf_path = utils.get_netcdf_path(layer)
@@ -1015,7 +1023,20 @@ def get_response_for_getquantity(get_parameters):
         data = dict(enumerate(ma.filled().tolist()))
     else:
         data = dict(enumerate(ma.filled().round(decimals).tolist()))
-    content = json.dumps(dict(nodatavalue=nodatavalue, data=data))
+
+    # TODO: for optimalization figure out how to directly do a dataset query
+    # with these link numbers
+    if link_numbers:
+        filtered_data = {}
+        for k, v in data.items():
+            if str(k) in link_numbers:
+                filtered_data[k] = v
+    else:
+        # if for some reason there are no link numbers, return the unfiltered
+        # data
+        filtered_data = data
+
+    content = json.dumps(dict(nodatavalue=nodatavalue, data=filtered_data))
 
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
