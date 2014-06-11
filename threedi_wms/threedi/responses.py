@@ -993,7 +993,6 @@ def get_response_for_getprofile(get_parameters):
         'Access-Control-Allow-Methods': 'GET'}
 
 
-# @cache.memoize(timeout=30)
 def get_response_for_getquantity(get_parameters):
     """ Return json with quantity for all calculation cells. """
 
