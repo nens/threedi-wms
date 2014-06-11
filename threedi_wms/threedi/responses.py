@@ -1010,24 +1010,33 @@ def get_response_for_getquantity(get_parameters):
     loaded_model = utils.get_loaded_model()
     link_numbers = rc.smembers('%s:%s:link_numbers' %
                                (config.CACHE_PREFIX, loaded_model))
-    # convert the set to a list
-    link_numbers = list(link_numbers)
 
     # Load quantity from netcdf
     netcdf_path = utils.get_netcdf_path(layer)
     with Dataset(netcdf_path) as dataset:
         # Explicitly make a masked array. Some quantities (unorm, q) return an
         # ndarray.
-        ma = np.ma.masked_array(
-            dataset.variables[quantity][time][np.uint64(link_numbers)])
-        #ma = dataset.variables[quantity][time]
-    nodatavalue = ma.fill_value
-    if decimals is None:
-        data = dict(zip(link_numbers, ma.filled().tolist()))
-    else:
-        data = dict(zip(link_numbers, ma.filled().round(decimals).tolist()))
+        if link_numbers:
+            # to convert to np.uint64, link_numbers need to be converted to a
+            # list first
+            np_link_numbers = np.uint64(list(link_numbers))
+            ma = np.ma.masked_array(
+                dataset.variables[quantity][time][np_link_numbers])
+            if decimals is None:
+                data = dict(zip(link_numbers, ma.filled().tolist()))
+            else:
+                data = dict(
+                    zip(link_numbers, ma.filled().round(decimals).tolist()))
+        else:
+            # no flow link numbers for filtering, so return all
+            # this produces the original unfiltered data dict
+            ma = np.ma.masked_array(dataset.variables[quantity][time])
+            if decimals is None:
+                data = dict(enumerate(ma.filled().tolist()))
+            else:
+                data = dict(enumerate(ma.filled().round(decimals).tolist()))
 
-    content = json.dumps(dict(nodatavalue=nodatavalue, data=data))
+    content = json.dumps(dict(nodatavalue=ma.fill_value, data=data))
 
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
