@@ -19,10 +19,15 @@ try:
 except ImportError:
     import osr
 
-from threedi_wms.threedi import config
+import redis
+
 from gislib import projections
 
+from threedi_wms.threedi import config
+
 logger = logging.getLogger(__name__)
+
+rc = redis.Redis()
 
 
 def get_netcdf_path(layer):
@@ -82,3 +87,9 @@ def get_bathymetry_srs(filename):
     # result = src.GetAttrValue(str('PROJCS|AUTHORITY'), 1)  # None or '22234'
     # ds = None  # Close dataset
     # return result
+
+
+def get_loaded_model():
+    """Return the loaded_model (slug) from redis)."""
+    threedi_subgrid_id = config.CACHE_PREFIX
+    return rc.get('%s:loaded_model' % threedi_subgrid_id)
