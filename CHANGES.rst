@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Throttle getquantity response by only returning the data for the used flow 
+  link numbers.
+
 - Added redis cache using flask-cache.
 
 - Added Listener thread master fail-safe try/except loop.
