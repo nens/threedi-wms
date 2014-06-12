@@ -1016,27 +1016,27 @@ def get_response_for_getquantity(get_parameters):
     with Dataset(netcdf_path) as dataset:
         # Explicitly make a masked array. Some quantities (unorm, q) return an
         # ndarray.
-        ma = np.ma.masked_array(dataset.variables[quantity][time])
-        #ma = dataset.variables[quantity][time]
-    nodatavalue = ma.fill_value
-    if decimals is None:
-        data = dict(enumerate(ma.filled().tolist()))
-    else:
-        data = dict(enumerate(ma.filled().round(decimals).tolist()))
+        if link_numbers:
+            # to convert to np.uint64, link_numbers need to be converted to a
+            # list first
+            np_link_numbers = np.uint64(list(link_numbers))
+            ma = np.ma.masked_array(
+                dataset.variables[quantity][time][np_link_numbers])
+            if decimals is None:
+                data = dict(zip(link_numbers, ma.filled().tolist()))
+            else:
+                data = dict(
+                    zip(link_numbers, ma.filled().round(decimals).tolist()))
+        else:
+            # no flow link numbers for filtering, so return all
+            # this produces the original unfiltered data dict
+            ma = np.ma.masked_array(dataset.variables[quantity][time])
+            if decimals is None:
+                data = dict(enumerate(ma.filled().tolist()))
+            else:
+                data = dict(enumerate(ma.filled().round(decimals).tolist()))
 
-    # TODO: for optimalization figure out how to directly do a dataset query
-    # with these link numbers
-    if link_numbers:
-        filtered_data = {}
-        for k, v in data.items():
-            if str(k) in link_numbers:
-                filtered_data[k] = v
-    else:
-        # if for some reason there are no link numbers, return the unfiltered
-        # data
-        filtered_data = data
-
-    content = json.dumps(dict(nodatavalue=nodatavalue, data=filtered_data))
+    content = json.dumps(dict(nodatavalue=ma.fill_value, data=data))
 
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
