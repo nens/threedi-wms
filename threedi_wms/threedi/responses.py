@@ -468,7 +468,11 @@ def get_response_for_getmap(get_parameters):
                 (mode, str(missing_vars)))
             # We cannot do anything for you...
             rgba = np.zeros( (1,1,4), dtype=np.uint8)
-            content, img = rgba2image(rgba)
+            rgba[0,0,0] = 243
+            rgba[0,0,1] = 191
+            rgba[0,0,2] = 183
+            rgba[0,0,3] = 150
+            content, img = rgba2image(rgba=rgba)
 
             return content, 200, {
                 'content-type': 'image/png',
@@ -626,7 +630,11 @@ def get_response_for_getmap(get_parameters):
     else:
         logger.error('Unsupported map requested: %s' % mode)
         rgba = np.zeros( (1,1,4), dtype=np.uint8)
-        content, img = rgba2image(rgba)
+        rgba[0,0,0] = 243
+        rgba[0,0,1] = 191
+        rgba[0,0,2] = 183
+        rgba[0,0,3] = 150
+        content, img = rgba2image(rgba=rgba)
 
     return content, 200, {
         'content-type': 'image/png',
