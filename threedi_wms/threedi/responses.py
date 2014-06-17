@@ -467,12 +467,17 @@ def get_response_for_getmap(get_parameters):
             logger.error('Required vars not available in message_data (mode: %s, missing: %r)' % 
                 (mode, str(missing_vars)))
             # We cannot do anything for you...
-            rgba = np.zeros( (1,1,4), dtype=np.uint8)
-            rgba[0,0,0] = 243
-            rgba[0,0,1] = 191
-            rgba[0,0,2] = 183
-            rgba[0,0,3] = 150
-            content, img = rgba2image(rgba=rgba)
+            # rgba = np.zeros( (1,1,4), dtype=np.uint8)
+            # rgba[0,0,0] = 243
+            # rgba[0,0,1] = 191
+            # rgba[0,0,2] = 183
+            # rgba[0,0,3] = 150
+            img = Image.open("/maperror.png")
+            buf = io.BytesIO()
+            img.save(buf, 'png')
+            content = buf.getvalue()
+
+            # content, img = rgba2image(rgba=rgba)
 
             return content, 200, {
                 'content-type': 'image/png',
@@ -629,11 +634,17 @@ def get_response_for_getmap(get_parameters):
             masked_array=u, hmax=7)
     else:
         logger.error('Unsupported map requested: %s' % mode)
-        rgba = np.zeros( (1,1,4), dtype=np.uint8)
-        rgba[0,0,0] = 243
-        rgba[0,0,1] = 191
-        rgba[0,0,2] = 183
-        rgba[0,0,3] = 150
+        # rgba = np.zeros( (1,1,4), dtype=np.uint8)
+        # rgba[0,0,0] = 243
+        # rgba[0,0,1] = 191
+        # rgba[0,0,2] = 183
+        # rgba[0,0,3] = 150
+        rgba = np.zeros( (15,15,4), dtype=np.uint8)
+        rgba[:,:,0] = 243
+        rgba[:,:,1] = 191
+        rgba[:,:,2] = 183
+        rgba[:,:,3] = 150
+
         content, img = rgba2image(rgba=rgba)
 
     return content, 200, {
