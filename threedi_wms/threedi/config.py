@@ -13,3 +13,6 @@ BLUEPRINT_NAME = '3di'
 
 DATA_DIR = os.path.join(DATA_DIR, BLUEPRINT_NAME)
 CACHE_DIR = os.path.join(CACHE_DIR, BLUEPRINT_NAME)
+
+STATIC_DIR = os.path.join(BUILDOUT_DIR, 'threedi_wms', 'threedi', 
+	'static', '3di')

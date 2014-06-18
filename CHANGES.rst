@@ -31,6 +31,9 @@ Changelog of threedi-wms
 
 - Return empty image for getmap when required data is not available in messages.
 
+- Instead of an empty image now an error image layer is displayed when nonexisting
+  map layers are requested using getmap
+
 
 0.10 (2014-04-17)
 -----------------

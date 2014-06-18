@@ -415,6 +415,16 @@ def get_data(container, ma=False, **get_parameters):
     return data, time
 
 
+def show_error_img():
+    """
+    Show error image when when no map layer is available.
+    """
+    img = Image.open(os.path.join(config.STATIC_DIR, 'maperror.png'))
+    buf = io.BytesIO()
+    img.save(buf, 'png')
+    return buf.getvalue(), img
+
+
 # Responses for various requests
 @cache.memoize(timeout=30)
 def get_response_for_getmap(get_parameters):
@@ -467,8 +477,7 @@ def get_response_for_getmap(get_parameters):
             logger.error('Required vars not available in message_data (mode: %s, missing: %r)' % 
                 (mode, str(missing_vars)))
             # We cannot do anything for you...
-            rgba = np.zeros( (1,1,4), dtype=np.uint8)
-            content, img = rgba2image(rgba)
+            content, img = show_error_img()
 
             return content, 200, {
                 'content-type': 'image/png',
@@ -625,8 +634,7 @@ def get_response_for_getmap(get_parameters):
             masked_array=u, hmax=7)
     else:
         logger.error('Unsupported map requested: %s' % mode)
-        rgba = np.zeros( (1,1,4), dtype=np.uint8)
-        content, img = rgba2image(rgba)
+        content, img = show_error_img()
 
     return content, 200, {
         'content-type': 'image/png',
