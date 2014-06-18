@@ -419,7 +419,7 @@ def show_error_img():
     """
     Show error image when when no map layer is available.
     """
-    img = Image.open(os.path.join(config.THREEDI_WMS_DIR, 'maperror.png'))
+    img = Image.open(os.path.join(config.STATIC_DIR, 'maperror.png'))
     buf = io.BytesIO()
     img.save(buf, 'png')
     return buf.getvalue(), img
