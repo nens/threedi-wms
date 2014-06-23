@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Combine quantity requests.
+
 - Throttle getquantity response by only returning the data for the used flow 
   link numbers.
 
