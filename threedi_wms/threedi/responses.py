@@ -1008,6 +1008,8 @@ def get_response_for_getquantity(get_parameters):
     layer = get_parameters['layers']
     time = int(get_parameters.get('time', 0))
     quantity = get_parameters['quantity']
+    quantities = quantity.split(',')
+
     try:
         decimals = int(get_parameters['decimals'])
     except KeyError:
@@ -1024,25 +1026,31 @@ def get_response_for_getquantity(get_parameters):
     with Dataset(netcdf_path) as dataset:
         # Explicitly make a masked array. Some quantities (unorm, q) return an
         # ndarray.
-        if link_numbers:
-            # to convert to np.uint64, link_numbers need to be converted to a
-            # list first
-            np_link_numbers = np.uint64(list(link_numbers))
-            ma = np.ma.masked_array(
-                dataset.variables[quantity][time][np_link_numbers])
-            if decimals is None:
-                data = dict(zip(link_numbers, ma.filled().tolist()))
+        data = {}
+        for quantity_key in quantities:
+            if link_numbers:
+                # to convert to np.uint64, link_numbers need to be converted to a
+                # list first
+                np_link_numbers = np.uint64(list(link_numbers))
+                ma = np.ma.masked_array(
+                    dataset.variables[quantity_key][time][np_link_numbers])
+                if decimals is None:
+                    quantity_data = dict(zip(link_numbers, ma.filled().
+                                             tolist()))
+                else:
+                    quantity_data = dict(
+                        zip(link_numbers, ma.filled().round(decimals).
+                            tolist()))
             else:
-                data = dict(
-                    zip(link_numbers, ma.filled().round(decimals).tolist()))
-        else:
-            # no flow link numbers for filtering, so return all
-            # this produces the original unfiltered data dict
-            ma = np.ma.masked_array(dataset.variables[quantity][time])
-            if decimals is None:
-                data = dict(enumerate(ma.filled().tolist()))
-            else:
-                data = dict(enumerate(ma.filled().round(decimals).tolist()))
+                # no flow link numbers for filtering, so return all
+                # this produces the original unfiltered data dict
+                ma = np.ma.masked_array(dataset.variables[quantity_key][time])
+                if decimals is None:
+                    quantity_data = dict(enumerate(ma.filled().tolist()))
+                else:
+                    quantity_data = dict(enumerate(ma.filled().round(
+                        decimals).tolist()))
+            data[quantity_key] = quantity_data
 
     content = json.dumps(dict(nodatavalue=ma.fill_value, data=data))
 
