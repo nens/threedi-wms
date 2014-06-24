@@ -19,6 +19,7 @@ try:
 except ImportError:
     import osr
 
+import numpy as np
 import redis
 
 from gislib import projections
@@ -93,3 +94,41 @@ def get_loaded_model():
     """Return the loaded_model (slug) from redis)."""
     threedi_subgrid_id = config.CACHE_PREFIX
     return rc.get('%s:loaded_model' % threedi_subgrid_id)
+
+
+def classify(data, classes):
+    """Classify data (arrays or lists) based on its values.
+
+    :param data - array of floats/integers (1-dimensional) or list of
+        floats/integers
+    :param classes - dictionary of classifier keys with their value range, e.g.
+    classes = {
+        -7: (-3.00, -3.00),  # will be used for lower as well
+        -6: (-3.00, -1.00),
+        -5: (-1.00, -0.50),
+        -4: (-0.50, -0.30),
+        -3: (-0.30, -0.10),
+        -2: (-0.10, -0.05),
+        -1: (-0.05, -0.01),
+         0: (-0.01, 0.01),
+         1: (0.01, 0.05),
+         2: (0.05, 0.10),
+         3: (0.10, 0.30),
+         4: (0.30, 0.50),
+         5: (0.50, 1.00),
+         6: (1.00, 3.00),
+         7: (3.00, 3.00),  # will be used for higher as well
+    }
+
+    :return array of classifiers
+
+    """
+    class_dtype = np.dtype({'names': ['classes', 'limits'],
+                            'formats': ['i8', '2f8']})
+    class_array = np.array(classes.items(), dtype=class_dtype)
+    class_array.sort()
+
+    fp = (class_array['classes'] * np.ones((2, 1))).transpose().ravel()
+    xp = class_array['limits'].ravel()
+
+    return np.int8(np.interp(x=data, xp=xp, fp=fp))

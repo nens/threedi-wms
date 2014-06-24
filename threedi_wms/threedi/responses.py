@@ -1015,6 +1015,25 @@ def get_response_for_getquantity(get_parameters):
     except KeyError:
         decimals = None
 
+    do_classify = bool(int(get_parameters.get('classify', 0)))
+    classification_classes = {
+        -7: (-3.00, -3.00),  # will be used for lower as well
+        -6: (-3.00, -1.00),
+        -5: (-1.00, -0.50),
+        -4: (-0.50, -0.30),
+        -3: (-0.30, -0.10),
+        -2: (-0.10, -0.05),
+        -1: (-0.05, -0.01),
+         0: (-0.01, 0.01),
+         1: (0.01, 0.05),
+         2: (0.05, 0.10),
+         3: (0.10, 0.30),
+         4: (0.30, 0.50),
+         5: (0.50, 1.00),
+         6: (1.00, 3.00),
+         7: (3.00, 3.00),  # will be used for higher as well
+    }
+
     # get the flow link numbers from redis; N.B. link numbers are returned
     # as strings from redis
     loaded_model = utils.get_loaded_model()
@@ -1034,25 +1053,33 @@ def get_response_for_getquantity(get_parameters):
                 np_link_numbers = np.uint64(list(link_numbers))
                 ma = np.ma.masked_array(
                     dataset.variables[quantity_key][time][np_link_numbers])
+                ma_filled = ma.filled()
+                if do_classify:
+                    ma_filled = utils.classify(ma_filled,
+                                               classification_classes)
                 if decimals is None:
-                    quantity_data = dict(zip(link_numbers, ma.filled().
+                    quantity_data = dict(zip(link_numbers, ma_filled.
                                              tolist()))
                 else:
                     quantity_data = dict(
-                        zip(link_numbers, ma.filled().round(decimals).
+                        zip(link_numbers, ma_filled.round(decimals).
                             tolist()))
             else:
                 # no flow link numbers for filtering, so return all
                 # this produces the original unfiltered data dict
                 ma = np.ma.masked_array(dataset.variables[quantity_key][time])
+                ma_filled = ma.filled()
+                if do_classify:
+                    ma_filled = utils.classify(ma_filled,
+                                               classification_classes)
                 if decimals is None:
-                    quantity_data = dict(enumerate(ma.filled().tolist()))
+                    quantity_data = dict(enumerate(ma_filled.tolist()))
                 else:
-                    quantity_data = dict(enumerate(ma.filled().round(
+                    quantity_data = dict(enumerate(ma_filled.round(
                         decimals).tolist()))
             data[quantity_key] = quantity_data
 
-    content = json.dumps(dict(nodatavalue=ma.fill_value, data=data))
+    content = json.dumps(dict(data=data))
 
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
