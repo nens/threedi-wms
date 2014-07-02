@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Bumped shapely to 1.2.15 because of import error in version 1.2.12.
+
 - Combine quantity requests.
 
 - Throttle getquantity response by only returning the data for the used flow 
