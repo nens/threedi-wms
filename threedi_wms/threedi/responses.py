@@ -42,6 +42,8 @@ logger = logging.getLogger(__name__)
 
 rc = redis.Redis(db=2)
 
+PANDAS_VARS = ['pumps', 'weirs', 'orifices']
+
 
 def rgba2image(rgba):
     """ return imagedata. """
@@ -1002,13 +1004,23 @@ def get_response_for_getprofile(get_parameters):
 
 
 def get_response_for_getquantity(get_parameters):
-    """ Return json with quantity for all calculation cells. """
+    """ Return json with quantity for all calculation cells. 
+
+    Option to return pumps, weirs and orifices: requires messages.
+    """
 
     # Determine layer and time
     layer = get_parameters['layers']
     time = int(get_parameters.get('time', 0))
     quantity = get_parameters['quantity']
     quantities = quantity.split(',')
+    use_messages = False
+
+    # Do we need message data? Intersect quantities and messages vars
+    if set(quantities) & set(PANDAS_VARS):
+        # No global import, celery doesn't want this.
+        from server.app import message_data 
+        use_messages = True
 
     try:
         decimals = int(get_parameters['decimals'])
@@ -1028,6 +1040,11 @@ def get_response_for_getquantity(get_parameters):
         # ndarray.
         data = {}
         for quantity_key in quantities:
+            # Special pandas variables
+            if quantity_key in PANDAS_VARS:
+                data[quantity_key] = message_data.get_pandas(quantity_key)
+                continue
+            # Normal variables
             if link_numbers:
                 # to convert to np.uint64, link_numbers need to be converted to a
                 # list first
