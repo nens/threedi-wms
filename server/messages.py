@@ -153,14 +153,8 @@ class Listener(threading.Thread):
         socket = self.socket
         while not self.kill_received:
             arr, metadata = recv_array(socket)
-            #logger.info("got msg {}".format(metadata))
 
             if metadata['action'] == 'reset':
-                # logger.debug('Resetting grid data...')
-                # #message_data.grid = {}
-                # for k in message_data.grid.keys():
-                #     del message_data.grid[k]  # try to save memory
-                # message_data.interpolation_ready = False
                 self.reset_grid_data()
             elif metadata['action'] == 'update':
                 logger.debug('Updating grid data [%s]' % metadata['name'])
@@ -366,8 +360,6 @@ class MessageData(object):
         # lookup cell centers
         if grid is None:
             grid = self.grid
-        #logger.info('nodk: %r' % grid['nodk'] )
-        #import pdb; pdb.set_trace()
 
         # twod_idx is a boolean array to filter out the 2D cells
         twod_idx = grid['nod_type'] == 1  # TODO: get value out of wrapper
