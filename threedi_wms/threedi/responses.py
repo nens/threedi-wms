@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 rc = redis.Redis(db=2)
 
-PANDAS_VARS = ['pumps', 'weirs', 'orifices']
+PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
 
 
 def rgba2image(rgba):
@@ -1042,6 +1042,7 @@ def get_response_for_getquantity(get_parameters):
         for quantity_key in quantities:
             # Special pandas variables
             if quantity_key in PANDAS_VARS:
+                # TODO: link_number trick, but for objects.
                 data[quantity_key] = message_data.get_pandas(quantity_key)
                 continue
             # Normal variables

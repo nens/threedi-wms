@@ -203,6 +203,7 @@ class Listener(threading.Thread):
             #     logger.debug('Post processing...')
             elif metadata['action'] == 'update-pandas':
                 logger.debug('Update pandas data [%s]...', metadata['name'])
+                # TODO: in case of weir, delete unused variables.
                 message_data.pandas[metadata['name']] = json.loads(metadata['pandas_json'])
 
             elif metadata['action'] == 'dump':
