@@ -1014,13 +1014,11 @@ def get_response_for_getquantity(get_parameters):
     time = int(get_parameters.get('time', 0))
     quantity = get_parameters['quantity']
     quantities = quantity.split(',')
-    use_messages = False
 
     # Do we need message data? Intersect quantities and messages vars
     if set(quantities) & set(PANDAS_VARS):
         # No global import, celery doesn't want this.
         from server.app import message_data 
-        use_messages = True
 
     try:
         decimals = int(get_parameters['decimals'])
