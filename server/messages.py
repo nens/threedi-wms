@@ -419,9 +419,9 @@ class MessageData(object):
         else:
             mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
         if 'quad_grid_dps_mask' in grid:
-            del grid['quad_grid_dps_mask']
-            grid['quad_grid_dps_mask'] = mask
-            
+            del self.grid['quad_grid_dps_mask']
+        self.grid['quad_grid_dps_mask'] = mask
+
     def get(self, layer, interpolate='nearest', from_disk=False, **kwargs):
         """
         layer: choose from waterlevel, waterheight, dps, uc, 
