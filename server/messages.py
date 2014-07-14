@@ -18,6 +18,7 @@ import bisect
 import sys
 import traceback
 import os
+import json
 
 from server import config
 
@@ -144,6 +145,7 @@ class Listener(threading.Thread):
         for k in self.message_data.grid.keys():
             del self.message_data.grid[k]  # try to save memory
         self.message_data.interpolation_ready = False
+        self.message_data.pandas = {}
 
     def _run(self):
         """run the thread"""
@@ -151,14 +153,8 @@ class Listener(threading.Thread):
         socket = self.socket
         while not self.kill_received:
             arr, metadata = recv_array(socket)
-            logger.info("got msg {}".format(metadata))
 
             if metadata['action'] == 'reset':
-                # logger.debug('Resetting grid data...')
-                # #message_data.grid = {}
-                # for k in message_data.grid.keys():
-                #     del message_data.grid[k]  # try to save memory
-                # message_data.interpolation_ready = False
                 self.reset_grid_data()
             elif metadata['action'] == 'update':
                 logger.debug('Updating grid data [%s]' % metadata['name'])
@@ -199,6 +195,10 @@ class Listener(threading.Thread):
                     logger.debug('Update indices finished.')
             # elif metadata['action'] == 'postprocess':
             #     logger.debug('Post processing...')
+            elif metadata['action'] == 'update-pandas':
+                logger.debug('Update pandas data [%s]...', metadata['name'])
+                # TODO: in case of weir, delete unused variables.
+                message_data.pandas[metadata['name']] = json.loads(metadata['pandas_json'])
 
             elif metadata['action'] == 'dump':
                 output_filename = metadata['output_filename']
@@ -360,8 +360,6 @@ class MessageData(object):
         # lookup cell centers
         if grid is None:
             grid = self.grid
-        #logger.info('nodk: %r' % grid['nodk'] )
-        #import pdb; pdb.set_trace()
 
         # twod_idx is a boolean array to filter out the 2D cells
         twod_idx = grid['nod_type'] == 1  # TODO: get value out of wrapper
@@ -763,6 +761,9 @@ class MessageData(object):
         """testing"""
         return self.grid[layer]
 
+    def get_pandas(self, key):
+        return self.pandas.get(key, None)
+
     def __init__(self, sub_port=5558):
         #self.req_port = req_port
         self.sub_port = sub_port
@@ -781,6 +782,8 @@ class MessageData(object):
         self.X = None
         self.Y = None
         self.interpolation_ready = False
+
+        self.pandas = {}
 
         self.thread = None
         self.make_listener(sub_port) # Listen to model messages

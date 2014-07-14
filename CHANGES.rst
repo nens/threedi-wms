@@ -42,6 +42,9 @@ Changelog of threedi-wms
 - Instead of an empty image now an error image layer is displayed when nonexisting
   map layers are requested using getmap
 
+- Added receiving pandas dataframe objects as json: status of pumps, weirs,
+  culverts, orifices.
+
 
 0.10 (2014-04-17)
 -----------------
