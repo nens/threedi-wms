@@ -965,6 +965,12 @@ def get_response_for_getprofile(get_parameters):
     minimum_level = min(
         np.ma.amin(groundwaterlevel_sampled, 0), 
         np.ma.amin(bathymetry_sampled, 0))
+    maximum_level = max(max(
+        np.ma.amax(groundwaterlevel_sampled, 0), 
+        np.ma.amax(bathymetry_sampled, 0)),
+        np.ma.amax(waterlevel_sampled, 0))
+    margin_level = max((maximum_level - minimum_level) * 0.1, 0.1)
+
     groundwaterlevel_delta_sampled = groundwaterlevel_sampled - minimum_level
     bathymetry_delta_sampled = bathymetry_sampled - groundwaterlevel_sampled
 
@@ -982,9 +988,6 @@ def get_response_for_getprofile(get_parameters):
         depth=zip(
             mapped_compressed_distances,
             map(roundfunc, compressed_depths)),
-        # waterlevel=zip(
-        #     mapped_compressed_distances,
-        #     map(roundfunc, compressed_waterlevels)),
         bathymetry_delta=zip(
             mapped_compressed_distances,
             map(roundfunc, compressed_bathymetry)),
@@ -993,6 +996,7 @@ def get_response_for_getprofile(get_parameters):
             map(roundfunc, compressed_groundwaterlevels)),
         offset=zip(mapped_compressed_distances,
             [roundfunc(minimum_level)]*len(mapped_compressed_distances)),
+        summary=dict(minimum=minimum_level, maximum=maximum_level, margin=margin_level),
     ))
 
     return content, 200, {

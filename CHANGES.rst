@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Added summary for getprofile: for nxt-graph.
+
 - Fix for some rare cases (Miami) in messages.
 
 - Bumped shapely to 1.2.15 because of import error in version 1.2.12.
