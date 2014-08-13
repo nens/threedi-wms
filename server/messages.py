@@ -109,7 +109,7 @@ class NCDump(object):
         if values is None:
             values = self.message_data.grid[var_name]
         self.v = self.ncfile.createVariable(var_name, var_type, dimensions)
-        logger.info('dimensions %s' % dimensions)
+        logger.info('dimensions %s' % str(dimensions))
         logger.info('len(unit) %d' % len(unit))
         if len(unit) == 0:
             self.v[:] = values
