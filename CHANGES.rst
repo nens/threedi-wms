@@ -9,7 +9,7 @@ Changelog of threedi-wms
 
 - Fix for some rare cases (Miami) in messages.
 
-- Fix for logging line in messages.
+- Fix for logging line in messages for the Archive function.
 
 - Bumped shapely to 1.2.15 because of import error in version 1.2.12.
 
