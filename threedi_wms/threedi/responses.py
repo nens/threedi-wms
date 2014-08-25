@@ -645,42 +645,60 @@ def get_response_for_getmap(get_parameters):
 
 
 def get_response_for_getinfo(get_parameters):
-    """ Return json with bounds and timesteps. """
-    # Read netcdf
-    path = utils.get_netcdf_path(layer=get_parameters['layers'])
-    with Dataset(path) as dataset:
-        v = dataset.variables
-        fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
-        timesteps = v['s1'].shape[0]
-        bathymetry = v['bath'][0, :]
+    """ Return json with bounds and timesteps. 
 
-    limits = bathymetry.min(), bathymetry.max()
-    netcdf_extent = fex.min(), fey.min(), fex.max(), fey.max()
-
-    # Determine transformed extent
-    srs = get_parameters['srs']
-    if srs:
-        # Read projection from bathymetry file, defaults to RD.
-        bathy_path = utils.get_bathymetry_path(layer=get_parameters['layers'])
-        # It defaults to Rijksdriehoek RD
-        source_projection = utils.get_bathymetry_srs(bathy_path)
-
-        logging.info('Source projection: %r' % source_projection)
-        #source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
-        target_projection = srs
-        extent = gislib_utils.get_transformed_extent(
-            extent=netcdf_extent,
-            source_projection=source_projection,
-            target_projection=target_projection,
-        )
+    With attempt to make it work with "messages" as well.
+    """
+    from server.app import message_data 
+    if get_parameters.get('messages', 'false') == 'true':
+        use_messages = True
     else:
-        logging.warning('No srs data available.')
-        extent = netcdf_extent
+        use_messages = False
 
-    # Prepare response
-    content = json.dumps(dict(bounds=extent,
-                              limits=limits,
-                              timesteps=timesteps))
+    if use_messages:
+        container = message_data.get('dps', **get_parameters)
+        dps, ms = get_data(container=container,
+                           ma=True, **get_parameters)
+        bathymetry = -dps
+        limits = float(bathymetry.min()), float(bathymetry.max())
+
+        content = json.dumps(dict(limits=limits))
+    else:
+        # Read netcdf
+        path = utils.get_netcdf_path(layer=get_parameters['layers'])
+        with Dataset(path) as dataset:
+            v = dataset.variables
+            fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
+            timesteps = v['s1'].shape[0]
+            bathymetry = v['bath'][0, :]
+
+        limits = bathymetry.min(), bathymetry.max()
+        netcdf_extent = fex.min(), fey.min(), fex.max(), fey.max()
+
+        # Determine transformed extent
+        srs = get_parameters['srs']
+        if srs:
+            # Read projection from bathymetry file, defaults to RD.
+            bathy_path = utils.get_bathymetry_path(layer=get_parameters['layers'])
+            # It defaults to Rijksdriehoek RD
+            source_projection = utils.get_bathymetry_srs(bathy_path)
+
+            logging.info('Source projection: %r' % source_projection)
+            #source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
+            target_projection = srs
+            extent = gislib_utils.get_transformed_extent(
+                extent=netcdf_extent,
+                source_projection=source_projection,
+                target_projection=target_projection,
+            )
+        else:
+            logging.warning('No srs data available.')
+            extent = netcdf_extent
+
+        # Prepare response
+        content = json.dumps(dict(bounds=extent,
+                                  limits=limits,
+                                  timesteps=timesteps))
     return content, 200, {
         'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*',
