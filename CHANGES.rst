@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Added option messages for GetInfo.
+
 - Added summary for getprofile: for nxt-graph.
 
 - Fix for some rare cases (Miami) in messages.
