@@ -373,7 +373,7 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     rgba[..., 3] = rgba2[..., 0]
 
     # A trick to filter out pixels outside the model, see messages.
-    rgba[..., 3][np.ma.less_equal(masked_array, 0.)] = 0.
+    rgba[..., 3][np.ma.less_equal(masked_array, vmin)] = 0.
 
     rgba[..., 3][masked_array.mask == True] = 0.
     #import pdb; pdb.set_trace()
@@ -430,7 +430,24 @@ def show_error_img():
 # Responses for various requests
 @cache.memoize(timeout=30)
 def get_response_for_getmap(get_parameters):
-    """ Return png image. """
+    """ Return png image. 
+
+    Available modes:
+    depth
+    flood
+    bathymetry
+    velocity
+    grid  : uses (old) pyramids
+    quad_grid : what's this?
+    sg  : ground water (messages only)
+    sg_abs : ground water absolute value
+    infiltration (messages only)
+    interception (messages only)
+    soil (messages only)
+    crop (messages only)
+    maxdepth -> only when grids.nc is used (messages only)
+    arrival -> only when grids.nc is used (messages only)
+    """
     # No global import, celery doesn't want this.
     from server.app import message_data 
 
@@ -578,6 +595,18 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_groundwater_image(masked_array=u)
+    elif mode == 'sg_abs':  # ground water, only with use_messages
+        container = message_data.get(
+                "sg_abs", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+        # we use u for visualization only. we want get_groundwater_image inverted.
+        u = -u  
+        vmin = np.amin(u)
+        vmax = np.amax(u) + 1  # make it visually more stable
+        logger.info("ground control to mayor tom")
+        logger.info("%f, %f" % (vmin, vmax))
+        content, img  = get_groundwater_image(
+            masked_array=u, vmin=vmin, vmax=vmax)
     elif mode == 'infiltration':
         container = message_data.get(
                 "infiltration", **get_parameters)

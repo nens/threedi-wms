@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Added getmap sg_abs (ground water level).
+
 - Added option messages for GetInfo.
 
 - Added summary for getprofile: for nxt-graph.
