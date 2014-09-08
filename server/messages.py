@@ -676,6 +676,21 @@ class MessageData(object):
             container = rasters.NumpyContainer(
                 groundwater_depth, transform, self.wkt, nodatavalue=nodatavalue)
             return container
+        elif layer == 'sg_abs':
+            dps = grid['dps'][S].copy()
+            quad_grid = grid['quad_grid'][S]
+            sg = grid['sg']
+            groundwater_level = sg[quad_grid]
+            # A trick to hold all depths inside model, 0's are filtered out.
+            #groundwater_depth[np.ma.less_equal(groundwater_depth, 0.01)] = 0.01
+
+            # Set the Deltares no data value.
+            nodatavalue = 1e10
+            groundwater_level[dps == self.grid['dsnop']] = nodatavalue
+
+            container = rasters.NumpyContainer(
+                groundwater_level, transform, self.wkt, nodatavalue=nodatavalue)
+            return container
         elif layer == 'quad_grid':
             quad_grid = grid['quad_grid'][S]
             container = rasters.NumpyContainer(
