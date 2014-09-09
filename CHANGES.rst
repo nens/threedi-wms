@@ -11,6 +11,8 @@ Changelog of threedi-wms
 
 - Added summary for getprofile: for nxt-graph.
 
+- Added statusfile '.failed' to nc_dump functionality.
+
 - Fix for some rare cases (Miami) in messages.
 
 - Fix for logging line in messages for the Archive function.
