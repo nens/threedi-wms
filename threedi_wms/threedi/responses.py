@@ -634,7 +634,7 @@ def get_response_for_getmap(get_parameters):
                 "interception", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_green_image(masked_array=u, hmax=.20)
+        content, img  = get_green_image(masked_array=u, hmax=.020)
     elif mode == 'soil':
         container = message_data.get(
                 "soil", **get_parameters)

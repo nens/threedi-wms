@@ -55,6 +55,8 @@ Changelog of threedi-wms
 
 - New colors for groundwater (brown to green to white-green).
 
+- Updated interceptino scaling from hmax=0.20 to hmax=0.02
+
 
 0.10 (2014-04-17)
 -----------------
