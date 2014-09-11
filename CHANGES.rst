@@ -53,6 +53,8 @@ Changelog of threedi-wms
 - Added receiving pandas dataframe objects as json: status of pumps, weirs,
   culverts, orifices.
 
+- New colors for groundwater (brown to green to white-green).
+
 
 0.10 (2014-04-17)
 -----------------
