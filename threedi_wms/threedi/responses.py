@@ -340,19 +340,36 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     normalize = colors.Normalize(vmin=vmin, vmax=vmax)
     normalized_arr = normalize(masked_array)
     cdict = {
-        'red': ((0.0, 0. / 256, 0. / 256),
-                (0.4, 98. / 256, 98. / 256),
-                (0.65, 255. / 256, 255. / 256),
-                (1.0, 123. / 256, 123. / 256)),
-        'green': ((0.0, 16. / 256, 16. / 256),
-                  (0.4, 117. / 256, 117. / 256),
-                  (0.65, 166. / 256, 166. / 256),
-                  (1.0, 47. / 256, 47. / 256)),
-        'blue': ((0.0, 134. / 256, 134. / 256),
-                 (0.4, 255. / 256, 255. / 256),
-                 (0.65, 110. / 256, 110. / 256),
-                 (1.0, 0. / 256, 0. / 256)),
+        'red': ((0.0, 118. / 256, 118. / 256),
+                (0.4, 64. / 256, 64. / 256),
+                (0.7, 28. / 256, 28. / 256),
+                (0.85, 78. / 256, 78. / 256),
+                (1.0, 124. / 256, 124. / 256)),
+        'green': ((0.0, 225. / 256, 225. / 256),
+                  (0.4, 164. / 256, 164. / 256),
+                  (0.7, 58. / 256, 58. / 256),
+                  (0.85, 80. / 256, 80. / 256),
+                  (1.0, 80. / 256, 80. / 256)),
+        'blue': ((0.0, 113. / 256, 113. / 256),
+                 (0.4, 30. / 256, 30. / 256),
+                 (0.7, 18. / 256, 18. / 256),
+                 (0.85, 11. / 256, 11. / 256),
+                 (1.0, 4. / 256, 4. / 256)),
     }
+    # cdict = {
+    #     'red': ((0.0, 54. / 256, 54. / 256),
+    #             (0.3, 64. / 256, 64. / 256),
+    #             (0.6, 28. / 256, 28. / 256),
+    #             (1.0, 124. / 256, 124. / 256)),
+    #     'green': ((0.0, 210. / 256, 210. / 256),
+    #               (0.3, 164. / 256, 164. / 256),
+    #               (0.6, 58. / 256, 58. / 256),
+    #               (1.0, 80. / 256, 80. / 256)),
+    #     'blue': ((0.0, 0. / 256, 0. / 256),
+    #              (0.3, 30. / 256, 30. / 256),
+    #              (0.6, 18. / 256, 18. / 256),
+    #              (1.0, 4. / 256, 4. / 256)),
+    # }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
     #colormap = cm.summer
@@ -365,7 +382,6 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
                  (1.0, 146. / 256, 146. / 256)),
         # alpha!!
         'red': ((0.0, 224. / 256, 224. / 256),
-                (0.5, 192. / 256, 192. / 256),
                 (1.0, 224. / 256, 224. / 256)),
     }
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
@@ -373,7 +389,7 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     rgba[..., 3] = rgba2[..., 0]
 
     # A trick to filter out pixels outside the model, see messages.
-    rgba[..., 3][np.ma.less_equal(masked_array, 0.)] = 0.
+    rgba[..., 3][np.ma.less_equal(masked_array, vmin)] = 0.
 
     rgba[..., 3][masked_array.mask == True] = 0.
     #import pdb; pdb.set_trace()
@@ -428,9 +444,26 @@ def show_error_img():
 
 
 # Responses for various requests
-@cache.memoize(timeout=30)
+@cache.memoize(timeout=5)
 def get_response_for_getmap(get_parameters):
-    """ Return png image. """
+    """ Return png image. 
+
+    Available modes:
+    depth
+    flood
+    bathymetry
+    velocity
+    grid  : uses (old) pyramids
+    quad_grid : what's this?
+    sg  : ground water (messages only)
+    sg_abs : ground water absolute value
+    infiltration (messages only)
+    interception (messages only)
+    soil (messages only)
+    crop (messages only)
+    maxdepth -> only when grids.nc is used (messages only)
+    arrival -> only when grids.nc is used (messages only)
+    """
     # No global import, celery doesn't want this.
     from server.app import message_data 
 
@@ -578,6 +611,18 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img  = get_groundwater_image(masked_array=u)
+    elif mode == 'sg_abs':  # ground water, only with use_messages
+        container = message_data.get(
+                "sg_abs", **get_parameters)
+        u, ms = get_data(container, ma=True, **get_parameters)
+        # we use u for visualization only. we want get_groundwater_image inverted.
+        u = -u  
+        vmin = np.amin(u)
+        vmax = np.amax(u) + 1  # make it visually more stable
+        logger.info("ground control to mayor tom")
+        logger.info("%f, %f" % (vmin, vmax))
+        content, img  = get_groundwater_image(
+            masked_array=u, vmin=vmin, vmax=vmax)
     elif mode == 'infiltration':
         container = message_data.get(
                 "infiltration", **get_parameters)
@@ -589,7 +634,7 @@ def get_response_for_getmap(get_parameters):
                 "interception", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_green_image(masked_array=u, hmax=.20)
+        content, img  = get_green_image(masked_array=u, hmax=.020)
     elif mode == 'soil':
         container = message_data.get(
                 "soil", **get_parameters)
@@ -645,42 +690,60 @@ def get_response_for_getmap(get_parameters):
 
 
 def get_response_for_getinfo(get_parameters):
-    """ Return json with bounds and timesteps. """
-    # Read netcdf
-    path = utils.get_netcdf_path(layer=get_parameters['layers'])
-    with Dataset(path) as dataset:
-        v = dataset.variables
-        fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
-        timesteps = v['s1'].shape[0]
-        bathymetry = v['bath'][0, :]
+    """ Return json with bounds and timesteps. 
 
-    limits = bathymetry.min(), bathymetry.max()
-    netcdf_extent = fex.min(), fey.min(), fex.max(), fey.max()
-
-    # Determine transformed extent
-    srs = get_parameters['srs']
-    if srs:
-        # Read projection from bathymetry file, defaults to RD.
-        bathy_path = utils.get_bathymetry_path(layer=get_parameters['layers'])
-        # It defaults to Rijksdriehoek RD
-        source_projection = utils.get_bathymetry_srs(bathy_path)
-
-        logging.info('Source projection: %r' % source_projection)
-        #source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
-        target_projection = srs
-        extent = gislib_utils.get_transformed_extent(
-            extent=netcdf_extent,
-            source_projection=source_projection,
-            target_projection=target_projection,
-        )
+    With attempt to make it work with "messages" as well.
+    """
+    from server.app import message_data 
+    if get_parameters.get('messages', 'false') == 'true':
+        use_messages = True
     else:
-        logging.warning('No srs data available.')
-        extent = netcdf_extent
+        use_messages = False
 
-    # Prepare response
-    content = json.dumps(dict(bounds=extent,
-                              limits=limits,
-                              timesteps=timesteps))
+    if use_messages:
+        container = message_data.get('dps', **get_parameters)
+        dps, ms = get_data(container=container,
+                           ma=True, **get_parameters)
+        bathymetry = -dps
+        limits = float(bathymetry.min()), float(bathymetry.max())
+
+        content = json.dumps(dict(limits=limits))
+    else:
+        # Read netcdf
+        path = utils.get_netcdf_path(layer=get_parameters['layers'])
+        with Dataset(path) as dataset:
+            v = dataset.variables
+            fex, fey = v['FlowElemContour_x'][:], v['FlowElemContour_y'][:]
+            timesteps = v['s1'].shape[0]
+            bathymetry = v['bath'][0, :]
+
+        limits = bathymetry.min(), bathymetry.max()
+        netcdf_extent = fex.min(), fey.min(), fex.max(), fey.max()
+
+        # Determine transformed extent
+        srs = get_parameters['srs']
+        if srs:
+            # Read projection from bathymetry file, defaults to RD.
+            bathy_path = utils.get_bathymetry_path(layer=get_parameters['layers'])
+            # It defaults to Rijksdriehoek RD
+            source_projection = utils.get_bathymetry_srs(bathy_path)
+
+            logging.info('Source projection: %r' % source_projection)
+            #source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
+            target_projection = srs
+            extent = gislib_utils.get_transformed_extent(
+                extent=netcdf_extent,
+                source_projection=source_projection,
+                target_projection=target_projection,
+            )
+        else:
+            logging.warning('No srs data available.')
+            extent = netcdf_extent
+
+        # Prepare response
+        content = json.dumps(dict(bounds=extent,
+                                  limits=limits,
+                                  timesteps=timesteps))
     return content, 200, {
         'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*',

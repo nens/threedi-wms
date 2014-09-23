@@ -109,7 +109,7 @@ class NCDump(object):
         if values is None:
             values = self.message_data.grid[var_name]
         self.v = self.ncfile.createVariable(var_name, var_type, dimensions)
-        logger.info('dimensions %s' % dimensions)
+        logger.info('dimensions %s' % str(dimensions))
         logger.info('len(unit) %d' % len(unit))
         if len(unit) == 0:
             self.v[:] = values
@@ -205,6 +205,9 @@ class Listener(threading.Thread):
                 path_nc = os.path.join(metadata['input_path'], 'subgrid_map.nc')
 
                 logger.debug('Dump: checking other threads...')
+                filename_failed = output_filename + '.failed'
+                if os.path.exists(filename_failed):
+                    os.remove(filename_failed)
                 if i_am_the_boss(output_filename):
                     nc_dump = NCDump(output_filename, message_data) # TODO: with statement
                     nc_dump.dump_nc('wkt', 'S1', ('i', ), '-', list(message_data.grid['wkt']))
@@ -308,7 +311,13 @@ class Listener(threading.Thread):
                     else:
                         logger.error('No subgrid_map file found at %r, skipping' % path_nc)
 
-                    nc_dump.close()  
+                    try:
+                        nc_dump.close()  
+                    except:
+                        # I don't know when nc_dump will fail, but if it fails, it is probably here.
+                        with file(filename_failed, 'w') as f:
+                            f.write('I failed...')
+
                     os.remove(output_filename + '.busy')  # So others can see we are finished.
             else:
                 logger.debug('Got an unknown message: %r' % metadata)
@@ -675,6 +684,21 @@ class MessageData(object):
 
             container = rasters.NumpyContainer(
                 groundwater_depth, transform, self.wkt, nodatavalue=nodatavalue)
+            return container
+        elif layer == 'sg_abs':
+            dps = grid['dps'][S].copy()
+            quad_grid = grid['quad_grid'][S]
+            sg = grid['sg']
+            groundwater_level = sg[quad_grid]
+            # A trick to hold all depths inside model, 0's are filtered out.
+            #groundwater_depth[np.ma.less_equal(groundwater_depth, 0.01)] = 0.01
+
+            # Set the Deltares no data value.
+            nodatavalue = 1e10
+            groundwater_level[dps == self.grid['dsnop']] = nodatavalue
+
+            container = rasters.NumpyContainer(
+                groundwater_level, transform, self.wkt, nodatavalue=nodatavalue)
             return container
         elif layer == 'quad_grid':
             quad_grid = grid['quad_grid'][S]

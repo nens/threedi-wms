@@ -5,9 +5,17 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Added getmap sg_abs (ground water level).
+
+- Added option messages for GetInfo.
+
 - Added summary for getprofile: for nxt-graph.
 
+- Added statusfile '.failed' to nc_dump functionality.
+
 - Fix for some rare cases (Miami) in messages.
+
+- Fix for logging line in messages for the Archive function.
 
 - Bumped shapely to 1.2.15 because of import error in version 1.2.12.
 
@@ -44,6 +52,10 @@ Changelog of threedi-wms
 
 - Added receiving pandas dataframe objects as json: status of pumps, weirs,
   culverts, orifices.
+
+- New colors for groundwater (brown to green to white-green).
+
+- Updated interceptino scaling from hmax=0.20 to hmax=0.02
 
 
 0.10 (2014-04-17)
