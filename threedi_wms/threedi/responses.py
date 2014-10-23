@@ -1178,8 +1178,11 @@ def get_response_for_getcapabilities(get_parameters):
         layers = [{
             'url': 'hhnk-gebiedsbreed-hhnk_hhnk%3Adepth',
             'name': '3Di test layer'}]
-    host_name = 'localhost:5000'
-    #host_name = 'staging.result.3di.lizard.net'
+    if hasattr(config, 'HOST_NAME'):
+        host_name = config.HOST_NAME
+    else:
+        logger.warning('Fill in the HOST_NAME in your localconfig.py')
+        host_name = 'localhost:5000'
     my_url = 'http://%s/3di/wms?SERVICE=WMS&MESSAGES=true&' \
         'NOCACHE=yes&FADEANIMATION=false&FAST=1.4&TIME=42&HMAX=2&' \
         'INTERPOLATE=linear&SRS=EPSG:3857&' % (host_name)
