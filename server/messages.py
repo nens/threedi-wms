@@ -485,6 +485,7 @@ class MessageData(object):
                 grid['dyp'] = nc.variables['dyp'].getValue()[0]
 
                 grid['file-memory'] = generate_hash(grid_path, layer_slug)
+                grid['layer-slug'] = layer_slug  # needed for getcapabilities
                 self.grid = grid
                 # grid['imax'] = nc.variables['imax'][:]
                 # grid['jmax'] = nc.variables['jmax'][:]

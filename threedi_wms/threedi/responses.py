@@ -1166,7 +1166,7 @@ def get_response_for_getcapabilities(get_parameters):
     from server.app import message_data 
 
     layers = []
-    available_layer = message_data.grid.get('file-memory', '')
+    available_layer = message_data.grid.get('layer-slug', '')
     if available_layer:
         layers = [{
             'url': '%s:arrival' % available_layer,
@@ -1178,11 +1178,17 @@ def get_response_for_getcapabilities(get_parameters):
         layers = [{
             'url': 'hhnk-gebiedsbreed-hhnk_hhnk%3Adepth',
             'name': '3Di test layer'}]
+    host_name = 'localhost:5000'
+    #host_name = 'staging.result.3di.lizard.net'
+    my_url = 'http://%s/3di/wms?SERVICE=WMS&MESSAGES=true&' \
+        'NOCACHE=yes&FADEANIMATION=false&FAST=1.4&TIME=42&HMAX=2&' \
+        'INTERPOLATE=linear&SRS=EPSG:3857&' % (host_name)
+
     # 
     content = flask.render_template(
         '3di/wms-getcapabilities.xml', 
         layers=layers, 
-        my_url='http://localhost:5000/3di/wms?SERVICE=WMS&MESSAGES=true&NOCACHE=yes&FADEANIMATION=false&FAST=1.4&TIME=42&HMAX=2&INTERPOLATE=linear&SRS=EPSG%3A3857&')
+        my_url=my_url)
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
                           'Access-Control-Allow-Methods': 'GET'}
