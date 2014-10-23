@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WMS_Capabilities version="1.3.0" updateSequence="300" xmlns="http://www.opengis.net/wms" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wms http://geoserver8.lizard.net:80/geoserver/schemas/wms/1.3.0/capabilities_1_3_0.xsd">
+  <Service>
+    <Name>WMS</Name>
+    <Title/>
+    <Abstract/>
+    <KeywordList/>
+    <OnlineResource xlink:type="simple" xlink:href="{{ my_url }}"/>
+    <ContactInformation>
+      <ContactPersonPrimary>
+        <ContactPerson/>
+        <ContactOrganization>Nelen &amp; Schuurmans</ContactOrganization>
+      </ContactPersonPrimary>
+      <ContactPosition/>
+      <ContactAddress>
+        <AddressType/>
+        <Address/>
+        <City/>
+        <StateOrProvince/>
+        <PostCode/>
+        <Country/>
+      </ContactAddress>
+      <ContactVoiceTelephone/>
+      <ContactFacsimileTelephone/>
+      <ContactElectronicMailAddress/>
+    </ContactInformation>
+    <Fees/>
+    <AccessConstraints/>
+  </Service>
+  <Capability>
+    <Request>
+      <GetCapabilities>
+        <Format>text/xml</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="{{ my_url }}"/>
+            </Get>
+            <Post>
+              <OnlineResource xlink:type="simple" xlink:href="{{ my_url }}"/>
+            </Post>
+          </HTTP>
+        </DCPType>
+      </GetCapabilities>
+      <GetMap>
+        <Format>image/png</Format>
+        <Format>application/atom+xml</Format>
+        <Format>application/pdf</Format>
+        <Format>application/vnd.google-earth.kml+xml</Format>
+        <Format>application/vnd.google-earth.kml+xml;mode=networklink</Format>
+        <Format>application/vnd.google-earth.kmz</Format>
+        <Format>image/geotiff</Format>
+        <Format>image/geotiff8</Format>
+        <Format>image/gif</Format>
+        <Format>image/jpeg</Format>
+        <Format>image/png; mode=8bit</Format>
+        <Format>image/svg+xml</Format>
+        <Format>image/tiff</Format>
+        <Format>image/tiff8</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="{{ my_url }}"/>
+            </Get>
+          </HTTP>
+        </DCPType>
+      </GetMap>
+      <!--GetFeatureInfo>
+        <Format>text/plain</Format>
+        <Format>application/vnd.ogc.gml</Format>
+        <Format>application/vnd.ogc.gml/3.1.1</Format>
+        <Format>text/html</Format>
+        <Format>application/json</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="{{ my_url }}"/>
+            </Get>
+          </HTTP>
+        </DCPType>
+      </GetFeatureInfo-->
+    </Request>
+    <Exception>
+      <Format>XML</Format>
+      <Format>INIMAGE</Format>
+      <Format>BLANK</Format>
+    </Exception>
+    <Layer>
+      <Title/>
+      <Abstract/>
+      <!--All supported EPSG projections:-->
+      <CRS>EPSG:3857</CRS>
+      <CRS>EPSG:4326</CRS>
+      <CRS>EPSG:28992</CRS>
+      <CRS>CRS:84</CRS>
+      <EX_GeographicBoundingBox>
+        <westBoundLongitude>1.8509927590546467</westBoundLongitude>
+        <eastBoundLongitude>107.1927389275614</eastBoundLongitude>
+        <southBoundLatitude>19.397913760774195</southBoundLatitude>
+        <northBoundLatitude>23.414564487759474</northBoundLatitude>
+      </EX_GeographicBoundingBox>
+      <BoundingBox CRS="CRS:84" minx="3" miny="50" maxx="8" maxy="55"/>
+      {% for layer in layers %}
+      <Layer queryable="1">
+        <Name>{{ layer.url }}</Name>
+        <Title>{{ layer.name }}</Title>
+        <Abstract>Er is geen samenvatting van</Abstract>
+        <SRS>EPSG:3857</SRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>104.86133915467492</westBoundLongitude>
+          <eastBoundLongitude>105.59327592794317</eastBoundLongitude>
+          <southBoundLatitude>21.50584576850451</southBoundLatitude>
+          <northBoundLatitude>22.655958660932495</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="EPSG:28992" minx="100000" miny="300000" maxx="300000" maxy="500000"/>
+      </Layer>
+      {% endfor %}
+    </Layer>
+  </Capability>
+</WMS_Capabilities>
