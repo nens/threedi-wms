@@ -5,7 +5,7 @@
     <Title/>
     <Abstract/>
     <KeywordList/>
-    <OnlineResource xlink:type="simple" xlink:href="http://geoserver8.lizard.net:80/geoserver/"/>
+    <OnlineResource xlink:type="simple" xlink:href="{{ my_url }}"/>
     <ContactInformation>
       <ContactPersonPrimary>
         <ContactPerson/>
