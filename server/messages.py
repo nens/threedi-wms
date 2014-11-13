@@ -77,7 +77,7 @@ def dump_geotiff(output_filename, values):
     Currently only works for dem_hhnk.tif / 5m because of all the constants.
     """
     # Import libs
-    print("writing geotiff")
+    logger.info("Writing [%s] geotiff..." % output_filename)
     #ds = osgeo.gdal.Open("original dem tif")  # find out origin
     #origin_x = 98970.0
     #origin_y = 553408.0
