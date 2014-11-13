@@ -110,6 +110,7 @@ def dump_geotiff(output_filename, values):
 
     # write the band
     dst_ds.GetRasterBand(1).WriteArray(raster)        
+    dst_ds.GetRasterBand(1).SetNoDataValue(-9999)
 
 
 
@@ -273,9 +274,9 @@ class Listener(threading.Thread):
                     nc_dump.dump_nc('dps', 'f4', ('x', 'y', ), '-')
 
                     # testing
-                    # tiff_filename = os.path.join(os.path.dirname(
+                    # dps_filename = os.path.join(os.path.dirname(
                     #     metadata['output_filename']), 'dps.tif')
-                    # dump_geotiff(tiff_filename, self.message_data.grid['dps'])
+                    # dump_geotiff(dps_filename, self.message_data.grid['dps'])
                     #nc_dump.dump_nc('quad_grid', 'i4', ('x', 'y', ), '-')
                     #nc_dump.dump_nc('quad_grid_dps_mask', 'i1', ('x', 'y', ), '-')
                     #nc_dump.dump_nc('vol1', 'f4', ('nFlowElem2', ), '-')
@@ -357,12 +358,20 @@ class Listener(threading.Thread):
                             mask = np.logical_or.reduce([np.isnan(waterlevel), mask, volmask])
                             waterlevel = np.ma.masked_array(waterlevel, mask=mask)
 
-                            maxdepth = waterlevel - (-dps)
+                            maxdepth = np.maximum(waterlevel - (-dps), 0)
+                            #maxdepth_masked = np.ma.masked_array(maxdepth, mask=mask)
                             nc_dump.dump_nc('maxdepth', 'f4', ('x', 'y'), 'm', maxdepth)
+
+                            #maxdepth[maxdepth > 10000].fill(-9999)  # hacky, but it may work
+                            #maxdepth_masked.filled()
+                            #import pdb; pdb.set_trace()
 
                             maxdepth_filename = os.path.join(os.path.dirname(
                                 metadata['output_filename']), 'maxdepth.tif')
-                            dump_geotiff(maxdepth_filename, maxdepth)
+                            # seems like interpolations take place to the masked
+                            # value sometimes outside the working area
+                            dump_geotiff(maxdepth_filename, 
+                                np.ma.masked_greater(maxdepth, 10000).filled(fill_value=-9999))
 
                     else:
                         logger.error('No subgrid_map file found at %r, skipping' % path_nc)
