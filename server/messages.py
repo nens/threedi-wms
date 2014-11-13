@@ -13,6 +13,7 @@ import random
 from netCDF4 import Dataset
 
 import time  # stopwatch
+import osgeo.gdal
 import osgeo.osr
 import bisect
 import sys
@@ -68,6 +69,48 @@ def i_am_the_boss(filename, timeout_seconds=5):
     touch(filename_busy, id_string)
     # race condition check:
     return verify(filename_busy, id_string)
+
+
+def dump_geotiff(output_filename, values):
+    """Dump data to geotiff
+
+    Currently only works for dem_hhnk.tif / 5m because of all the constants.
+    """
+    # Import libs
+    print("writing geotiff")
+    #ds = osgeo.gdal.Open("original dem tif")  # find out origin
+    #origin_x = 98970.0
+    #origin_y = 553408.0
+    origin_x, origin_y = 98970.000000000000000, 553410.000000000000000
+    #width = dimensions[0]  #ds.RasterXSize
+    #height = dimensions[1]  #ds.RasterYSize
+    height, width = values.shape
+
+    # Set file vars
+    #output_file = "%s.tif" % var_name
+
+    # Create gtif
+    driver = osgeo.gdal.GetDriverByName("GTiff")
+    dst_ds = driver.Create(output_filename, width, height, 1, 
+        osgeo.gdal.GDT_Float32, ['COMPRESS=DEFLATE',] )
+    
+    #raster = numpy.zeros( dimensions )
+    raster = np.flipud(values)
+
+    # top left x, w-e pixel resolution, rotation, top left y, rotation, n-s pixel resolution
+    dst_ds.SetGeoTransform( [origin_x, 5, 0, origin_y, 0, -5] )
+
+    # set the reference info 
+    srs = osgeo.osr.SpatialReference()
+    #srs.SetWellKnownGeogCS("WGS84")
+    #srs.SetWellKnownGeogCS("EPSG:28992")
+    srs.ImportFromEPSG(28992)
+
+    dst_ds.SetProjection( srs.ExportToWkt() )
+
+    # write the band
+    dst_ds.GetRasterBand(1).WriteArray(raster)        
+
 
 
 class NCDump(object):
@@ -228,6 +271,11 @@ class Listener(threading.Thread):
 
                     nc_dump.dump_nc('dsnop', 'f4', (), '-')
                     nc_dump.dump_nc('dps', 'f4', ('x', 'y', ), '-')
+
+                    # testing
+                    # tiff_filename = os.path.join(os.path.dirname(
+                    #     metadata['output_filename']), 'dps.tif')
+                    # dump_geotiff(tiff_filename, self.message_data.grid['dps'])
                     #nc_dump.dump_nc('quad_grid', 'i4', ('x', 'y', ), '-')
                     #nc_dump.dump_nc('quad_grid_dps_mask', 'i1', ('x', 'y', ), '-')
                     #nc_dump.dump_nc('vol1', 'f4', ('nFlowElem2', ), '-')
@@ -292,6 +340,10 @@ class Listener(threading.Thread):
                                 
                             nc_dump.dump_nc('arrival', 'f4', ('x', 'y'), 'm', time_array)
 
+                            arrival_filename = os.path.join(os.path.dirname(
+                                metadata['output_filename']), 'arrival.tif')
+                            dump_geotiff(arrival_filename, time_array)
+
                             # Max waterlevel. Somehow this part influences
                             # "Arrival times". So do not move.
                             s1_max = dataset.variables['s1'][:].max(0)
@@ -307,6 +359,10 @@ class Listener(threading.Thread):
 
                             maxdepth = waterlevel - (-dps)
                             nc_dump.dump_nc('maxdepth', 'f4', ('x', 'y'), 'm', maxdepth)
+
+                            maxdepth_filename = os.path.join(os.path.dirname(
+                                metadata['output_filename']), 'maxdepth.tif')
+                            dump_geotiff(maxdepth_filename, maxdepth)
 
                     else:
                         logger.error('No subgrid_map file found at %r, skipping' % path_nc)

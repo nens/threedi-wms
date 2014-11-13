@@ -7,6 +7,8 @@ Changelog of threedi-wms
 
 - Implemented simple getcapabilities function.
 
+- Added dumping of geotiffs too after 'Archive'. Currently only works for dem_hhnk (5m).
+
 - Added getmap sg_abs (ground water level).
 
 - Added option messages for GetInfo.
