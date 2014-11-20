@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Fix tests by reverting bootstrap.py to an older version and using our own
+  distribute_setup.py.
+
 - Added getmap sg_abs (ground water level).
 
 - Added option messages for GetInfo.
