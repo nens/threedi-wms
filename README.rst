@@ -76,6 +76,23 @@ Examples of requests for contours and quanties directly from the netcdf::
         quantity=dep&time=0&decimals=2
 
 
+Dutch
+-----
+
+Wanneer threedi-wms draait, zijn er 2 lopende processen. Een die handelt wms / url aanvragen af (flask). De ander luistert naar ZMQ voor inkomende data (server/messages.py, class Listener). Beide geinitieerd vanuit server/app.py. De app.py wordt op een dergelijke manier opgestart: $ src/threedi-wms/bin/gunicorn "server.app:build_app(req_port=5556,sub_port=5558)" -w 1 -b 0.0.0.0:5000
+
+- In het begin als je threedi-wms opstart is hij 'leeg'
+
+- Het rekenhart gaat grids sturen. Wanneer bepaalde grids binnen zijn, gaat threedi-wms afgeleide grids berekenen:                 
+         if (all([v in message_data.grid for v in DEPTH_VARS]) and 
+                    metadata['name'] in DEPTH_VARS):
+
+- Het 'dump' commando is de uitvoering van "archive".             
+        elif metadata['action'] == 'dump':,
+
+- Er zit nog een gekke i_am_the_boss functie in. Dit is omdat meerdere threedi-wms processen aan staan en je wilt maar dat eentje het dump commando gaat uitvoeren.
+
+
 Rasterinfo (not yet working?)
 -----------------------------
 The rasterinfo server serves a HTTP layer over gislib functonality
