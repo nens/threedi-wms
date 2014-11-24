@@ -32,6 +32,12 @@ CACHE_PREFIX = 'subgrid:10000'
 
 #SENTRY_DSN = None  # TODO: fill
 
+# redis settings for reporting threedi-wms status messages like busy, not busy,
+# and current timestep
+REDIS_STATUS_HOST = 'localhost'
+REDIS_STATUS_PORT = 6379
+REDIS_STATUS_DB = 1
+
 # Import local settings
 try:
     from server.localsettings import *
