@@ -9,6 +9,9 @@ Changelog of threedi-wms
 
 - Added dumping of geotiffs too after 'Archive'. Currently only works for dem_hhnk (5m).
 
+- Fix tests by reverting bootstrap.py to an older version and using our own
+  distribute_setup.py.
+
 - Added getmap sg_abs (ground water level).
 
 - Added option messages for GetInfo.
@@ -25,7 +28,7 @@ Changelog of threedi-wms
 
 - Combine quantity requests.
 
-- Throttle getquantity response by only returning the data for the used flow 
+- Throttle getquantity response by only returning the data for the used flow
   link numbers.
 
 - Added redis cache using flask-cache.
@@ -206,5 +209,3 @@ new gislib.
 - Added rasterinfo blueprint (app in Django lingo)
 
 - Initial project structure created with nensskel 1.33.dev0.
-
-
