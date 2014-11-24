@@ -27,6 +27,8 @@ install_requires = [
     'mmi',
     'flask-cache',
     'redis',
+    'GDAL',
+    'numpy',
     ],
 
 tests_require = [
