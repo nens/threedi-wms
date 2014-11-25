@@ -40,6 +40,8 @@ REDIS_PORT = 6379
 REDIS_STATE_DB = 0
 REDIS_NODE_MAPPING_DB = 2
 
+WMS_BUSY_THRESHOLD = 2  # 2 seconds
+
 # import local settings
 try:
     from server.localsettings import *
