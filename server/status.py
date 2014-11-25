@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
 
 import redis
 
@@ -5,27 +11,24 @@ import config
 
 
 class Status(object):
-    """Set threedi-wms status messages like busy, not busy and timestep
-    in redis. These messages can be used to be reported back to the end-user.
-
     """
-    STATES = {
-        0: 'not busy',
-        1: 'busy'
-    }
+    Set threedi-wms status messages like busy, not busy and current timestep
+    in redis state database. These messages can then be forwarded to the
+    end-user.
+    """
+    STATE_NOT_BUSY = 0
+    STATE_BUSY = 1
 
     def __init__(self):
-        """Initialise redis connection."""
+        """Initialise a redis client connection to the state database."""
         self.rc = redis.Redis(
-            host=config.REDIS_STATUS_HOST, port=config.REDIS_STATUS_PORT,
-            db=config.REDIS_STATUS_DB)
+            host=config.REDIS_HOST, port=config.REDIS_PORT,
+            db=config.REDIS_STATE_DB)
 
     def update_timestep(self, timestep):
         """Write timestep to redis."""
-        # TODO: create config.THREEDI_SUBGRID_ID; is same as
-        # config.CACHE_PREFIX
-        self.rc.set("%s:wms:timestep" % config.THREEDI_SUBGRID_ID, timestep)
+        self.rc.set("%s:wms_timestep" % config.THREEDI_SUBGRID_ID, timestep)
 
     def update_state(self, state):
         """Write state to redis."""
-        self.rc.set("%s:wms:state" % config.THREEDI_SUBGRID_ID, state)
+        self.rc.set("%s:wms_state" % config.THREEDI_SUBGRID_ID, state)

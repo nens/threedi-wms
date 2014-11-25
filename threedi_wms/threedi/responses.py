@@ -31,16 +31,17 @@ import json
 import logging
 import math
 import os
-import shutil
 import time as _time # stop watch
 
 from server.app import cache
+from server import config
 
 ogr.UseExceptions()
 
 logger = logging.getLogger(__name__)
 
-rc = redis.Redis(db=2)
+rc = redis.Redis(host=config.REDIS_HOST, port=config.REDIS_PORT,
+                 db=config.REDIS_NODE_MAPPING_DB)
 
 PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
 
@@ -171,12 +172,12 @@ def get_soil_image(masked_array, hmin=0, hmax=7):
         '#F7C6EA', # Beekeerd (lemig fijn zand)
         '#25F7F0', # Podzol (grof zand)
         '#C75B63', # Zavel
-        '#3613E8', # Lichte klei 
+        '#3613E8', # Lichte klei
         '#DB0E07', # Zware klei
         '#D1680D', # Klei op veen
         '#275C51', # Klei op zand
         '#8A084B', # Klei op grof zand
-        '#886A08', # Leem 
+        '#886A08', # Leem
         ])
     bounds = range(22)
     normalize = colors.BoundaryNorm(bounds, colormap.N)
@@ -446,7 +447,7 @@ def show_error_img():
 # Responses for various requests
 @cache.memoize(timeout=5)
 def get_response_for_getmap(get_parameters):
-    """ Return png image. 
+    """ Return png image.
 
     Available modes:
     depth
@@ -465,7 +466,7 @@ def get_response_for_getmap(get_parameters):
     arrival -> only when grids.nc is used (messages only)
     """
     # No global import, celery doesn't want this.
-    from server.app import message_data 
+    from server.app import message_data
 
     # Get the quad and waterlevel data objects
     layer_parameter = get_parameters['layers']
@@ -502,14 +503,14 @@ def get_response_for_getmap(get_parameters):
         required_message_vars = ['maxinterception', ]
         messaging_required = True
     else:
-        required_message_vars = ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 
-            'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn', 
+        required_message_vars = ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1',
+            'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn',
             'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']
         messaging_required = False
     if not set(required_message_vars).issubset(set(message_data.grid.keys())):
         missing_vars = (set(required_message_vars) - set(message_data.grid.keys()))
         if messaging_required:
-            logger.error('Required vars not available in message_data (mode: %s, missing: %r)' % 
+            logger.error('Required vars not available in message_data (mode: %s, missing: %r)' %
                 (mode, str(missing_vars)))
             # We cannot do anything for you...
             content, img = show_error_img()
@@ -523,9 +524,9 @@ def get_response_for_getmap(get_parameters):
                 ', falling back to netcdf.' % str(missing_vars))
             use_messages = False
 
-    if (use_messages and not messaging_required and 
+    if (use_messages and not messaging_required and
         not message_data.interpolation_ready):
-    
+
         logger.debug('Interpolation not ready in message_data'
             ', falling back to netcdf.')
         use_messages = False
@@ -616,7 +617,7 @@ def get_response_for_getmap(get_parameters):
                 "sg_abs", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
         # we use u for visualization only. we want get_groundwater_image inverted.
-        u = -u  
+        u = -u
         vmin = np.amin(u)
         vmax = np.amax(u) + 1  # make it visually more stable
         logger.info("ground control to mayor tom")
@@ -690,11 +691,11 @@ def get_response_for_getmap(get_parameters):
 
 
 def get_response_for_getinfo(get_parameters):
-    """ Return json with bounds and timesteps. 
+    """ Return json with bounds and timesteps.
 
     With attempt to make it work with "messages" as well.
     """
-    from server.app import message_data 
+    from server.app import message_data
     if get_parameters.get('messages', 'false') == 'true':
         use_messages = True
     else:
@@ -764,7 +765,7 @@ def get_response_for_gettimeseries(get_parameters):
     maxpoints=500 -> throw away points if # > maxpoints
     """
     # No global import, celery doesn't want this.
-    from server.app import message_data 
+    from server.app import message_data
 
     if get_parameters.get('messages', 'false') == 'true':
         use_messages = True
@@ -893,7 +894,7 @@ def get_response_for_gettimeseries(get_parameters):
 
 
 def get_response_for_getprofile(get_parameters):
-    """ Return json with profile. 
+    """ Return json with profile.
 
     get_parameters(may be incomplete):
 
@@ -903,7 +904,7 @@ def get_response_for_getprofile(get_parameters):
     """
 
     # No global import, celery doesn't want this.
-    from server.app import message_data 
+    from server.app import message_data
 
     if get_parameters.get('messages', 'false') == 'true':
         use_messages = True
@@ -1028,10 +1029,10 @@ def get_response_for_getprofile(get_parameters):
     # bathymetry_minimum = min(np.ma.amin(bathymetry_sampled, 0), 0)
     # bathymetry_sampled = bathymetry_sampled - bathymetry_minimum
     minimum_level = min(
-        np.ma.amin(groundwaterlevel_sampled, 0), 
+        np.ma.amin(groundwaterlevel_sampled, 0),
         np.ma.amin(bathymetry_sampled, 0))
     maximum_level = max(max(
-        np.ma.amax(groundwaterlevel_sampled, 0), 
+        np.ma.amax(groundwaterlevel_sampled, 0),
         np.ma.amax(bathymetry_sampled, 0)),
         np.ma.amax(waterlevel_sampled, 0))
     margin_level = max((maximum_level - minimum_level) * 0.1, 0.1)
@@ -1071,7 +1072,7 @@ def get_response_for_getprofile(get_parameters):
 
 
 def get_response_for_getquantity(get_parameters):
-    """ Return json with quantity for all calculation cells. 
+    """ Return json with quantity for all calculation cells.
 
     Option to return pumps, weirs and orifices: requires messages.
     """
@@ -1085,7 +1086,7 @@ def get_response_for_getquantity(get_parameters):
     # Do we need message data? Intersect quantities and messages vars
     if set(quantities) & set(PANDAS_VARS):
         # No global import, celery doesn't want this.
-        from server.app import message_data 
+        from server.app import message_data
 
     try:
         decimals = int(get_parameters['decimals'])
