@@ -39,7 +39,7 @@ class StateReporter(object):
 
     def set_timestep(self, timestep):
         """Write timestep to redis."""
-        self.rc.set("%s:wms_timestep" % self.redis_key, timestep)
+        self.rc.set('%s:wms_timestep' % self.redis_key, timestep)
 
     def set_busy(self):
         """
@@ -59,35 +59,36 @@ class StateReporter(object):
 
         """
         pipe = self.rc.pipeline()
-        pipe.get("%s:wms_busy_workers" % self.redis_key)
-        pipe.incr("%s:wms_busy_workers" % self.redis_key)
+        pipe.get('%s:wms_busy_workers' % self.redis_key)
+        pipe.incr('%s:wms_busy_workers' % self.redis_key)
         previous_busy_workers, _ = pipe.execute()
         if (previous_busy_workers is not None and
                 int(previous_busy_workers) == 0):  # current == 1
             # switch from 0 to 1 busy wms worker: set wms_busy_since timestamp
             # to be used by handle_busy_flag
-            self.rc.set("%s:wms_busy_since", current_timestamp())
+            self.rc.set('%s:wms_busy_since' % self.redis_key,
+                        current_timestamp())
 
     def set_not_busy(self):
         """Decrease wms_busy_workers."""
         pipe = self.rc.pipeline()
-        pipe.get("%s:wms_busy_workers" % self.redis_key)
-        pipe.decr("%s:wms_busy_workers" % self.redis_key)
+        pipe.get('%s:wms_busy_workers' % self.redis_key)
+        pipe.decr('%s:wms_busy_workers' % self.redis_key)
         previous_busy_workers, _ = pipe.execute()
         if (previous_busy_workers is not None and
                 int(previous_busy_workers) == 1):  # current == 0
             # switch from 1 to 0 busy wms workers: remove wms_busy_since
-            self.rc.delete("%s:wms_busy_since")
+            self.rc.delete('%s:wms_busy_since' % self.redis_key)
 
     def get_busy_workers(self):
         """Return number of busy workers. Primarily for debug purposes."""
-        return self.rc.get("%s:wms_busy_workers" % self.redis_key)
+        return self.rc.get('%s:wms_busy_workers' % self.redis_key)
 
     @property
     def busy_duration(self):
         """Return number of seconds wms is considered busy or time in seconds
         the number of busy wms workers was not 0. Used for debug logging."""
-        busy_since = self.rc.get("%s:wms_busy_since")
+        busy_since = self.rc.get('%s:wms_busy_since' % self.redis_key)
         if busy_since:
             current_ts = current_timestamp()
             return current_ts - float(busy_since)
@@ -98,18 +99,18 @@ class StateReporter(object):
 
         This can be used upon start of the wms server. See app.py.
         """
-        self.rc.set("%s:wms_busy_workers" % self.redis_key, 0)
-        self.rc.set("%s:wms_timestep" % self.redis_key, None)
+        self.rc.set('%s:wms_busy_workers' % self.redis_key, 0)
+        self.rc.set('%s:wms_timestep' % self.redis_key, None)
 
     def handle_busy_flag(self):
         """Check whether wms is busy longer than the WMS_BUSY_THRESHOLD. If so,
         set the wms_busy flag."""
-        busy_since = self.rc.get("%s:wms_busy_since")
+        busy_since = self.rc.get('%s:wms_busy_since' % self.redis_key)
         if busy_since:
             current_ts = current_timestamp()
             if (current_ts - float(busy_since)) > config.WMS_BUSY_THRESHOLD:
                 # now wms should be considered busy for the client as well
                 # set the wms_busy flag to be used by the client
-                self.rc.set('wms_busy', 1)
+                self.rc.set('%s:wms_busy' % self.redis_key, 1)
             else:
-                self.rc.delete('wms_busy')
+                self.rc.delete('%s:wms_busy' % self.redis_key)

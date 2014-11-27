@@ -159,6 +159,9 @@ class Listener(threading.Thread):
             arr, metadata = recv_array(socket)
             # now it is busy
             self.reporter.set_busy()
+            # N.B.: to simulate the wms_busy state uncomment the following
+            # line, but do not commit it, never!
+            # time.sleep(random.uniform(0.0, 0.5))
             logger.debug('(b) number of busy workers: %s' %
                          self.reporter.get_busy_workers())
             logger.debug('time in seconds wms is considered busy: %s' %
