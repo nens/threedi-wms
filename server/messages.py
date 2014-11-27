@@ -21,6 +21,7 @@ import os
 import json
 
 from server import config
+from status import StateReporter
 
 from threading import BoundedSemaphore
 from math import trunc
@@ -138,6 +139,7 @@ class Listener(threading.Thread):
         threading.Thread.__init__(self, *args, **kwargs)
         # A flag to notify the thread that it should finish up and exit
         self.kill_received = False
+        self.reporter = StateReporter()
 
     def reset_grid_data(self):
         logger.debug('Resetting grid data...')
@@ -152,11 +154,22 @@ class Listener(threading.Thread):
         message_data = self.message_data
         socket = self.socket
         while not self.kill_received:
+            logger.debug('(a) number of busy workers: %s' %
+                         self.reporter.get_busy_workers())
             arr, metadata = recv_array(socket)
-
+            # now it is busy
+            self.reporter.set_busy()
+            # N.B.: to simulate the wms_busy state uncomment the following
+            # line, but do not commit it, never!
+            # time.sleep(random.uniform(0.0, 0.5))
+            logger.debug('(b) number of busy workers: %s' %
+                         self.reporter.get_busy_workers())
+            logger.debug('time in seconds wms is considered busy: %s' %
+                         str(self.reporter.busy_duration))
             if metadata['action'] == 'reset':
                 self.reset_grid_data()
             elif metadata['action'] == 'update':
+                self.reporter.set_timestep(metadata['sim_time_seconds'])
                 logger.debug('Updating grid data [%s]' % metadata['name'])
                 if 'model' in metadata:
                     restarted = metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1
@@ -339,6 +352,9 @@ class Listener(threading.Thread):
                     os.remove(output_filename + '.busy')  # So others can see we are finished.
             else:
                 logger.debug('Got an unknown message: %r' % metadata)
+            # set this worker to not busy
+            self.reporter.set_not_busy()
+            self.reporter.handle_busy_flag()
 
     def run(self):
         """Run the thread fail-safe"""
