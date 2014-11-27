@@ -59,6 +59,8 @@ Changelog of threedi-wms
 - Added receiving pandas dataframe objects as json: status of pumps, weirs,
   culverts, orifices.
 
+- Added ability to update parts of grids. Needed for threedi-server 0.67.
+
 - New colors for groundwater (brown to green to white-green).
 
 - Updated interceptino scaling from hmax=0.20 to hmax=0.02
