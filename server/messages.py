@@ -21,6 +21,7 @@ import os
 import json
 
 from server import config
+from status import StateReporter
 
 from threading import BoundedSemaphore
 from math import trunc
@@ -28,7 +29,7 @@ from math import trunc
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-# global zmq context 
+# global zmq context
 ctx = zmq.Context()
 
 
@@ -58,7 +59,7 @@ def i_am_the_boss(filename, timeout_seconds=5):
 
 
     filename_busy = filename + '.busy'
-    if (os.path.exists(filename_busy) and 
+    if (os.path.exists(filename_busy) and
         os.path.getmtime(filename_busy) > time.time() - timeout_seconds):
 
         return False
@@ -84,7 +85,7 @@ class NCDump(object):
         x_dim = self.ncfile.createDimension(
             'x', self.message_data.grid['quad_grid'].shape[0])
         y_dim = self.ncfile.createDimension(
-            'y', self.message_data.grid['quad_grid'].shape[1]) 
+            'y', self.message_data.grid['quad_grid'].shape[1])
         i_dim = self.ncfile.createDimension(
             'i', None)   # random index, for wkt
         i_dim = self.ncfile.createDimension(
@@ -93,7 +94,7 @@ class NCDump(object):
             'nFlowElem1', self.message_data.grid['nFlowElem1d']+
             self.message_data.grid['nFlowElem2d'])  # Apparently no boundary nodes
         flow_elem2_dim = self.ncfile.createDimension(
-            'nFlowElem2', 
+            'nFlowElem2',
             self.message_data.grid['nFlowElem1d'] +
             self.message_data.grid['nFlowElem1dBounds'] +
             self.message_data.grid['nFlowElem2d'] +
@@ -138,6 +139,7 @@ class Listener(threading.Thread):
         threading.Thread.__init__(self, *args, **kwargs)
         # A flag to notify the thread that it should finish up and exit
         self.kill_received = False
+        self.reporter = StateReporter()
 
     def reset_grid_data(self):
         logger.debug('Resetting grid data...')
@@ -152,11 +154,22 @@ class Listener(threading.Thread):
         message_data = self.message_data
         socket = self.socket
         while not self.kill_received:
+            logger.debug('(a) number of busy workers: %s' %
+                         self.reporter.get_busy_workers())
             arr, metadata = recv_array(socket)
-
+            # now it is busy
+            self.reporter.set_busy()
+            # N.B.: to simulate the wms_busy state uncomment the following
+            # line, but do not commit it, never!
+            # time.sleep(random.uniform(0.0, 0.5))
+            logger.debug('(b) number of busy workers: %s' %
+                         self.reporter.get_busy_workers())
+            logger.debug('time in seconds wms is considered busy: %s' %
+                         str(self.reporter.busy_duration))
             if metadata['action'] == 'reset':
                 self.reset_grid_data()
             elif metadata['action'] == 'update':
+                self.reporter.set_timestep(metadata['sim_time_seconds'])
                 logger.debug('Updating grid data [%s]' % metadata['name'])
                 if 'model' in metadata:
                     restarted = metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1
@@ -179,7 +192,7 @@ class Listener(threading.Thread):
                 else:
                     message_data.grid[metadata['name']] = arr
 
-                if (all([v in message_data.grid for v in DEPTH_VARS]) and 
+                if (all([v in message_data.grid for v in DEPTH_VARS]) and
                     metadata['name'] in DEPTH_VARS):
 
                     logger.debug('Update grids after receiving dps or quad_grid...')
@@ -187,7 +200,7 @@ class Listener(threading.Thread):
                     logger.debug('Update grids finished.')
 
                 # check update indices
-                if (all([v in message_data.grid for v in UPDATE_INDICES_VARS]) and 
+                if (all([v in message_data.grid for v in UPDATE_INDICES_VARS]) and
                     metadata['name'] in UPDATE_INDICES_VARS):
 
                     logger.debug('Update indices...')
@@ -281,15 +294,15 @@ class Listener(threading.Thread):
                                 # or where mask of the
                                 s1_mask = np.logical_or.reduce([np.isnan(s1_waterlevel), mask])
                                 s1_waterlevel = np.ma.masked_array(s1_waterlevel, mask=s1_mask)
-                                
+
                                 s1_waterdepth = s1_waterlevel - (-dps)
 
-                                # Gdal does not know about masked arrays, so we transform to an array with 
+                                # Gdal does not know about masked arrays, so we transform to an array with
                                 #  a nodatavalue
                                 array = np.ma.masked_array(s1_waterdepth, mask=s1_mask).filled(nodatavalue)
 
                                 time_array[np.logical_and(time_array==-9999, array>0)] = i + 1
-                                
+
                             nc_dump.dump_nc('arrival', 'f4', ('x', 'y'), 'm', time_array)
 
                             # Max waterlevel. Somehow this part influences
@@ -312,7 +325,7 @@ class Listener(threading.Thread):
                         logger.error('No subgrid_map file found at %r, skipping' % path_nc)
 
                     try:
-                        nc_dump.close()  
+                        nc_dump.close()
                     except:
                         # I don't know when nc_dump will fail, but if it fails, it is probably here.
                         with file(filename_failed, 'w') as f:
@@ -321,6 +334,9 @@ class Listener(threading.Thread):
                     os.remove(output_filename + '.busy')  # So others can see we are finished.
             else:
                 logger.debug('Got an unknown message: %r' % metadata)
+            # set this worker to not busy
+            self.reporter.set_not_busy()
+            self.reporter.handle_busy_flag()
 
     def run(self):
         """Run the thread fail-safe"""
@@ -431,7 +447,7 @@ class MessageData(object):
 
     def get(self, layer, interpolate='nearest', from_disk=False, **kwargs):
         """
-        layer: choose from waterlevel, waterheight, dps, uc, 
+        layer: choose from waterlevel, waterheight, dps, uc,
           sg, quad_grid, infiltration,
           interception, soil, crop, maxdepth, arrival
 
@@ -468,7 +484,7 @@ class MessageData(object):
                 grid['dsnop'] = nc.variables['dsnop'].getValue()[0]
                 # grid['quad_grid_dps_mask'] = nc.variables['quad_grid_dps_mask'][:]
                 # grid['quad_grid'] = np.ma.masked_array(
-                #     nc.variables['quad_grid'][:], 
+                #     nc.variables['quad_grid'][:],
                 #     mask=grid['quad_grid_dps_mask'])
                 # grid['vol1'] = nc.variables['vol1'][:]
                 grid['wkt'] = ''.join(nc.variables['wkt'])
@@ -576,11 +592,11 @@ class MessageData(object):
             #S = np.s_[:,:]
             # Compute transform for sliced grid
             transform = (
-                grid["x0p"] + dx_src*x_start, 
-                dx_src*x_step, 
+                grid["x0p"] + dx_src*x_start,
+                dx_src*x_step,
                 0,
-                grid["y0p"] + grid["dyp"]*y_start, 
-                0, 
+                grid["y0p"] + grid["dyp"]*y_start,
+                0,
                 grid["dyp"]*y_step
             )
 
@@ -589,7 +605,7 @@ class MessageData(object):
             S = np.s_[:,:]
             transform = self.transform
         # logger.debug('transform: %s' % str(transform))
-            
+
         if layer == 'waterlevel' or layer == 'waterheight':
             nodatavalue = 1e10
             dps = grid['dps'][S].copy()
@@ -636,17 +652,17 @@ class MessageData(object):
             if layer == 'waterlevel':
                 waterlevel = waterheight - (-dps)
 
-                # Gdal does not know about masked arrays, so we transform to an array with 
+                # Gdal does not know about masked arrays, so we transform to an array with
                 #  a nodatavalue
                 array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
-                container = rasters.NumpyContainer(array, transform, self.wkt, 
+                container = rasters.NumpyContainer(array, transform, self.wkt,
                                                    nodatavalue=nodatavalue)
             elif layer == 'waterheight':
                 waterlevel = waterheight
 
                 # Strange: nodatavalue becomes 0, which is undesirable for getprofile
                 array = np.ma.masked_array(waterlevel, mask=mask).filled(-dps)
-                container = rasters.NumpyContainer(array, transform, self.wkt, 
+                container = rasters.NumpyContainer(array, transform, self.wkt,
                                                    nodatavalue=nodatavalue)
 
 
@@ -757,7 +773,7 @@ class MessageData(object):
             a[dps == grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
 
             # Strange stuff: no data value is not handled correctly in preprocessing
-            a[a > 10000] = nodatavalue  
+            a[a > 10000] = nodatavalue
 
             container = rasters.NumpyContainer(
                 a, transform, wkt, nodatavalue=nodatavalue)

@@ -10,6 +10,7 @@ from server import blueprints
 from server import loghelper
 from server.messages import MessageData
 from server import config
+from server import status
 
 import flask
 from flask.ext.cache import Cache
@@ -19,6 +20,8 @@ from raven.contrib.flask import Sentry
 # For celery
 _app = flask.Flask(__name__)
 cache = Cache(_app, config={'CACHE_TYPE': 'null', })
+
+reporter = status.StateReporter()
 
 
 def build_app(sub_port=5558, **kwargs):
@@ -38,7 +41,7 @@ def build_app(sub_port=5558, **kwargs):
     app = flask.Flask(__name__)
     if config.USE_CACHE:
         cache_config = {
-            'CACHE_TYPE': 'redis', 
+            'CACHE_TYPE': 'redis',
             'CACHE_KEY_PREFIX': config.CACHE_PREFIX,
             'CACHE_REDIS_DB': 3,
             }
@@ -46,6 +49,10 @@ def build_app(sub_port=5558, **kwargs):
         cache_config = {
             'CACHE_TYPE': 'null', }
     cache = Cache(app, config=cache_config)
+
+    # reset state variables
+    print("Reset wms state variables in redis.")
+    reporter.reset_all()
 
     if hasattr(config, 'SENTRY_DSN'):
         app.config['SENTRY_DSN'] = (config.SENTRY_DSN)

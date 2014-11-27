@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
-
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
@@ -23,11 +22,14 @@ import redis
 
 from gislib import projections
 
+from server import config as server_config
 from threedi_wms.threedi import config
 
 logger = logging.getLogger(__name__)
 
-rc = redis.Redis()
+rc = redis.Redis(
+    host=server_config.REDIS_HOST, port=server_config.REDIS_PORT,
+    db=server_config.REDIS_STATE_DB)
 
 
 def get_netcdf_path(layer):
