@@ -174,6 +174,9 @@ class Listener(threading.Thread):
                 if 'model' in metadata:
                     restarted = metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1
                     if metadata['model'] != message_data.loaded_model or restarted:
+                        # Since working with 'reset', this part probably never
+                        # occur anymore.
+
                         # New model detected
                         logger.info('New model detected: %r (old=%r)' % (
                             metadata['model'], message_data.loaded_model))
@@ -184,19 +187,33 @@ class Listener(threading.Thread):
                         message_data.loaded_model = metadata['model']
 
                 # Update new grid
-                if metadata['name'] in message_data.grid:
-                    del message_data.grid[metadata['name']]  # saves memory
                 if arr.dtype.kind == 'S':
                     # String, for wkt
                     message_data.grid[metadata['name']] = ''.join(arr)
                 else:
-                    message_data.grid[metadata['name']] = arr
+                    if 'bbox' in metadata:
+                        logger.debug("BBOXED update")
+                        x0, x1, y0, y1 = metadata['bbox']
+                        message_data.grid[metadata['name']][y0:y1, x0:x1] = arr
+                    else:
+                        # normal case
+                        # if metadata['name'] in message_data.grid:
+                        #     del message_data.grid[metadata['name']]  # saves memory?
+                        message_data.grid[metadata['name']] = arr.copy()
 
+                # Receive one of the DEPTH_VARS and all DEPTH_VARS are complete
                 if (all([v in message_data.grid for v in DEPTH_VARS]) and
                     metadata['name'] in DEPTH_VARS):
 
-                    logger.debug('Update grids after receiving dps or quad_grid...')
-                    message_data.update_grids()
+                    if 'bbox' in metadata:
+                        logger.debug(
+                            'Update grids using bbox after receiving '
+                            'dps or quad_grid...')
+                        message_data.update_grids_bbox(metadata['bbox'])
+                    else:
+                        logger.debug(
+                            'Update grids after receiving dps or quad_grid...')
+                        message_data.update_grids()
                     logger.debug('Update grids finished.')
 
                 # check update indices
@@ -318,7 +335,8 @@ class Listener(threading.Thread):
                             mask = np.logical_or.reduce([np.isnan(waterlevel), mask, volmask])
                             waterlevel = np.ma.masked_array(waterlevel, mask=mask)
 
-                            maxdepth = waterlevel - (-dps)
+                            maxdepth = np.maximum(waterlevel - (-dps), 0)
+                            #maxdepth_masked = np.ma.masked_array(maxdepth, mask=mask)
                             nc_dump.dump_nc('maxdepth', 'f4', ('x', 'y'), 'm', maxdepth)
 
                     else:
@@ -426,7 +444,7 @@ class MessageData(object):
         return X, Y, L
 
     def update_grids(self):
-        """Preprocess some stuff that only needs to be done once.
+        """Precalculate quad_grid_dps_mask that only needs to be calculated once.
 
         Needs to be run when quad_grid or dps is updated.
         """
@@ -444,6 +462,27 @@ class MessageData(object):
         if 'quad_grid_dps_mask' in grid:
             del self.grid['quad_grid_dps_mask']
         self.grid['quad_grid_dps_mask'] = mask
+
+    def update_grids_bbox(self, bbox):
+        """Update quad_grid_dps_mask using bbox
+
+        bbox format: [x0, x1, y0, y1]
+        """
+        if 'quad_grid_dps_mask' not in self.grid:
+            logger.debug("Calling update_grids instead of update_grids_bbox")
+            return self.update_grids()
+        x0, x1, y0, y1 = bbox
+        quad_grid = self.grid['quad_grid'][y0:y1, x0:x1]
+        dps = self.grid['dps'][y0:y1, x0:x1]
+        logger.debug('quad grid bbox shape: %r' % (str(quad_grid.shape)))
+        logger.debug('dps bbox shape: %r' % (str(dps.shape)))
+        # Sometimes quad_grid.mask is False instead of a table... (model Miami)
+        # TODO: investigate more
+        if quad_grid.mask.__class__.__name__ == 'bool_':
+            mask = np.logical_or.reduce([dps<-9000,])
+        else:
+            mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])
+        self.grid['quad_grid_dps_mask'][y0:y1, x0:x1] = mask
 
     def get(self, layer, interpolate='nearest', from_disk=False, **kwargs):
         """
@@ -501,6 +540,7 @@ class MessageData(object):
                 grid['dyp'] = nc.variables['dyp'].getValue()[0]
 
                 grid['file-memory'] = generate_hash(grid_path, layer_slug)
+                grid['layer-slug'] = layer_slug  # needed for getcapabilities
                 self.grid = grid
                 # grid['imax'] = nc.variables['imax'][:]
                 # grid['jmax'] = nc.variables['jmax'][:]
