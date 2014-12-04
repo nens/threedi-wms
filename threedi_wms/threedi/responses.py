@@ -254,7 +254,7 @@ def get_arrival_image(masked_array, hmin=0, hmax=7):
     return rgba2image(rgba=rgba)
 
 
-def get_bathymetry_image2(masked_array, limits):
+def get_bathymetry_image(masked_array, limits):
     """ Return imagedata. """
     normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
     normalized_arr = normalize(masked_array)
@@ -291,28 +291,6 @@ def get_bathymetry_image2(masked_array, limits):
     # Apply scaling and colormap
 
     rgba = colormap(normalized_arr, bytes=True)
-    # # If matplotlib does not support alpha and you want it anyway:
-    # # Use red as alpha, then overwrite the alpha channel
-    # cdict2 = {  # some versions of matplotlib do not have alpha
-    #     'green': ((0.0, 200. / 256, 200. / 256),
-    #               (1.0, 65. / 256, 65. / 256)),
-    #     'blue': ((0.0, 255. / 256, 255. / 256),
-    #              (1.0, 146. / 256, 146. / 256)),
-    #     # alpha!!
-    #     'red': ((0.0, 0. / 256, 0. / 256),
-    #             (0.03, 32. / 256, 32. / 256),
-    #             (0.07, 64. / 256, 64. / 256),
-    #             (0.2, 128. / 256, 128. / 256),
-    #              (0.5, 256. / 256, 256. / 256),
-    #              (1.0, 256. / 256, 256. / 256)),
-    # }
-    # colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
-    # rgba2 = colormap2(normalized_arr, bytes=True)
-    # rgba[..., 3] = rgba2[..., 0]
-
-    # # Make very small/negative depths transparent
-    # rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
-    # rgba[masked_array.mask,3] = 0
 
     return rgba2image(rgba=rgba)
 
@@ -535,7 +513,6 @@ def get_response_for_getmap(get_parameters):
     if mode == 'maxdepth' or mode == 'arrival':
         use_messages = True  # Always use_messages = True
 
-    #interpolate = get_parameters.get('interpolate', 'nearest')
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
@@ -647,7 +624,7 @@ def get_response_for_getmap(get_parameters):
     elif mode == 'bathymetry':
         logging.debug('bathymetry min, max %r %r' % (np.amin(bathymetry), np.amax(bathymetry)))
         limits = map(float, get_parameters['limits'].split(','))
-        content, img  = get_bathymetry_image2(masked_array=bathymetry,
+        content, img  = get_bathymetry_image(masked_array=bathymetry,
                                        limits=limits)
     elif mode == 'grid':
         content, img  = get_grid_image(masked_array=quads)
@@ -824,7 +801,6 @@ def get_response_for_gettimeseries(get_parameters):
         use_messages = True
     else:
         use_messages = False
-    #interpolate = get_parameters.get('interpolate', 'nearest')
 
     # Option to directly get the value of a quad
     quad = get_parameters.get('quad', None)
@@ -963,7 +939,6 @@ def get_response_for_getprofile(get_parameters):
         use_messages = True
     else:
         use_messages = False
-    #interpolate = get_parameters.get('interpolate', 'nearest')
 
     # Fallback doesn't work: netcdf not present yet.
 
@@ -1223,11 +1198,6 @@ class StaticData(object):
         """
         Return instance from cache if possible, new instance otherwise.
         """
-        # # Prepare key
-        # key = collections.namedtuple(
-        #     'StaticDataKey', ['layer'],
-        # )(layer=layer)
-
         if reload:
             value = cls(layer=layer, reload=reload)
             return value
@@ -1279,11 +1249,6 @@ class DynamicData(object):
         """
         Return instance from cache if possible, new instance otherwise.
         """
-        # # Prepare key
-        # key = collections.namedtuple(
-        #     'DynamicDataKey', ['layer', 'time', 'variable', 'netcdf_path'],
-        # )(layer=layer, time=time, variable=variable, netcdf_path=netcdf_path)
-        # Return object
         value = cls(layer=layer, time=time, variable=variable,
                     netcdf_path=netcdf_path)
         return value
