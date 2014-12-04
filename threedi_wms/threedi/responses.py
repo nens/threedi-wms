@@ -24,24 +24,24 @@ import numpy as np
 import ogr
 import redis
 
-import collections
+#import collections
 import datetime
 import io
 import json
 import logging
 import math
 import os
-import time as _time # stop watch
+import time as _time  # stop watch
 
 from server.app import cache
-from server import config
+from server import config as redis_config
 
 ogr.UseExceptions()
 
 logger = logging.getLogger(__name__)
 
-rc = redis.Redis(host=config.REDIS_HOST, port=config.REDIS_PORT,
-                 db=config.REDIS_NODE_MAPPING_DB)
+rc = redis.Redis(host=redis_config.REDIS_HOST, port=redis_config.REDIS_PORT,
+                 db=redis_config.REDIS_NODE_MAPPING_DB)
 
 PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
 
@@ -78,7 +78,6 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
     # Apply scaling and colormap
-    arr = masked_array
 
     rgba = colormap(normalized_arr, bytes=True)
     # If matplotlib does not support alpha and you want it anyway:
@@ -93,8 +92,8 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
                 (0.03, 32. / 256, 32. / 256),
                 (0.07, 64. / 256, 64. / 256),
                 (0.2, 128. / 256, 128. / 256),
-                 (0.5, 256. / 256, 256. / 256),
-                 (1.0, 256. / 256, 256. / 256)),
+                (0.5, 256. / 256, 256. / 256),
+                (1.0, 256. / 256, 256. / 256)),
     }
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
     rgba2 = colormap2(normalized_arr, bytes=True)
@@ -102,7 +101,7 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
 
     # Make very small/negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
-    rgba[masked_array.mask,3] = 0
+    rgba[masked_array.mask, 3] = 0
 
     return rgba2image(rgba=rgba)
 
@@ -119,13 +118,12 @@ def get_green_image(masked_array, hmin=0, hmax=2):
         'green': ((0.0, 192. / 256, 192. / 256),
                  (1.0, 118. / 256, 118. / 256)),
         'blue': ((0.0, 163. / 256, 163. / 256),
-                  (1.0, 0. / 256, 0. / 256)),
+                 (1.0, 0. / 256, 0. / 256)),
         'alpha': ((0.0, 64. / 256, 64. / 256),
                  (1.0, 256. / 256, 256. / 256)),
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
     # Apply scaling and colormap
-    arr = masked_array
 
     rgba = colormap(normalized_arr, bytes=True)
     # If matplotlib does not support alpha and you want it anyway:
@@ -140,8 +138,8 @@ def get_green_image(masked_array, hmin=0, hmax=2):
                 (0.03, 32. / 256, 32. / 256),
                 (0.07, 64. / 256, 64. / 256),
                 (0.2, 128. / 256, 128. / 256),
-                 (0.5, 256. / 256, 256. / 256),
-                 (1.0, 256. / 256, 256. / 256)),
+                (0.5, 256. / 256, 256. / 256),
+                (1.0, 256. / 256, 256. / 256)),
     }
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
     rgba2 = colormap2(normalized_arr, bytes=True)
@@ -149,86 +147,87 @@ def get_green_image(masked_array, hmin=0, hmax=2):
 
     # Make very small/negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
-    rgba[masked_array.mask,3] = 0
+    rgba[masked_array.mask, 3] = 0
 
     return rgba2image(rgba=rgba)
+
 
 def get_soil_image(masked_array, hmin=0, hmax=7):
     """ Return a png image from masked_array. """
     colormap = colors.ListedColormap([
-        '#FFFFFF', # empty, starts at 1
-        '#F2BF24', # Veengrond met veraarde bovengrond
-        '#8F793C', # Veengrond met veraarde bovengrond, zand
-        '#63160D', # Veengrond met kleidek
-        '#14208C', # Veengrond met kleidek op zand
-        '#9943E6', # Veengrond met zanddek op zand
-        '#29FA11', # Veengrond op ongerijpte klei
-        '#F2F5A9', # Stuifzand
-        '#09701A', # Podzol (Leemarm, fijn zand)
-        '#309AE6', # Podzol (zwak lemig, fijn zand)
-        '#1FED86', # Podzol (zwak lemig, fijn zand op grof zand
-        '#A3E014', # Podzol (lemig keileem)
-        '#363154', # Enkeerd (zwak lemig, fijn zand)
-        '#F7C6EA', # Beekeerd (lemig fijn zand)
-        '#25F7F0', # Podzol (grof zand)
-        '#C75B63', # Zavel
-        '#3613E8', # Lichte klei
-        '#DB0E07', # Zware klei
-        '#D1680D', # Klei op veen
-        '#275C51', # Klei op zand
-        '#8A084B', # Klei op grof zand
-        '#886A08', # Leem
+        '#FFFFFF',  # empty, starts at 1
+        '#F2BF24',  # Veengrond met veraarde bovengrond
+        '#8F793C',  # Veengrond met veraarde bovengrond, zand
+        '#63160D',  # Veengrond met kleidek
+        '#14208C',  # Veengrond met kleidek op zand
+        '#9943E6',  # Veengrond met zanddek op zand
+        '#29FA11',  # Veengrond op ongerijpte klei
+        '#F2F5A9',  # Stuifzand
+        '#09701A',  # Podzol (Leemarm, fijn zand)
+        '#309AE6',  # Podzol (zwak lemig, fijn zand)
+        '#1FED86',  # Podzol (zwak lemig, fijn zand op grof zand
+        '#A3E014',  # Podzol (lemig keileem)
+        '#363154',  # Enkeerd (zwak lemig, fijn zand)
+        '#F7C6EA',  # Beekeerd (lemig fijn zand)
+        '#25F7F0',  # Podzol (grof zand)
+        '#C75B63',  # Zavel
+        '#3613E8',  # Lichte klei
+        '#DB0E07',  # Zware klei
+        '#D1680D',  # Klei op veen
+        '#275C51',  # Klei op zand
+        '#8A084B',  # Klei op grof zand
+        '#886A08',  # Leem
         ])
     bounds = range(22)
     normalize = colors.BoundaryNorm(bounds, colormap.N)
     normalized_arr = normalize(masked_array)
     # Custom color map
     # Apply scaling and colormap
-    arr = masked_array
 
     rgba = colormap(normalized_arr, bytes=True)
 
     # Make very small/negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
-    rgba[masked_array.mask,3] = 0
+    rgba[masked_array.mask, 3] = 0
 
     return rgba2image(rgba=rgba)
+
 
 def get_crop_image(masked_array, hmin=0, hmax=7):
     """ Return a png image from masked_array. """
     colormap = colors.ListedColormap([
-        '#FFFFFF', # empty, starts at 1
-        '#76CD2F', # ' . grass ', & rgb(118, 205, 47)
-        '#F1C40F', # ' . corn ', & rgb(241, 196, 15)
-        '#F39C12', # ' . potatoes ', & rgb(243, 156, 18)
-        '#CD2FAD', # ' . sugarbeet ', & rgb(205, 47, 173)
-        '#FDFF41', # ' . grain ', & rgb(253, 255, 65)
-        '#2ECC71', # ' . miscellaneous ', & rgb(46, 204, 113)
-        '#886A08', # ' . non-arable land', & rgb(136, 106, 8)
-        '#0489B1', # ' . greenhouse area', & rgb(4, 137, 177)
-        '#173B0B', # ' . orchard ', & rgb(23, 59, 11)
-        '#B45F04', # '. bulbous plants ', & rgb(180, 95, 4)
-        '#2F5A00', # '. foliage forest ', & rgb (47, 90, 0)
-        '#38610B', # '. pine forest ', & rgb(56, 97, 11)
-        '#16A085', # '. nature ', & rgb(22, 160, 133)
-        '#61380B', # '. fallow ', & rgb(97, 56, 11)
-        '#16A085', # '. vegetables ', & rgb(22, 160, 133)
-        '#9B59B6', # '. flowers '/) rgb(155, 89, 182)
+        '#FFFFFF',  # empty, starts at 1
+        '#76CD2F',  # ' . grass ', & rgb(118, 205, 47)
+        '#F1C40F',  # ' . corn ', & rgb(241, 196, 15)
+        '#F39C12',  # ' . potatoes ', & rgb(243, 156, 18)
+        '#CD2FAD',  # ' . sugarbeet ', & rgb(205, 47, 173)
+        '#FDFF41',  # ' . grain ', & rgb(253, 255, 65)
+        '#2ECC71',  # ' . miscellaneous ', & rgb(46, 204, 113)
+        '#886A08',  # ' . non-arable land', & rgb(136, 106, 8)
+        '#0489B1',  # ' . greenhouse area', & rgb(4, 137, 177)
+        '#173B0B',  # ' . orchard ', & rgb(23, 59, 11)
+        '#B45F04',  # '. bulbous plants ', & rgb(180, 95, 4)
+        '#2F5A00',  # '. foliage forest ', & rgb (47, 90, 0)
+        '#38610B',  # '. pine forest ', & rgb(56, 97, 11)
+        '#16A085',  # '. nature ', & rgb(22, 160, 133)
+        '#61380B',  # '. fallow ', & rgb(97, 56, 11)
+        '#16A085',  # '. vegetables ', & rgb(22, 160, 133)
+        '#9B59B6',  # '. flowers '/) rgb(155, 89, 182)
         ])
     bounds = range(17)
     normalize = colors.BoundaryNorm(bounds, colormap.N)
     normalized_arr = normalize(masked_array)
     # Custom color map
     # Apply scaling and colormap
-    arr = masked_array
 
     rgba = colormap(normalized_arr, bytes=True)
 
     # Make very small/negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
-    rgba[masked_array.mask,3] = 0
+    rgba[masked_array.mask, 3] = 0
 
     return rgba2image(rgba=rgba)
+
 
 def get_arrival_image(masked_array, hmin=0, hmax=7):
     """ Return a png image from masked_array. """
@@ -241,17 +240,16 @@ def get_arrival_image(masked_array, hmin=0, hmax=7):
         'green': ((0.0, 0. / 256, 0. / 256),
                  (1.0, 255. / 256, 255. / 256)),
         'blue': ((0.0, 0. / 256, 0. / 256),
-                  (1.0, 0. / 256, 0. / 256)),
+                 (1.0, 0. / 256, 0. / 256)),
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
     # Apply scaling and colormap
-    arr = masked_array
 
     rgba = colormap(normalized_arr, bytes=True)
 
     # Make very small/negative depths transparent
     rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
-    rgba[masked_array.mask,3] = 0
+    rgba[masked_array.mask, 3] = 0
 
     return rgba2image(rgba=rgba)
 
@@ -259,8 +257,41 @@ def get_arrival_image(masked_array, hmin=0, hmax=7):
 def get_bathymetry_image(masked_array, limits):
     """ Return imagedata. """
     normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
-    colormap = cm.summer
-    rgba = colormap(normalize(masked_array), bytes=True)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    cdict = {
+        'red': ((0.0, 253. / 256, 253. / 256),
+                (0.14, 32. / 256, 32. / 256),
+                (0.28, 124. / 256, 124. / 256),
+                (0.43, 255. / 256, 255. / 256),
+                (0.57, 133. / 256, 133. / 256),
+                (0.71, 107. / 256, 107. / 256),
+                (0.85, 150. / 256, 150. / 256),
+                (1.0, 230. / 256, 230. / 256)),
+        'green': ((0.0, 255. / 256, 255. / 256),
+                (0.14, 148. / 256, 148. / 256),
+                (0.28, 160. / 256, 160. / 256),
+                (0.43, 78. / 256, 78. / 256),
+                (0.57, 42. / 256, 42. / 256),
+                (0.71, 64. / 256, 64. / 256),
+                (0.85, 150. / 256, 150. / 256),
+                (1.0, 230. / 256, 230. / 256)),
+        'blue': ((0.0, 92. / 256, 92. / 256),
+                (0.14, 29. / 256, 29. / 256),
+                (0.28, 46. / 256, 46. / 256),
+                (0.43, 0. / 256, 0. / 256),
+                (0.57, 2. / 256, 2. / 256),
+                (0.71, 46. / 256, 46. / 256),
+                (0.85, 150. / 256, 150. / 256),
+                (1.0, 230. / 256, 230. / 256)),
+        'alpha': ((0.0, 256. / 256, 256. / 256),
+                (1.0, 256. / 256, 256. / 256)),
+    }
+    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
+    # Apply scaling and colormap
+
+    rgba = colormap(normalized_arr, bytes=True)
+
     return rgba2image(rgba=rgba)
 
 
@@ -482,7 +513,6 @@ def get_response_for_getmap(get_parameters):
     if mode == 'maxdepth' or mode == 'arrival':
         use_messages = True  # Always use_messages = True
 
-    interpolate = get_parameters.get('interpolate', 'nearest')
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
@@ -771,7 +801,6 @@ def get_response_for_gettimeseries(get_parameters):
         use_messages = True
     else:
         use_messages = False
-    interpolate = get_parameters.get('interpolate', 'nearest')
 
     # Option to directly get the value of a quad
     quad = get_parameters.get('quad', None)
@@ -910,7 +939,6 @@ def get_response_for_getprofile(get_parameters):
         use_messages = True
     else:
         use_messages = False
-    interpolate = get_parameters.get('interpolate', 'nearest')
 
     # Fallback doesn't work: netcdf not present yet.
 
@@ -1170,11 +1198,6 @@ class StaticData(object):
         """
         Return instance from cache if possible, new instance otherwise.
         """
-        # Prepare key
-        key = collections.namedtuple(
-            'StaticDataKey', ['layer'],
-        )(layer=layer)
-
         if reload:
             value = cls(layer=layer, reload=reload)
             return value
@@ -1226,11 +1249,6 @@ class DynamicData(object):
         """
         Return instance from cache if possible, new instance otherwise.
         """
-        # Prepare key
-        key = collections.namedtuple(
-            'DynamicDataKey', ['layer', 'time', 'variable', 'netcdf_path'],
-        )(layer=layer, time=time, variable=variable, netcdf_path=netcdf_path)
-        # Return object
         value = cls(layer=layer, time=time, variable=variable,
                     netcdf_path=netcdf_path)
         return value
