@@ -8,7 +8,7 @@ Changelog of threedi-wms
 - Fix tests by reverting bootstrap.py to an older version and using our own
   distribute_setup.py.
 
-- Add a timer for measuring whether wms is busy and put the wms busy state in 
+- Add a timer for measuring whether wms is busy and put the wms busy state in
   redis, so that it is sent to the client.
 
 - Added getmap sg_abs (ground water level).
@@ -27,7 +27,7 @@ Changelog of threedi-wms
 
 - Combine quantity requests.
 
-- Throttle getquantity response by only returning the data for the used flow 
+- Throttle getquantity response by only returning the data for the used flow
   link numbers.
 
 - Added redis cache using flask-cache.
@@ -64,6 +64,8 @@ Changelog of threedi-wms
 - Updated interception scaling from hmax=0.20 to hmax=0.02
 
 - Better colors for DEM in getmap.
+
+- Fixed config bug (probably caused pyramid failed errors).
 
 
 0.10 (2014-04-17)

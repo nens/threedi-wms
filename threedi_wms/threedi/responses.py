@@ -254,14 +254,6 @@ def get_arrival_image(masked_array, hmin=0, hmax=7):
     return rgba2image(rgba=rgba)
 
 
-# def get_bathymetry_image(masked_array, limits):
-#     """ Return imagedata. """
-#     normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
-#     colormap = cm.summer
-#     rgba = colormap(normalize(masked_array), bytes=True)
-#     return rgba2image(rgba=rgba)
-
-
 def get_bathymetry_image2(masked_array, limits):
     """ Return imagedata. """
     normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
