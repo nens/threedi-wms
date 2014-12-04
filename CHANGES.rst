@@ -61,7 +61,9 @@ Changelog of threedi-wms
 
 - New colors for groundwater (brown to green to white-green).
 
-- Updated interceptino scaling from hmax=0.20 to hmax=0.02
+- Updated interception scaling from hmax=0.20 to hmax=0.02
+
+- Better colors for DEM in getmap.
 
 
 0.10 (2014-04-17)
