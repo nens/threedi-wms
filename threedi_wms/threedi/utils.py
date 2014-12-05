@@ -82,7 +82,7 @@ def get_monolith_path(layer):
 
 def get_bathymetry_srs(filename):
     """Return srs from bathymetry, None if not set"""
-    ds = gdal.Open(str(filename))
+    ds = gdal.Open(filename)
     return projections.get_wkt(ds.GetProjection())
     # src = osr.SpatialReference()
     # src.ImportFromWkt(ds.GetProjection())
