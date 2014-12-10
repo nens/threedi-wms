@@ -24,7 +24,7 @@ import numpy as np
 import ogr
 import redis
 
-#import collections
+# import collections
 import datetime
 import io
 import json
@@ -40,8 +40,13 @@ ogr.UseExceptions()
 
 logger = logging.getLogger(__name__)
 
-rc = redis.Redis(host=redis_config.REDIS_HOST, port=redis_config.REDIS_PORT,
-                 db=redis_config.REDIS_NODE_MAPPING_DB)
+rc_node = redis.Redis(host=redis_config.REDIS_HOST,
+                      port=redis_config.REDIS_PORT,
+                      db=redis_config.REDIS_NODE_MAPPING_DB)
+
+rc_state = redis.Redis(host=redis_config.REDIS_HOST,
+                       port=redis_config.REDIS_PORT,
+                       db=redis_config.REDIS_STATE_DB)
 
 PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
 
@@ -73,8 +78,8 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
                  (1.0, 146. / 256, 146. / 256)),
         'alpha': ((0.0, 64. / 256, 64. / 256),
                   (0.1, 128. / 256, 128. / 256),
-                 (0.5, 256. / 256, 256. / 256),
-                 (1.0, 256. / 256, 256. / 256)),
+                  (0.5, 256. / 256, 256. / 256),
+                  (1.0, 256. / 256, 256. / 256)),
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
     # Apply scaling and colormap
@@ -116,11 +121,11 @@ def get_green_image(masked_array, hmin=0, hmax=2):
         'red': ((0.0, 167. / 256, 167. / 256),
                 (1.0, 14. / 256, 14. / 256)),
         'green': ((0.0, 192. / 256, 192. / 256),
-                 (1.0, 118. / 256, 118. / 256)),
+                  (1.0, 118. / 256, 118. / 256)),
         'blue': ((0.0, 163. / 256, 163. / 256),
                  (1.0, 0. / 256, 0. / 256)),
         'alpha': ((0.0, 64. / 256, 64. / 256),
-                 (1.0, 256. / 256, 256. / 256)),
+                  (1.0, 256. / 256, 256. / 256)),
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
     # Apply scaling and colormap
@@ -238,7 +243,7 @@ def get_arrival_image(masked_array, hmin=0, hmax=7):
         'red': ((0.0, 255. / 256, 255. / 256),
                 (1.0, 255. / 256, 255. / 256)),
         'green': ((0.0, 0. / 256, 0. / 256),
-                 (1.0, 255. / 256, 255. / 256)),
+                  (1.0, 255. / 256, 255. / 256)),
         'blue': ((0.0, 0. / 256, 0. / 256),
                  (1.0, 0. / 256, 0. / 256)),
     }
@@ -269,23 +274,23 @@ def get_bathymetry_image(masked_array, limits):
                 (0.85, 150. / 256, 150. / 256),
                 (1.0, 230. / 256, 230. / 256)),
         'green': ((0.0, 255. / 256, 255. / 256),
-                (0.14, 148. / 256, 148. / 256),
-                (0.28, 160. / 256, 160. / 256),
-                (0.43, 78. / 256, 78. / 256),
-                (0.57, 42. / 256, 42. / 256),
-                (0.71, 64. / 256, 64. / 256),
-                (0.85, 150. / 256, 150. / 256),
-                (1.0, 230. / 256, 230. / 256)),
+                  (0.14, 148. / 256, 148. / 256),
+                  (0.28, 160. / 256, 160. / 256),
+                  (0.43, 78. / 256, 78. / 256),
+                  (0.57, 42. / 256, 42. / 256),
+                  (0.71, 64. / 256, 64. / 256),
+                  (0.85, 150. / 256, 150. / 256),
+                  (1.0, 230. / 256, 230. / 256)),
         'blue': ((0.0, 92. / 256, 92. / 256),
-                (0.14, 29. / 256, 29. / 256),
-                (0.28, 46. / 256, 46. / 256),
-                (0.43, 0. / 256, 0. / 256),
-                (0.57, 2. / 256, 2. / 256),
-                (0.71, 46. / 256, 46. / 256),
-                (0.85, 150. / 256, 150. / 256),
-                (1.0, 230. / 256, 230. / 256)),
+                 (0.14, 29. / 256, 29. / 256),
+                 (0.28, 46. / 256, 46. / 256),
+                 (0.43, 0. / 256, 0. / 256),
+                 (0.57, 2. / 256, 2. / 256),
+                 (0.71, 46. / 256, 46. / 256),
+                 (0.85, 150. / 256, 150. / 256),
+                 (1.0, 230. / 256, 230. / 256)),
         'alpha': ((0.0, 256. / 256, 256. / 256),
-                (1.0, 256. / 256, 256. / 256)),
+                  (1.0, 256. / 256, 256. / 256)),
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
     # Apply scaling and colormap
@@ -325,23 +330,23 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     normalized_arr = normalize(masked_array)
     cdict = {
         'green': ((0.0, 170. / 256, 170. / 256),
-                (0.5, 65. / 256, 65. / 256),
-                (1.0, 4. / 256, 4. / 256)),
+                  (0.5, 65. / 256, 65. / 256),
+                  (1.0, 4. / 256, 4. / 256)),
         'blue': ((0.0, 200. / 256, 200. / 256),
-                  (0.5, 120. / 256, 120. / 256),
-                  (1.0, 65. / 256, 65. / 256)),
+                 (0.5, 120. / 256, 120. / 256),
+                 (1.0, 65. / 256, 65. / 256)),
         'red': ((0.0, 255. / 256, 255. / 256),
-                 (0.5, 221. / 256, 221. / 256),
-                 (1.0, 146. / 256, 146. / 256)),
+                (0.5, 221. / 256, 221. / 256),
+                (1.0, 146. / 256, 146. / 256)),
         'alpha': ((0.0, 0. / 256, 0. / 256),
                   (0.1, 64. / 256, 64. / 256),
                   (0.4, 128. / 256, 128. / 256),
-                 (0.5, 256. / 256, 256. / 256),
-                 (1.0, 256. / 256, 256. / 256)),
+                  (0.5, 256. / 256, 256. / 256),
+                  (1.0, 256. / 256, 256. / 256)),
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
-    #colormap = cm.summer
+    # colormap = cm.summer
     rgba = colormap(normalized_arr, bytes=True)
 
     cdict2 = {  # some versions of matplotlib do not have alpha
@@ -351,10 +356,10 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
                  (1.0, 146. / 256, 146. / 256)),
         # alpha!!
         'red': ((0.0, 0. / 256, 0. / 256),
-                  (0.1, 64. / 256, 64. / 256),
-                  (0.4, 128. / 256, 128. / 256),
-                 (0.5, 256. / 256, 256. / 256),
-                 (1.0, 256. / 256, 256. / 256)),
+                (0.1, 64. / 256, 64. / 256),
+                (0.4, 128. / 256, 128. / 256),
+                (0.5, 256. / 256, 256. / 256),
+                (1.0, 256. / 256, 256. / 256)),
     }
     colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
     rgba2 = colormap2(normalized_arr, bytes=True)
@@ -404,7 +409,7 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     # }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
-    #colormap = cm.summer
+    # colormap = cm.summer
     rgba = colormap(normalized_arr, bytes=True)
 
     cdict2 = {  # some versions of matplotlib do not have alpha
@@ -424,7 +429,7 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     rgba[..., 3][np.ma.less_equal(masked_array, vmin)] = 0.
 
     rgba[..., 3][masked_array.mask == True] = 0.
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
     return rgba2image(rgba=rgba)
 
@@ -516,7 +521,8 @@ def get_response_for_getmap(get_parameters):
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
-    # Check if messages data is ready. If not: fall back to netcdf/pyramid method.
+    # Check if messages data is ready. If not: fall back to netcdf/pyramid
+    # method.
     if mode == 'maxdepth' or mode == 'arrival':
         required_message_vars = []
         messaging_required = True  # Is it required to use the message method?
@@ -533,15 +539,17 @@ def get_response_for_getmap(get_parameters):
         required_message_vars = ['maxinterception', ]
         messaging_required = True
     else:
-        required_message_vars = ['dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1',
-            'x1p', 'y1p', 'jmaxk', 'nodm', 'nodn',
-            'dyp', 'nodk', 'vol1', 'imax', 'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']
+        required_message_vars = [
+            'dxp', 'wkt', 'quad_grid_dps_mask', 'quad_grid', 's1', 'x1p',
+            'y1p', 'jmaxk', 'nodm', 'nodn', 'dyp', 'nodk', 'vol1', 'imax',
+            'dsnop', 'imaxk', 'y0p', 'dps', 'jmax', 'x0p']
         messaging_required = False
     if not set(required_message_vars).issubset(set(message_data.grid.keys())):
-        missing_vars = (set(required_message_vars) - set(message_data.grid.keys()))
+        missing_vars = (set(required_message_vars) -
+                        set(message_data.grid.keys()))
         if messaging_required:
-            logger.error('Required vars not available in message_data (mode: %s, missing: %r)' %
-                (mode, str(missing_vars)))
+            logger.error('Required vars not available in message_data (mode: '
+                         '%s, missing: %r)' % (mode, str(missing_vars)))
             # We cannot do anything for you...
             content, img = show_error_img()
 
@@ -550,7 +558,8 @@ def get_response_for_getmap(get_parameters):
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET'}
         else:
-            logger.debug('Not all vars available yet in message_data (missing: %r)'
+            logger.debug(
+                'Not all vars available yet in message_data (missing: %r)'
                 ', falling back to netcdf.' % str(missing_vars))
             use_messages = False
 
@@ -558,7 +567,7 @@ def get_response_for_getmap(get_parameters):
         not message_data.interpolation_ready):
 
         logger.debug('Interpolation not ready in message_data'
-            ', falling back to netcdf.')
+                     ', falling back to netcdf.')
         use_messages = False
 
     # Pyramid + monolith, when not using messages
@@ -573,7 +582,7 @@ def get_response_for_getmap(get_parameters):
         if mode in ['depth', 'grid', 'flood', 'velocity', 'quad_grid']:
             # lookup quads in target coordinate system
             quads, ms = get_data(container=static_data.monolith,
-                                     ma=True, **get_parameters)
+                                 ma=True, **get_parameters)
             logger.debug('Got quads in {} ms.'.format(ms))
 
     if mode in ['depth', 'bathymetry', 'flood', 'velocity']:
@@ -592,7 +601,8 @@ def get_response_for_getmap(get_parameters):
     # The velocity layer has the depth layer beneath it
     if mode == 'depth':
         if use_messages:
-            # TODO: cleanup bathymetry. Best do substraction before interpolation
+            # TODO: cleanup bathymetry. Best do substraction before
+            # interpolation
             container = message_data.get(
                 "waterlevel", **get_parameters)
             waterlevel, ms = get_data(container, ma=True, **get_parameters)
@@ -619,56 +629,52 @@ def get_response_for_getmap(get_parameters):
         depth = waterlevel - bathymetry
 
         # Direct image
-        content, img  = get_depth_image(masked_array=depth,
-                                  hmax=hmax)
+        content, img = get_depth_image(masked_array=depth,
+                                       hmax=hmax)
     elif mode == 'bathymetry':
-        logging.debug('bathymetry min, max %r %r' % (np.amin(bathymetry), np.amax(bathymetry)))
+        logging.debug('bathymetry min, max %r %r' % (np.amin(bathymetry),
+                                                     np.amax(bathymetry)))
         limits = map(float, get_parameters['limits'].split(','))
-        content, img  = get_bathymetry_image(masked_array=bathymetry,
-                                       limits=limits)
+        content, img = get_bathymetry_image(masked_array=bathymetry,
+                                            limits=limits)
     elif mode == 'grid':
-        content, img  = get_grid_image(masked_array=quads)
+        content, img = get_grid_image(masked_array=quads)
     elif mode == 'quad_grid':
-        content, img  = get_quad_grid_image(masked_array=quads)
+        content, img = get_quad_grid_image(masked_array=quads)
     elif mode == 'velocity':
-        container = message_data.get(
-                "uc", **get_parameters)
+        container = message_data.get("uc", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_velocity_image(masked_array=u)
+        content, img = get_velocity_image(masked_array=u)
     elif mode == 'sg':  # ground water, only with use_messages
-        container = message_data.get(
-                "sg", **get_parameters)
+        container = message_data.get("sg", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_groundwater_image(masked_array=u)
+        content, img = get_groundwater_image(masked_array=u)
     elif mode == 'sg_abs':  # ground water, only with use_messages
-        container = message_data.get(
-                "sg_abs", **get_parameters)
+        container = message_data.get("sg_abs", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
-        # we use u for visualization only. we want get_groundwater_image inverted.
+        # we use u for visualization only. we want get_groundwater_image
+        # inverted.
         u = -u
         vmin = np.amin(u)
         vmax = np.amax(u) + 1  # make it visually more stable
         logger.info("ground control to mayor tom")
         logger.info("%f, %f" % (vmin, vmax))
-        content, img  = get_groundwater_image(
+        content, img = get_groundwater_image(
             masked_array=u, vmin=vmin, vmax=vmax)
     elif mode == 'infiltration':
-        container = message_data.get(
-                "infiltration", **get_parameters)
+        container = message_data.get("infiltration", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_depth_image(masked_array=u, hmax=1000)
+        content, img = get_depth_image(masked_array=u, hmax=1000)
     elif mode == 'interception':
-        container = message_data.get(
-                "interception", **get_parameters)
+        container = message_data.get("interception", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_green_image(masked_array=u, hmax=.020)
+        content, img = get_green_image(masked_array=u, hmax=.020)
     elif mode == 'soil':
-        container = message_data.get(
-                "soil", **get_parameters)
+        container = message_data.get("soil", **get_parameters)
         if container is None:
             logging.info('WMS not ready for mode: {}'.format(mode))
             content = ''
@@ -679,10 +685,9 @@ def get_response_for_getmap(get_parameters):
             fix_mask = u == 1410065408
             u.mask = fix_mask
 
-            content, img  = get_soil_image(masked_array=u, hmax=22)
+            content, img = get_soil_image(masked_array=u, hmax=22)
     elif mode == 'crop':
-        container = message_data.get(
-                "crop", **get_parameters)
+        container = message_data.get("crop", **get_parameters)
         if container is None:
             logging.info('WMS not ready for mode: {}'.format(mode))
             content = ''
@@ -693,23 +698,20 @@ def get_response_for_getmap(get_parameters):
             fix_mask = u == 1410065408
             u.mask = fix_mask
 
-            content, img  = get_crop_image(masked_array=u, hmax=16)
+            content, img = get_crop_image(masked_array=u, hmax=16)
     elif mode == 'maxdepth':
-        container = message_data.get(
-                "maxdepth", from_disk=True, **get_parameters)
+        container = message_data.get("maxdepth", from_disk=True,
+                                     **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_depth_image(
-            masked_array=u,
-            hmax=hmax)
+        content, img = get_depth_image(masked_array=u, hmax=hmax)
 
     elif mode == 'arrival':
         container = message_data.get(
-                "arrival", from_disk=True, **get_parameters)
+            "arrival", from_disk=True, **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img  = get_arrival_image(
-            masked_array=u, hmax=7)
+        content, img = get_arrival_image(masked_array=u, hmax=7)
     else:
         logger.error('Unsupported map requested: %s' % mode)
         content, img = show_error_img()
@@ -755,7 +757,8 @@ def get_response_for_getinfo(get_parameters):
         srs = get_parameters['srs']
         if srs:
             # Read projection from bathymetry file, defaults to RD.
-            bathy_path = utils.get_bathymetry_path(layer=get_parameters['layers'])
+            bathy_path = utils.get_bathymetry_path(
+                layer=get_parameters['layers'])
             # It defaults to Rijksdriehoek RD
             source_projection = utils.get_bathymetry_srs(bathy_path)
 
@@ -814,7 +817,8 @@ def get_response_for_gettimeseries(get_parameters):
                          get_parameters['point'].split(','))).reshape(1, 2)
     #bbox = ','.join(map(str, np.array(point + np.array([[-1], [1]])).ravel()))
     # Make a fake bounding box. Beware: units depend on epsg (wgs84)
-    bbox = ','.join(map(str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))
+    bbox = ','.join(map(
+        str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))
     get_parameters_extra = dict(height='1', width='1', bbox=bbox)
     get_parameters_extra.update(get_parameters)
 
@@ -838,13 +842,13 @@ def get_response_for_gettimeseries(get_parameters):
         dps_container = message_data.get('dps')
 
         if quad is None:
-            quads, ms = get_data(container=quad_container,
-                                     ma=True, **get_parameters_extra)
+            quads, ms = get_data(container=quad_container, ma=True,
+                                 **get_parameters_extra)
             quad = int(quads[0, 0])
             logging.debug('Got quads in {} ms.'.format(ms))
 
-        dps, ms = get_data(container=dps_container,
-                                  ma=True, **get_parameters_extra)
+        dps, ms = get_data(container=dps_container, ma=True,
+                           **get_parameters_extra)
         logging.debug('Got dps in {} ms.'.format(ms))
 
         bathymetry = -dps
@@ -883,7 +887,7 @@ def get_response_for_gettimeseries(get_parameters):
             else:
                 depth = v[mode][:, quad]
         else:
-            #depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
+            # depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
             if absolute == 'true':
                 # For unorm, q
                 depth = np.ma.abs(v[mode][:, quad])
@@ -981,13 +985,14 @@ def get_response_for_getprofile(get_parameters):
     if use_messages:
         time_start = _time.time()
         dps_container = message_data.get('dps', **get_parameters_extra)
-        logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
-        dps, ms = get_data(container=dps_container,
-                                  ma=True, **get_parameters_extra)
+        logging.debug(
+            'Got containers in {} s.'.format(_time.time() - time_start))
+        dps, ms = get_data(container=dps_container, ma=True,
+                           **get_parameters_extra)
         logging.debug('Got dps in {} ms.'.format(ms))
 
-
-        waterlevel_container = message_data.get("waterheight", **get_parameters_extra)
+        waterlevel_container = message_data.get("waterheight",
+                                                **get_parameters_extra)
         logging.debug('Got waterlevel container.')
         waterlevel, ms = get_data(
             waterlevel_container, ma=True, **get_parameters_extra)
@@ -995,17 +1000,19 @@ def get_response_for_getprofile(get_parameters):
         bathymetry = -dps
         depth = waterlevel - bathymetry
 
-        if 'sg' in message_data.grid and message_data.get_raw('sg') is not None:
+        if 'sg' in message_data.grid and \
+           message_data.get_raw('sg') is not None:
             # Got ground water
-            quad_container = message_data.get("quad_grid", **get_parameters_extra)
-            quads, ms = get_data(container=quad_container,
-                                     ma=True, **get_parameters_extra)
+            quad_container = message_data.get("quad_grid",
+                                              **get_parameters_extra)
+            quads, ms = get_data(container=quad_container, ma=True,
+                                 **get_parameters_extra)
             logging.debug('Got quads in {} ms.'.format(ms))
             groundwaterlevel = message_data.get_raw('sg')[quads]
         else:
             groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
 
-        #bathymetry_delta = bathymetry - groundwaterlevel
+        # bathymetry_delta = bathymetry - groundwaterlevel
 
         logging.debug('Got depth.')
     else:
@@ -1014,10 +1021,11 @@ def get_response_for_getprofile(get_parameters):
         static_data = StaticData.get(layer=layer)
         quad_container = static_data.monolith
         bathy_container = static_data.pyramid
-        logging.debug('Got containers in {} s.'.format(_time.time()-time_start))
+        logging.debug(
+            'Got containers in {} s.'.format(_time.time() - time_start))
 
-        quads, ms = get_data(container=quad_container,
-                                 ma=True, **get_parameters_extra)
+        quads, ms = get_data(container=quad_container, ma=True,
+                             **get_parameters_extra)
         logging.debug('Got quads in {} ms.'.format(ms))
 
         bathymetry, ms = get_data(container=bathy_container,
@@ -1032,7 +1040,7 @@ def get_response_for_getprofile(get_parameters):
 
         # No support for groundwater
         groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
-        #bathymetry_delta = bathymetry
+        # bathymetry_delta = bathymetry
 
     # Sample the depth using the cellsize
     magicline = vector.MagicLine(np.array(geometry.GetPoints())[:, :2])
@@ -1051,9 +1059,10 @@ def get_response_for_getprofile(get_parameters):
     bathymetry_sampled = np.ma.maximum(bathymetry[indices], -100)
 
     # groundwaterlevel higher than the bathymetry is clipped
-    groundwaterlevel_sampled = np.ma.minimum(groundwaterlevel_sampled, bathymetry_sampled)
+    groundwaterlevel_sampled = np.ma.minimum(groundwaterlevel_sampled,
+                                             bathymetry_sampled)
 
-    #bathymetry from 0 up
+    # bathymetry from 0 up
     # bathymetry_minimum = min(np.ma.amin(bathymetry_sampled, 0), 0)
     # bathymetry_sampled = bathymetry_sampled - bathymetry_minimum
     minimum_level = min(
@@ -1088,9 +1097,11 @@ def get_response_for_getprofile(get_parameters):
         groundwater_delta=zip(
             mapped_compressed_distances,
             map(roundfunc, compressed_groundwaterlevels)),
-        offset=zip(mapped_compressed_distances,
+        offset=zip(
+            mapped_compressed_distances,
             [roundfunc(minimum_level)]*len(mapped_compressed_distances)),
-        summary=dict(minimum=minimum_level, maximum=maximum_level, margin=margin_level),
+        summary=dict(minimum=minimum_level, maximum=maximum_level,
+                     margin=margin_level),
     ))
 
     return content, 200, {
@@ -1124,8 +1135,8 @@ def get_response_for_getquantity(get_parameters):
     # get the flow link numbers from redis; N.B. link numbers are returned
     # as strings from redis
     loaded_model = utils.get_loaded_model()
-    link_numbers = rc.smembers('%s:%s:link_numbers' %
-                               (config.CACHE_PREFIX, loaded_model))
+    link_numbers = rc_node.smembers(
+        '%s:%s:link_numbers' % (config.CACHE_PREFIX, loaded_model))
 
     # Load quantity from netcdf
     netcdf_path = utils.get_netcdf_path(layer)
@@ -1141,8 +1152,8 @@ def get_response_for_getquantity(get_parameters):
                 continue
             # Normal variables
             if link_numbers:
-                # to convert to np.uint64, link_numbers need to be converted to a
-                # list first
+                # to convert to np.uint64, link_numbers need to be converted to
+                # a list first
                 np_link_numbers = np.uint64(list(link_numbers))
                 ma = np.ma.masked_array(
                     dataset.variables[quantity_key][time][np_link_numbers])
@@ -1211,14 +1222,13 @@ class StaticData(object):
         errors = []
         # Initialize pyramid for bathymetry
         pyramid_path = utils.get_pyramid_path(layer)
-        pyramid = rasters.Pyramid(path=pyramid_path,
-                                 compression='DEFLATE')
+        pyramid = rasters.Pyramid(path=pyramid_path, compression='DEFLATE')
 
         # Order building if necessary
         if not pyramid.has_data():
             tasks.make_pyramid.delay(layer)
             errors.append('Pyramid not ready yet, task submitted.')
-            #raise ValueError('Pyramid not ready yet, task submitted.')
+            # raise ValueError('Pyramid not ready yet, task submitted.')
         # If all ok, set pyramid attribute.
         self.pyramid = pyramid
 
@@ -1231,7 +1241,7 @@ class StaticData(object):
         if not monolith.has_data():
             tasks.make_monolith.delay(layer=layer)
             errors.append('Pyramid not ready yet, task submitted.')
-            #raise ValueError('Monolith not ready yet, task submitted.')
+            # raise ValueError('Monolith not ready yet, task submitted.')
 
         if errors:
             raise ValueError(' '.join(errors))
@@ -1255,7 +1265,7 @@ class DynamicData(object):
 
     def __init__(self, layer, time, variable='s1', netcdf_path=None):
         """ Load data from netcdf. """
-        #logging.debug('Loading dynamic data layer {}...'.format(layer))
+        # logging.debug('Loading dynamic data layer {}...'.format(layer))
         if netcdf_path is None:
             netcdf_path = utils.get_netcdf_path(layer)
         with Dataset(netcdf_path) as dataset:
