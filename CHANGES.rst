@@ -69,6 +69,8 @@ Changelog of threedi-wms
 
 - Fixed config bug (probably caused pyramid failed errors).
 
+- Bugfix gettimeseriess speeds it up by a large amount.
+
 
 0.10 (2014-04-17)
 -----------------

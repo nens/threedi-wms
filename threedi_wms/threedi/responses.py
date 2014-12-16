@@ -838,8 +838,8 @@ def get_response_for_gettimeseries(get_parameters):
 
     # Get height and quad
     if use_messages:
-        quad_container = message_data.get('quad_grid')
-        dps_container = message_data.get('dps')
+        quad_container = message_data.get('quad_grid', **get_parameters_extra)
+        dps_container = message_data.get('dps', **get_parameters_extra)
 
         if quad is None:
             quads, ms = get_data(container=quad_container, ma=True,
