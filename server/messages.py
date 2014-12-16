@@ -1,18 +1,13 @@
-
-from mmi import send_array, recv_array
+from mmi import recv_array
 from gislib import rasters
-from scipy import ndimage
 
 import scipy.interpolate
 import zmq
 import logging
 import threading
 import numpy as np
-import string
-import random
 from netCDF4 import Dataset
 
-import time  # stopwatch
 import osgeo.gdal
 import osgeo.osr
 import bisect
@@ -27,9 +22,18 @@ from status import StateReporter
 from threading import BoundedSemaphore
 from math import trunc
 
+from . import dump_data
+
+DELTARES_NO_DATA = 1e10
+NO_DATA = -9999
+
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
 # global zmq context
 ctx = zmq.Context()
 
@@ -41,6 +45,7 @@ DEPTH_VARS = [
     'dps', 'quad_grid']
 
 
+<<<<<<< HEAD
 def i_am_the_boss(filename, timeout_seconds=5):
     """Make sure I can write filename on my own"""
 
@@ -176,6 +181,8 @@ class NCDump(object):
         logger.debug('Done')
 
 
+=======
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
 class Listener(threading.Thread):
     def __init__(self, socket, message_data, *args, **kwargs):
         self.socket = socket
@@ -187,7 +194,6 @@ class Listener(threading.Thread):
 
     def reset_grid_data(self):
         logger.debug('Resetting grid data...')
-        #message_data.grid = {}
         for k in self.message_data.grid.keys():
             del self.message_data.grid[k]  # try to save memory
         self.message_data.interpolation_ready = False
@@ -216,11 +222,19 @@ class Listener(threading.Thread):
                 self.reporter.set_timestep(metadata['sim_time_seconds'])
                 logger.debug('Updating grid data [%s]' % metadata['name'])
                 if 'model' in metadata:
+<<<<<<< HEAD
                     restarted = metadata['name'] == 't1' and metadata['sim_time_seconds'] < 0.1
                     if metadata['model'] != message_data.loaded_model or restarted:
                         # Since working with 'reset', this part probably never
                         # occur anymore.
 
+=======
+                    restarted = (
+                        metadata['name'] == 't1' and
+                        metadata['sim_time_seconds'] < 0.1)
+                    if (metadata['model'] != message_data.loaded_model
+                            or restarted):
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
                         # New model detected
                         logger.info('New model detected: %r (old=%r)' % (
                             metadata['model'], message_data.loaded_model))
@@ -245,6 +259,7 @@ class Listener(threading.Thread):
                         #     del message_data.grid[metadata['name']]  # saves memory?
                         message_data.grid[metadata['name']] = arr.copy()
 
+<<<<<<< HEAD
                 # Receive one of the DEPTH_VARS and all DEPTH_VARS are complete
                 if (all([v in message_data.grid for v in DEPTH_VARS]) and
                     metadata['name'] in DEPTH_VARS):
@@ -263,18 +278,32 @@ class Listener(threading.Thread):
                 # check update indices
                 if (all([v in message_data.grid for v in UPDATE_INDICES_VARS]) and
                     metadata['name'] in UPDATE_INDICES_VARS):
+=======
+                if (all(v in message_data.grid for v in DEPTH_VARS) and
+                        metadata['name'] in DEPTH_VARS):
+
+                    logger.debug(
+                        'Update grids after receiving dps or quad_grid...')
+                    message_data.update_grids()
+                    logger.debug('Update grids finished.')
+
+                # check update indices
+                if (all(v in message_data.grid for v in UPDATE_INDICES_VARS)
+                        and metadata['name'] in UPDATE_INDICES_VARS):
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
 
                     logger.debug('Update indices...')
-                    message_data.X, message_data.Y, message_data.L = message_data.calc_indices()
+                    message_data.X, message_data.Y, message_data.L = (
+                        message_data.calc_indices())
                     logger.debug('Update indices finished.')
-            # elif metadata['action'] == 'postprocess':
-            #     logger.debug('Post processing...')
             elif metadata['action'] == 'update-pandas':
                 logger.debug('Update pandas data [%s]...', metadata['name'])
                 # TODO: in case of weir, delete unused variables.
-                message_data.pandas[metadata['name']] = json.loads(metadata['pandas_json'])
+                message_data.pandas[metadata['name']] = json.loads(
+                    metadata['pandas_json'])
 
             elif metadata['action'] == 'dump':
+<<<<<<< HEAD
                 output_filename = metadata['output_filename']
                 path_nc = os.path.join(metadata['input_path'], 'subgrid_map.nc')
 
@@ -414,6 +443,11 @@ class Listener(threading.Thread):
                             f.write('I failed...')
 
                     os.remove(output_filename + '.busy')  # So others can see we are finished.
+=======
+                dump_data.dump_data(
+                    metadata['output_filename'], metadata['input_path'],
+                    message_data)
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
             else:
                 logger.debug('Got an unknown message: %r' % metadata)
             # set this worker to not busy
@@ -430,7 +464,7 @@ class Listener(threading.Thread):
                 # Log everything
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 for line in traceback.format_exception(
-                    exc_type, exc_value, exc_traceback):
+                        exc_type, exc_value, exc_traceback):
                     logger.error(line)
 
                 # Throw away existing data: can be corrupt.
@@ -446,7 +480,7 @@ class MessageData(object):
         """make a socket that waits for new data in a thread"""
         subsock = ctx.socket(zmq.SUB)
         subsock.connect("tcp://localhost:{port}".format(port=sub_port))
-        subsock.setsockopt(zmq.SUBSCRIBE,b'')
+        subsock.setsockopt(zmq.SUBSCRIBE, b'')
         thread = Listener(subsock, self)
         thread.daemon = True
         thread.start()
@@ -477,13 +511,12 @@ class MessageData(object):
         n = (grid['nodn'][twod_idx] - 1)*jmaxk
 
         # TODO: handle 1D stuff correctly
-        #m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
-        #n = (grid['nodn']-1)*grid['jmaxk'][grid['nodk']-1]
         size = imaxk  # grid['imaxk'][grid['nodk']-1]
         mc = m + size/2.0
         nc = n + size/2.0
 
-        points = np.c_[mc.ravel() * grid['dxp'] + grid['x0p'] ,nc.ravel() * grid['dyp'] + grid['y0p']]
+        points = np.c_[mc.ravel() * grid['dxp'] + grid['x0p'],
+                       nc.ravel() * grid['dyp'] + grid['y0p']]
         self.points = points
         # create array with values
         values = np.zeros_like(mc.ravel())
@@ -491,17 +524,17 @@ class MessageData(object):
         # replace L.values with a an array of size points,nvar to interpolate
         L = scipy.interpolate.LinearNDInterpolator(points, values)
         s = np.s_[
-            grid['y0p']:grid['y1p']:complex(0,grid['jmax']),
-            grid['x0p']:grid['x1p']:complex(0,grid['imax'])
+            grid['y0p']:grid['y1p']:complex(0, grid['jmax']),
+            grid['x0p']:grid['x1p']:complex(0, grid['imax'])
         ]
-        #self.x, self.y = np.ogrid[s]
-        Y , X = np.mgrid[s]
-        transform= (float(grid['x0p']),  # xmin
-                    float(grid['dxp']), # xmax
-                    0,            # for rotation
-                    float(grid['y0p']),
-                    0,
-                    float(grid['dyp']))
+
+        Y, X = np.mgrid[s]
+        transform = (float(grid['x0p']),  # xmin
+                     float(grid['dxp']),  # xmax
+                     0,            # for rotation
+                     float(grid['y0p']),
+                     0,
+                     float(grid['dyp']))
         self.transform = transform
         self.wkt = grid['wkt']
         self.interpolation_ready = True
@@ -520,9 +553,10 @@ class MessageData(object):
         # Sometimes quad_grid.mask is False instead of a table... (model Miami)
         # TODO: investigate more
         if quad_grid.mask.__class__.__name__ == 'bool_':
-            mask = np.logical_or.reduce([dps<-9000,])
+            mask = np.logical_or.reduce([dps < -9000, ])
         else:
-            mask = np.logical_or.reduce([quad_grid.mask, dps<-9000])  # 4 seconds
+            mask = np.logical_or.reduce(
+                [quad_grid.mask, dps < -9000])  # 4 seconds
         if 'quad_grid_dps_mask' in grid:
             del self.grid['quad_grid_dps_mask']
         self.grid['quad_grid_dps_mask'] = mask
@@ -554,7 +588,8 @@ class MessageData(object):
           sg, quad_grid, infiltration,
           interception, soil, crop, maxdepth, arrival
 
-        from_disk: read grids.nc instead of memory, kwargs must contain kw 'layers':
+        from_disk: read grids.nc instead of memory, kwargs must
+        contain kw 'layers':
           duifp-duifp:maxdepth
 
         NOTE: maxdepth and arrival REQUIRE the from_disk method.
@@ -570,13 +605,16 @@ class MessageData(object):
             logger.debug('Memory from file...')
             layer_slug = kwargs['layers'].split(':')[0]
             logger.debug(layer_slug)
-            grid_path = os.path.join(config.DATA_DIR, '3di', layer_slug, 'grids.nc')
+            grid_path = os.path.join(
+                config.DATA_DIR, '3di', layer_slug, 'grids.nc')
 
-            if 'file-memory' in self.grid and self.grid['file-memory'] == generate_hash(
-                grid_path, layer_slug):
+            if ('file-memory' in self.grid and
+                    self.grid['file-memory'] == generate_hash(
+                        grid_path, layer_slug)):
 
                 # already loaded
-                # if a new file is placed in the same location, it is not detected!!
+                # if a new file is placed in the same location, it is
+                # not detected!!
                 logger.debug('already loaded from file into memory')
                 grid = self.grid
             else:
@@ -585,14 +623,16 @@ class MessageData(object):
                 nc = Dataset(grid_path, 'r', format='NETCDF3_CLASSIC')
                 grid = {}
                 grid['dsnop'] = nc.variables['dsnop'].getValue()[0]
+<<<<<<< HEAD
                 # grid['quad_grid_dps_mask'] = nc.variables['quad_grid_dps_mask'][:]
                 # grid['quad_grid'] = np.ma.masked_array(
                 #     nc.variables['quad_grid'][:],
                 #     mask=grid['quad_grid_dps_mask'])
                 # grid['vol1'] = nc.variables['vol1'][:]
+=======
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
                 grid['wkt'] = ''.join(nc.variables['wkt'])
                 grid['dps'] = nc.variables['dps'][:].copy()
-                #grid['maxlevel'] = nc.variables['maxlevel'][:]
                 grid['maxdepth'] = nc.variables['maxdepth'][:].copy()
                 grid['arrival'] = nc.variables['arrival'][:].copy()
 
@@ -606,26 +646,15 @@ class MessageData(object):
                 grid['file-memory'] = generate_hash(grid_path, layer_slug)
                 grid['layer-slug'] = layer_slug  # needed for getcapabilities
                 self.grid = grid
-                # grid['imax'] = nc.variables['imax'][:]
-                # grid['jmax'] = nc.variables['jmax'][:]
-                # grid['imaxk'] = nc.variables['imaxk'][:]
-                # grid['jmaxk'] = nc.variables['jmaxk'][:]
-
-                # grid['nodm'] = nc.variables['nodm'][:]
-                # grid['nodn'] = nc.variables['nodn'][:]
-                # grid['nodk'] = nc.variables['nodk'][:]
-                # grid['nod_type'] = nc.variables['nod_type'][:]
-
-                # # testing
-                # grid['nt'] = nc.variables['nt'].getValue()[0]
                 nc.close()
 
         if grid is None:
             if not self.grid:
-                logger.info('Initializing grids (is normally already done, unless some server error)')
+                logger.info(
+                    'Initializing grids (is normally already done,'
+                    ' unless some server error)')
                 return None  # Crashes, try again later!
             grid = self.grid
-        time_start = time.time()
 
         # try to get parameters from request
         srs = kwargs.get("srs")
@@ -637,7 +666,8 @@ class MessageData(object):
         logger.debug('bbox: %r' % str(bbox))
         height = int(kwargs.get("height", "0"))
         width = int(kwargs.get("width", "0"))
-        fast = float(kwargs.get("fast", "1.4"))  # multiply the slicing stepsize with 'fast'.
+        # multiply the slicing stepsize with 'fast'.
+        fast = float(kwargs.get("fast", "1.4"))
 
         if all([srs, bbox, height, width]):
             logger.debug("slicing and dicing")
@@ -646,14 +676,17 @@ class MessageData(object):
             src_srs = osgeo.osr.SpatialReference()
             src_srs.ImportFromEPSGA(int(srs.split(':')[1]))
             dst_srs = osgeo.osr.SpatialReference()
-            #logger.debug("wkt %r" % grid["wkt"])
+
             if 'wkt' in grid and grid['wkt']:
                 dst_srs.ImportFromWkt(grid["wkt"])
-                if dst_srs.GetAuthorityCode("PROJCS") == '28992' and not dst_srs.GetTOWGS84():
-                    logger.error("Check WKT for TOWGS84 string! Je weet tog ;-)")
+                if (dst_srs.GetAuthorityCode("PROJCS") == '28992'
+                        and not dst_srs.GetTOWGS84()):
+                    logger.error(
+                        "Check WKT for TOWGS84 string! Je weet tog ;-)")
             else:
                 logger.warning(
-                    'Something is probably wrong with the wkt (%r), taking default 28992.' % grid['wkt'])
+                    'Something is probably wrong with the wkt (%r),'
+                    ' taking default 28992.' % grid['wkt'])
                 dst_srs.ImportFromEPSGA(28992)
 
             src2dst = osgeo.osr.CoordinateTransformation(src_srs, dst_srs)
@@ -674,26 +707,38 @@ class MessageData(object):
             xmin_src, ymin_src = (grid['x0p'], grid['y0p'])
             xmax_src, ymax_src = (grid['x1p'], grid['y1p'])
             dx_src, dy_src = (grid['dxp'], grid['dyp'])
-            # logger.debug(xmin_src)
-            # logger.debug(xmax_src)
-            # logger.debug(dx_src)
             x_src = np.arange(xmin_src, xmax_src, dx_src)
             y_src = np.arange(ymin_src, ymax_src, dy_src)
             # Lookup indices of plotted grid
             # this can be done faster with a calculation
             dps_shape = grid['dps'].shape
-            x_start = min(max(bisect.bisect(x_src, xmin_dst) - 1, 0), dps_shape[1]-1)
-            x_end = min(max(bisect.bisect(x_src, xmax_dst) + 1, 0), dps_shape[1])
-            y_start = min(max(bisect.bisect(y_src, ymin_dst) - 1, 0), dps_shape[0]-1)
-            y_end = min(max(bisect.bisect(y_src, ymax_dst) + 1, 0), dps_shape[0])
+            x_start = min(
+                max(bisect.bisect(x_src, xmin_dst) - 1, 0),
+                dps_shape[1]-1)
+            x_end = min(
+                max(bisect.bisect(x_src, xmax_dst) + 1, 0),
+                dps_shape[1])
+            y_start = min(
+                max(bisect.bisect(y_src, ymin_dst) - 1, 0),
+                dps_shape[0]-1)
+            y_end = min(
+                max(bisect.bisect(y_src, ymax_dst) + 1, 0),
+                dps_shape[0])
             # lookup resolution: restricted to make it faster for big images
-            x_step = max(trunc(fast * (x_end - x_start)) // min(width, 1200), 1)
-            y_step = max(trunc(fast * (y_end - y_start)) // min(height, 800), 1)
-            num_pixels = (y_end - y_start) // y_step * (x_end - x_start) // x_step
-            logger.debug('Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d, pixels=%d' % (
-                y_start, y_end, y_step, x_start, x_end, x_step, width, height, num_pixels))
+            x_step = max(
+                trunc(fast * (x_end - x_start)) // min(width, 1200),
+                1)
+            y_step = max(
+                trunc(fast * (y_end - y_start)) // min(height, 800),
+                1)
+            num_pixels = ((y_end - y_start) // y_step *
+                          (x_end - x_start) // x_step)
+            logger.debug(
+                'Slice: y=%d,%d,%d x=%d,%d,%d width=%d height=%d, pixels=%d'
+                % (y_start, y_end, y_step, x_start, x_end, x_step,
+                   width, height, num_pixels))
             S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
-            #S = np.s_[:,:]
+
             # Compute transform for sliced grid
             transform = (
                 grid["x0p"] + dx_src*x_start,
@@ -706,14 +751,18 @@ class MessageData(object):
 
         else:
             logger.debug("couldn't find enough info in %s", kwargs)
-            S = np.s_[:,:]
+            S = np.s_[:, :]
             transform = self.transform
+<<<<<<< HEAD
         # logger.debug('transform: %s' % str(transform))
+=======
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
 
         if layer == 'waterlevel' or layer == 'waterheight':
-            nodatavalue = 1e10
             dps = grid['dps'][S].copy()
-            dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+
+            dps[dps == self.grid['dsnop']] = DELTARES_NO_DATA
+
             quad_grid = grid['quad_grid'][S]
             mask = grid['quad_grid_dps_mask'][S]
             s1 = self.grid['s1'].copy()
@@ -728,57 +777,69 @@ class MessageData(object):
                 if L is None:
                     logger.warn("Interpolation data not available")
                 X, Y = self.X[S], self.Y[S]
-                #L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
-                # scipy interpolate does not deal with masked arrays
-                # so we set waterlevels to nan where volume is 0
-                #s1[vol1 == 0] = np.nan
-                #s1 = np.where(vol1 == 0, -self.grid['dmax'], s1)
                 try:
-                    volmask = (vol1 == 0)[quad_grid]  # Kaapstad gives IndexError
-                    L.values = np.ascontiguousarray(s1[:,np.newaxis])
+                    # Kaapstad gives IndexError
+                    volmask = (vol1 == 0)[quad_grid]
+                    L.values = np.ascontiguousarray(s1[:, np.newaxis])
                     waterheight = L(X, Y)
                     # now mask the waterlevels where we did not compute
                     # or where mask of the
-                    mask = np.logical_or.reduce([np.isnan(waterheight), mask, volmask])
+                    mask = np.logical_or.reduce(
+                        [np.isnan(waterheight), mask, volmask])
                     waterheight = np.ma.masked_array(waterheight, mask=mask)
                 except IndexError:
                     # Fallback to nearest
                     # Kaapstad:
-                    # IndexError: index 1085856568 is out of bounds for size 16473
-                    logger.error('Interpolation crashed, falling back to nearest.')
+                    # IndexError: index 1085856568 is out of bounds
+                    # for size 16473
+                    logger.error(
+                        'Interpolation crashed, falling back to nearest.')
                     waterheight = s1[quad_grid.filled(0)]
                     # Log everything
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                     for line in traceback.format_exception(
-                        exc_type, exc_value, exc_traceback):
+                            exc_type, exc_value, exc_traceback):
                         logger.debug(line)
 
             if layer == 'waterlevel':
                 waterlevel = waterheight - (-dps)
 
+<<<<<<< HEAD
                 # Gdal does not know about masked arrays, so we transform to an array with
                 #  a nodatavalue
                 array = np.ma.masked_array(waterlevel, mask=mask).filled(nodatavalue)
                 container = rasters.NumpyContainer(array, transform, self.wkt,
                                                    nodatavalue=nodatavalue)
+=======
+                # Gdal does not know about masked arrays, so we
+                # transform to an array with a nodatavalue
+                array = np.ma.masked_array(
+                    waterlevel, mask=mask).filled(DELTARES_NO_DATA)
+                container = rasters.NumpyContainer(
+                    array, transform, self.wkt, nodatavalue=DELTARES_NO_DATA)
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
             elif layer == 'waterheight':
                 waterlevel = waterheight
 
-                # Strange: nodatavalue becomes 0, which is undesirable for getprofile
+                # Strange: nodatavalue becomes 0, which is undesirable
+                # for getprofile
                 array = np.ma.masked_array(waterlevel, mask=mask).filled(-dps)
+<<<<<<< HEAD
                 container = rasters.NumpyContainer(array, transform, self.wkt,
                                                    nodatavalue=nodatavalue)
 
+=======
+                container = rasters.NumpyContainer(
+                    array, transform, self.wkt, nodatavalue=DELTARES_NO_DATA)
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
 
             return container
         elif layer == 'dps':
             dps = grid['dps'][S].copy()
 
-            nodatavalue = 1e10
-            dps[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
-
+            dps[dps == self.grid['dsnop']] = DELTARES_NO_DATA
             container = rasters.NumpyContainer(
-                dps, transform, self.wkt, nodatavalue=nodatavalue)
+                dps, transform, self.wkt, nodatavalue=DELTARES_NO_DATA)
             return container
         elif layer == 'uc':
             quad_grid = grid['quad_grid'][S]
@@ -798,27 +859,23 @@ class MessageData(object):
             # A trick to hold all depths inside model, 0's are filtered out.
             groundwater_depth[np.ma.less_equal(groundwater_depth, 0.01)] = 0.01
 
-            # Set the Deltares no data value.
-            nodatavalue = 1e10
-            groundwater_depth[dps == self.grid['dsnop']] = nodatavalue
+            groundwater_depth[dps == self.grid['dsnop']] = DELTARES_NO_DATA
 
             container = rasters.NumpyContainer(
-                groundwater_depth, transform, self.wkt, nodatavalue=nodatavalue)
+                groundwater_depth, transform, self.wkt,
+                nodatavalue=DELTARES_NO_DATA)
             return container
         elif layer == 'sg_abs':
             dps = grid['dps'][S].copy()
             quad_grid = grid['quad_grid'][S]
             sg = grid['sg']
             groundwater_level = sg[quad_grid]
-            # A trick to hold all depths inside model, 0's are filtered out.
-            #groundwater_depth[np.ma.less_equal(groundwater_depth, 0.01)] = 0.01
 
-            # Set the Deltares no data value.
-            nodatavalue = 1e10
-            groundwater_level[dps == self.grid['dsnop']] = nodatavalue
+            groundwater_level[dps == self.grid['dsnop']] = DELTARES_NO_DATA
 
             container = rasters.NumpyContainer(
-                groundwater_level, transform, self.wkt, nodatavalue=nodatavalue)
+                groundwater_level, transform, self.wkt,
+                nodatavalue=DELTARES_NO_DATA)
             return container
         elif layer == 'quad_grid':
             quad_grid = grid['quad_grid'][S]
@@ -829,41 +886,37 @@ class MessageData(object):
             dps = grid['dps'][S].copy()
             g = grid['infiltrationrate'][S].copy()
 
-            nodatavalue = 1e10
-            g[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            g[dps == self.grid['dsnop']] = DELTARES_NO_DATA
 
             container = rasters.NumpyContainer(
-                g, transform, self.wkt, nodatavalue=nodatavalue)
+                g, transform, self.wkt, nodatavalue=DELTARES_NO_DATA)
             return container
         elif layer == 'interception':
             dps = grid['dps'][S].copy()
             g = grid['maxinterception'][S].copy()
 
-            nodatavalue = 1e10
-            g[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            g[dps == self.grid['dsnop']] = DELTARES_NO_DATA
 
             container = rasters.NumpyContainer(
-                g, transform, self.wkt, nodatavalue=nodatavalue)
+                g, transform, self.wkt, nodatavalue=DELTARES_NO_DATA)
             return container
         elif layer == 'soil':
             dps = grid['dps'][S].copy()
             g = grid['soiltype'][S].copy()
 
-            nodatavalue = 1e10
-            g[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            g[dps == self.grid['dsnop']] = DELTARES_NO_DATA
 
             container = rasters.NumpyContainer(
-                g, transform, self.wkt, nodatavalue=nodatavalue)
+                g, transform, self.wkt, nodatavalue=DELTARES_NO_DATA)
             return container
         elif layer == 'crop':
             dps = grid['dps'][S].copy()
             g = grid['croptype'][S].copy()
 
-            nodatavalue = 1e10
-            g[dps == self.grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            g[dps == self.grid['dsnop']] = DELTARES_NO_DATA
 
             container = rasters.NumpyContainer(
-                g, transform, self.wkt, nodatavalue=nodatavalue)
+                g, transform, self.wkt, nodatavalue=DELTARES_NO_DATA)
             return container
         elif layer == 'maxdepth':
             if not from_disk:
@@ -873,14 +926,19 @@ class MessageData(object):
             dps = grid['dps'][S].copy()
             wkt = grid['wkt']
 
-            nodatavalue = 1e10
-            a[dps == grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            a[dps == grid['dsnop']] = DELTARES_NO_DATA
 
+<<<<<<< HEAD
             # Strange stuff: no data value is not handled correctly in preprocessing
             a[a > 10000] = nodatavalue
+=======
+            # Strange stuff: no data value is not handled correctly in
+            # preprocessing
+            a[a > 10000] = DELTARES_NO_DATA
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
 
             container = rasters.NumpyContainer(
-                a, transform, wkt, nodatavalue=nodatavalue)
+                a, transform, wkt, nodatavalue=DELTARES_NO_DATA)
             return container
 
         elif layer == 'arrival':
@@ -891,11 +949,10 @@ class MessageData(object):
             dps = grid['dps'][S].copy()
             wkt = grid['wkt']
 
-            nodatavalue = 1e10
-            a[dps == grid['dsnop']] = nodatavalue  # Set the Deltares no data value.
+            a[dps == grid['dsnop']] = DELTARES_NO_DATA
 
             container = rasters.NumpyContainer(
-                a, transform, wkt, nodatavalue=nodatavalue)
+                a, transform, wkt, nodatavalue=DELTARES_NO_DATA)
             return container
 
         else:
@@ -909,20 +966,17 @@ class MessageData(object):
         return self.pandas.get(key, None)
 
     def __init__(self, sub_port=5558):
-        #self.req_port = req_port
         self.sub_port = sub_port
-        self.is_updating = BoundedSemaphore(1)  # When updating, let 'get' function wait
+        # When updating, let 'get' function wait
+        self.is_updating = BoundedSemaphore(1)
 
         self.transform = None
         # continuously fill data
-        #self.data = {}
         self.loaded_model = None
         self.grid = {}
         # define an interpolation function
         # use update indices to update these variables
         self.L = None
-        #self.x = None
-        #self.y = None
         self.X = None
         self.Y = None
         self.interpolation_ready = False
@@ -930,4 +984,4 @@ class MessageData(object):
         self.pandas = {}
 
         self.thread = None
-        self.make_listener(sub_port) # Listen to model messages
+        self.make_listener(sub_port)  # Listen to model messages
