@@ -842,8 +842,11 @@ def get_response_for_gettimeseries(get_parameters):
 
     # Get height and quad
     if use_messages:
+        logger.info('b1 %f' % (_time.time() - time_start))
         quad_container = message_data.get('quad_grid')
+        logger.info('b2 %f' % (_time.time() - time_start))
         dps_container = message_data.get('dps')
+        logger.info('b3 %f' % (_time.time() - time_start))
 
         if quad is None:
             quads, ms = get_data(container=quad_container, ma=True,
@@ -851,6 +854,7 @@ def get_response_for_gettimeseries(get_parameters):
             quad = int(quads[0, 0])
             logging.debug('Got quads in {} ms.'.format(ms))
 
+        logger.info('b4 %f' % (_time.time() - time_start))
         dps, ms = get_data(container=dps_container, ma=True,
                            **get_parameters_extra)
         logging.debug('Got dps in {} ms.'.format(ms))
