@@ -21,16 +21,18 @@ from matplotlib import colors
 from scipy import ndimage
 
 import numpy as np
-import ogr
-import redis
 
 # import collections
 import datetime
+import flask
 import io
 import json
 import logging
 import math
+import ogr
 import os
+import redis
+import shutil
 import time as _time  # stop watch
 
 from server.app import cache
@@ -1198,6 +1200,43 @@ def get_response_for_getcontours(get_parameters):
     return content, 200, {'content-type': 'application/json',
                           'Access-Control-Allow-Origin': '*',
                           'Access-Control-Allow-Methods': 'GET'}
+
+
+def get_response_for_getcapabilities(get_parameters):
+    """Simple and hacky getcapabilities implementation"""
+    from server.app import message_data 
+
+    layers = []
+    available_layer = message_data.grid.get('layer-slug', '')
+    if available_layer:
+        layers = [{
+            'url': '%s:arrival' % available_layer,
+            'name': '3Di arrival'},
+            {
+            'url': '%s:maxdepth' % available_layer, 
+            'name': '3Di max depth'}]
+    else:
+        layers = [{
+            'url': 'hhnk-gebiedsbreed-hhnk_hhnk%3Adepth',
+            'name': '3Di test layer'}]
+    if hasattr(config, 'HOST_NAME'):
+        host_name = config.HOST_NAME
+    else:
+        logger.warning('Fill in the HOST_NAME in your localconfig.py')
+        host_name = 'localhost:5000'
+    my_url = 'http://%s/3di/wms?SERVICE=WMS&MESSAGES=true&' \
+        'NOCACHE=yes&FADEANIMATION=false&FAST=1.4&TIME=42&HMAX=2&' \
+        'INTERPOLATE=linear&SRS=EPSG:3857&' % (host_name)
+
+    # 
+    content = flask.render_template(
+        '3di/wms-getcapabilities.xml', 
+        layers=layers, 
+        my_url=my_url)
+    return content, 200, {'content-type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'Access-Control-Allow-Methods': 'GET'}
+
 
 
 class StaticData(object):

@@ -36,6 +36,7 @@ def wms():
     request_handlers = dict(
         getinfo=responses.get_response_for_getinfo,
         getmap=responses.get_response_for_getmap,
+        getcapabilities=responses.get_response_for_getcapabilities,
     )
     return request_handlers[request](get_parameters=get_parameters)
 

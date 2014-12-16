@@ -5,11 +5,18 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Implemented simple getcapabilities function.
+
+- Added dumping of geotiffs too after 'Archive'. Currently only works for dem_hhnk (5m).
+
 - Fix tests by reverting bootstrap.py to an older version and using our own
   distribute_setup.py.
+<<<<<<< HEAD
 
 - Add a timer for measuring whether wms is busy and put the wms busy state in
   redis, so that it is sent to the client.
+=======
+>>>>>>> 04c4d58170ac9fd39e66acddf3bdf65bad3e4ee1
 
 - Added getmap sg_abs (ground water level).
 
@@ -216,5 +223,3 @@ new gislib.
 - Added rasterinfo blueprint (app in Django lingo)
 
 - Initial project structure created with nensskel 1.33.dev0.
-
-
