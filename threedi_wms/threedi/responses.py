@@ -798,7 +798,9 @@ def get_response_for_gettimeseries(get_parameters):
     maxpoints=500 -> throw away points if # > maxpoints
     """
     # No global import, celery doesn't want this.
+    time_start = _time.time()
     from server.app import message_data
+    logger.info('a %f' % (_time.time() - time_start))
 
     if get_parameters.get('messages', 'false') == 'true':
         use_messages = True
@@ -836,6 +838,8 @@ def get_response_for_gettimeseries(get_parameters):
     else:
         layer, mode = layer_parameter, 's1'
 
+    logger.info('b %f' % (_time.time() - time_start))
+
     # Get height and quad
     if use_messages:
         quad_container = message_data.get('quad_grid')
@@ -853,6 +857,7 @@ def get_response_for_gettimeseries(get_parameters):
 
         bathymetry = -dps
         height = bathymetry[0, 0]  # not needed when absolute=true
+        logger.info('c1 %f' % (_time.time() - time_start))
     else:
         static_data = StaticData.get(layer=layer)
         if quad is None:
@@ -867,6 +872,7 @@ def get_response_for_gettimeseries(get_parameters):
         logging.debug('Got bathymetry in {} ms.'.format(ms))
 
         height = bathymetry[0, 0]
+        logger.info('c1 %f' % (_time.time() - time_start))
 
     if not height:
         logging.debug('Got no height.')
@@ -895,6 +901,8 @@ def get_response_for_gettimeseries(get_parameters):
                 depth = v[mode][:, quad]
         var_units = v[mode].getncattr('units')
 
+    logger.info('d %f' % (_time.time() - time_start))
+
     compressed_time = time
     compressed_depth = depth
 
@@ -910,6 +918,8 @@ def get_response_for_gettimeseries(get_parameters):
         time_list = []
     depth_list = compressed_depth.round(3).tolist()
 
+    logger.info('e %f' % (_time.time() - time_start))
+
     while len(depth_list) > maxpoints:
         # Never throw away the last item.
         depth_list = depth_list[:-1:2] + depth_list[-1:]
@@ -920,6 +930,9 @@ def get_response_for_gettimeseries(get_parameters):
         height=float(height),
         units=var_units)
     content = json.dumps(content_dict)
+
+    logger.info('f %f' % (_time.time() - time_start))
+
     return content, 200, {
         'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*',
