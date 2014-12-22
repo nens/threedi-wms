@@ -79,6 +79,12 @@ class StateReporter(object):
                 int(previous_busy_workers) == 1):  # current == 0
             # switch from 1 to 0 busy wms workers: remove wms_busy_since
             self.rc.delete('%s:wms_busy_since' % self.redis_key)
+        # We suspect that sometimes the number of busy workers falls below 0.
+        # We don't know the exact cause, but we need to adjust that, because
+        # number of busy workers can never be below 0.
+        if (previous_busy_workers is not None and
+                int(previous_busy_workers) == 0):  # current == -1
+            self.correct_negative_busy_workers()
 
     def get_busy_workers(self):
         """Return number of busy workers. Primarily for debug purposes."""
@@ -114,3 +120,11 @@ class StateReporter(object):
                 self.rc.set('%s:wms_busy' % self.redis_key, 1)
             else:
                 self.rc.delete('%s:wms_busy' % self.redis_key)
+
+    def correct_negative_busy_workers(self):
+        """
+        We suspect that sometimes the number of busy workers falls below 0.
+        We don't know the exact cause, but we need to adjust that, because
+        number of busy workers can never be below 0.
+        """
+        self.rc.set('%s:wms_busy_workers' % self.redis_key, 0)
