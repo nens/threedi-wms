@@ -8,6 +8,10 @@ Changelog of threedi-wms
 - Fix tests by reverting bootstrap.py to an older version and using our own
   distribute_setup.py.
 
+- Fix negative number of busy wms workers. This can occur sometimes, but should
+  always be corrected to 0, because number of busy workers < 0 does not make
+  sense. Reason for it to become lower than 0 is unknown.
+
 - Add a timer for measuring whether wms is busy and put the wms busy state in
   redis, so that it is sent to the client.
 
