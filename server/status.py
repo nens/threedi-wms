@@ -27,7 +27,7 @@ def current_timestamp():
 class StateReporter(object):
     """
     Set threedi-wms status messages in redis state database. These messages
-    can then be forwarded to theend-user.
+    can then be forwarded to the end-user.
 
     """
     def __init__(self):
