@@ -14,7 +14,6 @@ import redis
 import flask
 
 from server import config
-from server.app import cache
 
 
 def get_parameters():
@@ -33,7 +32,6 @@ def get_ip_address(ifname='eth0'):
     )[20:24])
 
 
-@cache.cached(timeout=50, key_prefix='subgrid_id')
 def fetch_subgrid_id():
     """Return the subgrid id.
 
