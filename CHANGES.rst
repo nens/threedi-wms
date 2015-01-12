@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Better colors for infiltration and interception.
+
 - Fix tests by reverting bootstrap.py to an older version and using our own
   distribute_setup.py.
 
