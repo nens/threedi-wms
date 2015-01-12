@@ -111,52 +111,6 @@ def get_depth_image(masked_array, hmin=0, hmax=2):
     return rgba2image(rgba=rgba)
 
 
-def get_green_image(masked_array, hmin=0, hmax=2):
-    """ Return a png image from masked_array. """
-    # Hardcode depth limits, until better height data
-    normalize = colors.Normalize(vmin=hmin, vmax=hmax)
-    normalized_arr = normalize(masked_array)
-    # Custom color map
-    cdict = {
-        'red': ((0.0, 167. / 256, 167. / 256),
-                (1.0, 14. / 256, 14. / 256)),
-        'green': ((0.0, 192. / 256, 192. / 256),
-                  (1.0, 118. / 256, 118. / 256)),
-        'blue': ((0.0, 163. / 256, 163. / 256),
-                 (1.0, 0. / 256, 0. / 256)),
-        'alpha': ((0.0, 64. / 256, 64. / 256),
-                  (1.0, 256. / 256, 256. / 256)),
-    }
-    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
-    # Apply scaling and colormap
-
-    rgba = colormap(normalized_arr, bytes=True)
-    # If matplotlib does not support alpha and you want it anyway:
-    # Use red as alpha, then overwrite the alpha channel
-    cdict2 = {  # some versions of matplotlib do not have alpha
-        'green': ((0.0, 200. / 256, 200. / 256),
-                  (1.0, 65. / 256, 65. / 256)),
-        'blue': ((0.0, 255. / 256, 255. / 256),
-                 (1.0, 146. / 256, 146. / 256)),
-        # alpha!!
-        'red': ((0.0, 0. / 256, 0. / 256),
-                (0.03, 32. / 256, 32. / 256),
-                (0.07, 64. / 256, 64. / 256),
-                (0.2, 128. / 256, 128. / 256),
-                (0.5, 256. / 256, 256. / 256),
-                (1.0, 256. / 256, 256. / 256)),
-    }
-    colormap2 = colors.LinearSegmentedColormap('something', cdict2, N=1024)
-    rgba2 = colormap2(normalized_arr, bytes=True)
-    rgba[..., 3] = rgba2[..., 0]
-
-    # Make very small/negative depths transparent
-    rgba[..., 3][np.ma.less_equal(masked_array, 0.01)] = 0
-    rgba[masked_array.mask, 3] = 0
-
-    return rgba2image(rgba=rgba)
-
-
 def get_soil_image(masked_array, hmin=0, hmax=7):
     """ Return a png image from masked_array. """
     colormap = colors.ListedColormap([
@@ -289,6 +243,38 @@ def get_bathymetry_image(masked_array, limits):
                  (0.71, 46. / 256, 46. / 256),
                  (0.85, 150. / 256, 150. / 256),
                  (1.0, 230. / 256, 230. / 256)),
+        'alpha': ((0.0, 256. / 256, 256. / 256),
+                  (1.0, 256. / 256, 256. / 256)),
+    }
+    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
+    # Apply scaling and colormap
+
+    rgba = colormap(normalized_arr, bytes=True)
+
+    return rgba2image(rgba=rgba)
+
+
+def get_color_image(masked_array, color_a=None, color_b=None, vmin=0, vmax=1):
+    """ Return imagedata in a sort of rainbow. """
+    if color_a is None:
+        # default: magenta
+        color_a = (256, 50, 256)
+    if color_b is None:
+        # default: green
+        color_b = (50, 256, 50)
+    normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    cdict = {
+        'red': ((0.0, color_a[0] / 256., color_a[0] / 256.),
+                (0.5, 256. / 256., 256. / 256.),
+                (1.0, color_b[0] / 256., color_b[0] / 256.)),
+        'green': ((0.0, color_a[1] / 256, color_a[1] / 256),
+                  (0.5, 256. / 256, 256. / 256),
+                  (1.0, color_b[1] / 256, color_b[1] / 256)),
+        'blue': ((0.0, color_a[2] / 256, color_a[2] / 256),
+                 (0.5, 256. / 256, 256. / 256),
+                 (1.0, color_b[2] / 256, color_b[2] / 256)),
         'alpha': ((0.0, 256. / 256, 256. / 256),
                   (1.0, 256. / 256, 256. / 256)),
     }
@@ -667,12 +653,16 @@ def get_response_for_getmap(get_parameters):
         container = message_data.get("infiltration", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img = get_depth_image(masked_array=u, hmax=1000)
+        content, img = get_color_image(
+            masked_array=u, color_a=(256, 50, 256), color_b=(50, 256, 50),
+            vmin=0, vmax=1000)
     elif mode == 'interception':
         container = message_data.get("interception", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img = get_green_image(masked_array=u, hmax=.020)
+        content, img = get_color_image(
+            masked_array=u, color_a=(50, 256, 256), color_b=(256, 50, 50),
+            vmin=0, vmax=0.020)
     elif mode == 'soil':
         container = message_data.get("soil", **get_parameters)
         if container is None:
