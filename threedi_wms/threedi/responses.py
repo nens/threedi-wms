@@ -655,7 +655,7 @@ def get_response_for_getmap(get_parameters):
 
         content, img = get_color_image(
             masked_array=u, color_a=(256, 50, 256), color_b=(50, 256, 50),
-            vmin=0, vmax=1000)
+            vmin=0, vmax=500)
     elif mode == 'interception':
         container = message_data.get("interception", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
