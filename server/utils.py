@@ -39,7 +39,7 @@ def fetch_subgrid_id():
     id.
 
     """
-    if config.THREEDI_SUBGRID_STANDALONE:
+    if config.THREEDI_STANDALONE_SUBGRID_MACHINE:
         # standalone
         # get the subgrid id by the machine's ip address
         rc = redis.Redis(

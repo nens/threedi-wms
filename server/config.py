@@ -30,7 +30,7 @@ CELERY_DB = os.path.join(CELERY_DIR, 'celerydb.sqlite')
 USE_CACHE = False  # redis
 CACHE_PREFIX = 'subgrid:10000'
 THREEDI_SUBGRID_ID = 'subgrid:10000'
-THREEDI_SUBGRID_STANDALONE = False
+THREEDI_STANDALONE_SUBGRID_MACHINE = False
 
 # SENTRY_DSN = None  # TODO: fill
 
