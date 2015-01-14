@@ -10,6 +10,7 @@ from datetime import datetime
 import redis
 
 from server import config
+from server.utils import fetch_subgrid_id
 
 
 def to_timestamp(dt, epoch=datetime(1970, 1, 1)):
@@ -27,7 +28,7 @@ def current_timestamp():
 class StateReporter(object):
     """
     Set threedi-wms status messages in redis state database. These messages
-    can then be forwarded to theend-user.
+    can then be forwarded to the end-user.
 
     """
     def __init__(self):
@@ -35,7 +36,7 @@ class StateReporter(object):
         self.rc = redis.Redis(
             host=config.REDIS_HOST, port=config.REDIS_PORT,
             db=config.REDIS_STATE_DB)
-        self.redis_key = config.THREEDI_SUBGRID_ID
+        self.redis_key = fetch_subgrid_id()
 
     def set_timestep(self, timestep):
         """Write timestep to redis."""
