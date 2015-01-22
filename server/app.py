@@ -11,13 +11,17 @@ from server import loghelper
 from server.messages import MessageData
 from server import config
 from server import status
+from server import utils
 
 import flask
 from flask.ext.cache import Cache
 from raven.contrib.flask import Sentry
 
+import redis
 
 # For celery
+import time
+
 _app = flask.Flask(__name__)
 cache = Cache(_app, config={'CACHE_TYPE': 'null', })
 
@@ -70,6 +74,15 @@ def build_app(sub_port=5558, **kwargs):
         url_prefix = '/' + blueprint.name
         app.register_blueprint(blueprint, url_prefix=url_prefix)
 
+    # use the correct subgrid id
+    subgrid_id = utils.fetch_subgrid_id()
+    while not subgrid_id:
+        print('waiting for a subgrid id from redis...')
+        time.sleep(1)
+        subgrid_id = utils.fetch_subgrid_id()
+    app.config['THREEDI_SUBGRID_ID'] = subgrid_id
+    print("using subgrid id: %s" % subgrid_id)
+
     print("ready to rock and roll!")
 
     return app
@@ -79,5 +92,3 @@ def build_app(sub_port=5558, **kwargs):
 def run():
     app = build_app(sub_port=5558)
     app.run(host='0.0.0.0', debug=True)
-
-
