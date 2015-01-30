@@ -6,6 +6,9 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 
+import logging
+import time
+
 from server import blueprints
 from server import loghelper
 from server.messages import MessageData
@@ -17,15 +20,14 @@ import flask
 from flask.ext.cache import Cache
 from raven.contrib.flask import Sentry
 
-import redis
-
-# For celery
-import time
-
 _app = flask.Flask(__name__)
 cache = Cache(_app, config={'CACHE_TYPE': 'null', })
 
 reporter = status.StateReporter()
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def build_app(sub_port=5558, **kwargs):
@@ -35,11 +37,8 @@ def build_app(sub_port=5558, **kwargs):
     global cache
 
     print("Starting threedi-wms...")
-    # Setup logging
-    loghelper.setup_logging(logfile_name='server.log')
-    # Using print because I don't see logging output on screen while running manually
-    # print("request port: %d (server should process requests on this port)" % req_port)
-    print("subscription port: %d (server should publish on this port)" % sub_port)
+    print("subscription port: %d (server should publish on this port)" %
+          sub_port)
 
     # App
     app = flask.Flask(__name__)
@@ -77,7 +76,9 @@ def build_app(sub_port=5558, **kwargs):
     # use the correct subgrid id
     subgrid_id = utils.fetch_subgrid_id()
     while not subgrid_id:
-        print('waiting for a subgrid id from redis...')
+        msg = 'waiting for a subgrid id from redis...'
+        print(msg)
+        logger.info(msg)
         time.sleep(1)
         subgrid_id = utils.fetch_subgrid_id()
     app.config['THREEDI_SUBGRID_ID'] = subgrid_id
