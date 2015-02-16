@@ -256,7 +256,10 @@ def dump_geotiff(output_filename, values):
     """
     # Import libs
     logger.info("Writing [%s] geotiff..." % output_filename)
-    origin_x, origin_y = 98970.000000000000000, 553410.000000000000000
+    # hhnk gebiedsbreed
+    #origin_x, origin_y = 98970.000000000000000, 553410.000000000000000
+    # texel
+    origin_x, origin_y = 109280.000000000000000,577880
     height, width = values.shape
 
     # Create gtif
