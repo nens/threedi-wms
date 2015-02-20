@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Add logstash logging handler.
+
 - Better colors for infiltration and interception, range of infiltration to 
   0-500.
 
