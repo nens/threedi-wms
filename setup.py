@@ -14,6 +14,7 @@ install_requires = [
     'gislib',
     'gunicorn',
 #    'blinker',
+    'ipdb',
     'matplotlib',
     'netCDF4',
     'Pillow',
