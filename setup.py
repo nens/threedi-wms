@@ -17,6 +17,7 @@ install_requires = [
     'matplotlib',
     'netCDF4',
     'Pillow',
+    'python-logstash',
     'requests',
     'scipy',
     'setuptools',
