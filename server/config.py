@@ -46,5 +46,6 @@ WMS_BUSY_THRESHOLD = 2  # 2 seconds
 # import local settings
 try:
     from server.localsettings import *
+    from server.localloggingsettings import *
 except ImportError:
     pass

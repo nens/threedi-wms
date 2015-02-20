@@ -55,16 +55,19 @@ def _get_logging_dict(logfile_path):
 
 
 def setup_logging(logfile_name):
-    """ Setup logging according to logfile and settings. """
-    # Get logging dictionary
+    """Setup logging according to logfile and settings."""
     logfile_path = os.path.join(config.LOG_DIR, logfile_name)
-    logging_dict = _get_logging_dict(logfile_path=logfile_path)
-    # Create directory if necessary
+    if hasattr(config, 'LOGGING'):
+        logging_dict = config.LOGGING
+        logging_dict['handlers']['file']['filename'] = logfile_path
+    else:
+        logging_dict = _get_logging_dict(logfile_path=logfile_path)
+    # create directory if necessary
     try:
         os.makedirs(os.path.dirname(
             logging_dict['handlers']['file']['filename'],
         ))
     except OSError:
-        pass  # Already exists
-    # Config logging
+        pass  # probably already exists
+    # config logging
     logging.config.dictConfig(logging_dict)
