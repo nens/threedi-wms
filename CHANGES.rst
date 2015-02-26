@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Removed archiving Arrival times and Max depth (it is implemented in
+  threedi-result now).
+
 - Add logstash logging handler.
 
 - Better colors for infiltration and interception, range of infiltration to 
