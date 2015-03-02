@@ -35,6 +35,7 @@ import time as _time  # stop watch
 
 from server.app import cache
 from server import config as redis_config
+from server import utils as server_utils
 
 ogr.UseExceptions()
 
@@ -1125,8 +1126,9 @@ def get_response_for_getquantity(get_parameters):
     # get the flow link numbers from redis; N.B. link numbers are returned
     # as strings from redis
     loaded_model = utils.get_loaded_model()
+    redis_key = server_utils.fetch_subgrid_id()
     link_numbers = rc_node.smembers(
-        '%s:%s:link_numbers' % (config.CACHE_PREFIX, loaded_model))
+        '%s:%s:link_numbers' % (redis_key, loaded_model))
 
     # Load quantity from netcdf
     netcdf_path = utils.get_netcdf_path(layer)

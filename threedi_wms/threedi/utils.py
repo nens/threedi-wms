@@ -23,6 +23,7 @@ import redis
 from gislib import projections
 
 from server import config as server_config
+from server import utils as server_utils
 from threedi_wms.threedi import config
 
 logger = logging.getLogger(__name__)
@@ -93,5 +94,5 @@ def get_bathymetry_srs(filename):
 
 def get_loaded_model():
     """Return the loaded_model (slug) from redis)."""
-    threedi_subgrid_id = config.CACHE_PREFIX
+    threedi_subgrid_id = server_utils.fetch_subgrid_id()
     return rc.get('%s:loaded_model' % threedi_subgrid_id)

@@ -6,22 +6,28 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 
+import logging
+import time
+
 from server import blueprints
 from server import loghelper
 from server.messages import MessageData
 from server import config
 from server import status
+from server import utils
 
 import flask
 from flask.ext.cache import Cache
 from raven.contrib.flask import Sentry
 
-
-# For celery
 _app = flask.Flask(__name__)
 cache = Cache(_app, config={'CACHE_TYPE': 'null', })
 
 reporter = status.StateReporter()
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def build_app(sub_port=5558, **kwargs):
@@ -31,11 +37,8 @@ def build_app(sub_port=5558, **kwargs):
     global cache
 
     print("Starting threedi-wms...")
-    # Setup logging
-    loghelper.setup_logging(logfile_name='server.log')
-    # Using print because I don't see logging output on screen while running manually
-    # print("request port: %d (server should process requests on this port)" % req_port)
-    print("subscription port: %d (server should publish on this port)" % sub_port)
+    print("subscription port: %d (server should publish on this port)" %
+          sub_port)
 
     # App
     app = flask.Flask(__name__)
@@ -43,6 +46,8 @@ def build_app(sub_port=5558, **kwargs):
         cache_config = {
             'CACHE_TYPE': 'redis',
             'CACHE_KEY_PREFIX': config.CACHE_PREFIX,
+            'CACHE_REDIS_HOST': config.REDIS_HOST,
+            'CACHE_REDIS_PORT': config.REDIS_PORT,
             'CACHE_REDIS_DB': 3,
             }
     else:
@@ -68,6 +73,17 @@ def build_app(sub_port=5558, **kwargs):
         url_prefix = '/' + blueprint.name
         app.register_blueprint(blueprint, url_prefix=url_prefix)
 
+    # use the correct subgrid id
+    subgrid_id = utils.fetch_subgrid_id()
+    while not subgrid_id:
+        msg = 'waiting for a subgrid id from redis...'
+        print(msg)
+        logger.info(msg)
+        time.sleep(1)
+        subgrid_id = utils.fetch_subgrid_id()
+    app.config['THREEDI_SUBGRID_ID'] = subgrid_id
+    print("using subgrid id: %s" % subgrid_id)
+
     print("ready to rock and roll!")
 
     return app
@@ -77,5 +93,3 @@ def build_app(sub_port=5558, **kwargs):
 def run():
     app = build_app(sub_port=5558)
     app.run(host='0.0.0.0', debug=True)
-
-
