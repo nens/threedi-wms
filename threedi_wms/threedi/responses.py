@@ -357,6 +357,12 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     return rgba2image(rgba=rgba)
 
 
+def get_velocity_array(masked_array, vmin=0, vmax=3):
+    """return velocity array encoded in image"""
+    rgba = np.rollaxis(masked_array.view('uint8').reshape(masked_array.shape[0], 4, masked_array.shape[1]), 1, start=3)
+    return rgba2image(rgba=rgba)
+
+
 def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     """ Return imagedata. """
     # Custom color map
@@ -632,6 +638,13 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img = get_velocity_image(masked_array=u)
+    elif mode == 'u' or mode == 'v':
+        # get u or v image
+        container = message_data.get(mode, **get_parameters)
+        # warp
+        u, ms = get_data(container, ma=True, **get_parameters)
+        # float32 -> uint8[4]
+        content, img = get_velocity_array(masked_array=u)
     elif mode == 'sg':  # ground water, only with use_messages
         container = message_data.get("sg", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)

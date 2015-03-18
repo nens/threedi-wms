@@ -33,8 +33,14 @@ ctx = zmq.Context()
 
 
 UPDATE_INDICES_VARS = [
-    'nod_type', 'imaxk', 'nodk', 'jmaxk', 'nodm', 'nodn',
-    'dxp', 'x0p', 'dyp', 'y0p', 'x1p', 'y1p', 'imax', 'jmax', 'wkt']
+    'nod_type', 'link_type',
+    'imaxk', 'nodk', 'jmaxk', 'nodm', 'nodn',
+    'dxp', 'x0p', 'dyp', 'y0p', 'x1p', 'y1p',
+    'imax', 'jmax', 'wkt',
+    'liutot', 'livtot'
+]
+
+
 DEPTH_VARS = [
     'dps', 'quad_grid']
 
@@ -640,6 +646,72 @@ class MessageData(object):
 
             container = rasters.NumpyContainer(
                 uc_norm[quad_grid], transform, self.wkt)
+            return container
+        elif layer == 'u' or layer == 'v':
+            u1 = grid['u1']
+            is_u = np.zeros_like(u1, dtype='bool')
+            is_v = np.zeros_like(u1, dtype='bool')
+            # fill the boolean indices
+            liutot = grid['liutot']
+            is_u[:liutot] = True
+            livtot = grid['livtot']
+            is_v[(liutot):(liutot+livtot)] = True
+            assert np.all(is_u == ~is_v), 'Got inconsistent indices for u, v'
+
+            # Get the u velocities (on interfaces, contains both u and v direction)
+            u1 = grid['u1']
+            link_type = grid['link_type']
+            # only the 2d links
+            u1 = u1[link_type == 1]
+
+            # get the coordinates
+            xu = grid['FlowLink_xu']
+            yu = grid['FlowLink_yu']
+            # only the 2d links
+            xu = xu[link_type == 1]
+            yu = yu[link_type == 1]
+
+            if layer == 'u':
+                index = is_u
+            elif layer == 'v':
+                index = is_v
+            # define interpolation function for U,V
+            # that interpolates u1 to grid
+            F = scipy.interpolate.LinearNDInterpolator(
+                np.c_[xu[index], yu[index]],
+                u1[index]
+            )
+            x = np.arange(
+                grid['x0p'],
+                grid['x0p'] + grid['imax']*grid['dxp'],
+                grid['dxp']
+            )
+            y = np.arange(
+                grid['y0p'],
+                grid['y0p'] + grid['jmax']*grid['dyp'],
+                grid['dyp']
+            )
+            # this seems to be the same as update_indices
+            Y, X = np.meshgrid(y, x)
+
+            # compute pixel velocities
+            # can be replaced by better algorithm that takes into account local roughness
+            velocity = F(np.c_[X.ravel(), Y.ravel()])
+
+            # fit in correct shape
+            velocity = velocity.reshape(X.shape).T
+
+            # from m/s to px/s
+            if layer == 'u':
+                pixel_velocity = velocity / grid['dxp']
+            elif layer == 'v':
+                pixel_velocity = velocity / grid['dyp']
+
+            # return as float32 for encoding in image
+            pixel_velocity = pixel_velocity.astype('float32')
+
+            container = rasters.NumpyContainer(
+                pixel_velocity, transform, self.wkt)
             return container
         elif layer == 'sg':
             dps = grid['dps'][S].copy()
