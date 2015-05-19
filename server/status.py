@@ -6,12 +6,16 @@ from __future__ import absolute_import
 from __future__ import division
 
 from datetime import datetime
+import logging
 import time
 
 import redis
 
 from server import config
 from server import utils
+
+
+logger = logging.getLogger(__name__)
 
 
 def to_timestamp(dt, epoch=datetime(1970, 1, 1)):
@@ -40,7 +44,8 @@ class StateReporter(object):
         # get the correct subgrid id
         subgrid_id = utils.fetch_subgrid_id()
         while not subgrid_id:
-            print('[StateReporter] waiting for a subgrid id from redis...')
+            logger.info(
+                '[StateReporter] waiting for a subgrid id from redis...')
             time.sleep(1)
             subgrid_id = utils.fetch_subgrid_id()
         self.redis_key = subgrid_id

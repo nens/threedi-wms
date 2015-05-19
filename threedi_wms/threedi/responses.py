@@ -24,7 +24,6 @@ import numpy as np
 import ogr
 import redis
 
-# import collections
 import datetime
 import io
 import json
@@ -597,7 +596,7 @@ def get_response_for_getmap(get_parameters):
         if not use_messages:
             bathymetry, ms = get_data(container=static_data.pyramid,
                                       ma=True, **get_parameters)
-        logging.debug('Got bathymetry in {} ms.'.format(ms))
+        logger.debug('Got bathymetry in {} ms.'.format(ms))
 
     # The velocity layer has the depth layer beneath it
     if mode == 'depth':
@@ -633,7 +632,7 @@ def get_response_for_getmap(get_parameters):
         content, img = get_depth_image(masked_array=depth,
                                        hmax=hmax)
     elif mode == 'bathymetry':
-        logging.debug('bathymetry min, max %r %r' % (np.amin(bathymetry),
+        logger.debug('bathymetry min, max %r %r' % (np.amin(bathymetry),
                                                      np.amax(bathymetry)))
         limits = map(float, get_parameters['limits'].split(','))
         content, img = get_bathymetry_image(masked_array=bathymetry,
@@ -677,7 +676,7 @@ def get_response_for_getmap(get_parameters):
     elif mode == 'soil':
         container = message_data.get("soil", **get_parameters)
         if container is None:
-            logging.info('WMS not ready for mode: {}'.format(mode))
+            logger.info('WMS not ready for mode: {}'.format(mode))
             content = ''
         else:
             u, ms = get_data(container, ma=True, **get_parameters)
@@ -690,7 +689,7 @@ def get_response_for_getmap(get_parameters):
     elif mode == 'crop':
         container = message_data.get("crop", **get_parameters)
         if container is None:
-            logging.info('WMS not ready for mode: {}'.format(mode))
+            logger.info('WMS not ready for mode: {}'.format(mode))
             content = ''
         else:
             u, ms = get_data(container, ma=True, **get_parameters)
@@ -763,7 +762,7 @@ def get_response_for_getinfo(get_parameters):
             # It defaults to Rijksdriehoek RD
             source_projection = utils.get_bathymetry_srs(bathy_path)
 
-            logging.info('Source projection: %r' % source_projection)
+            logger.info('Source projection: %r' % source_projection)
             #source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
             target_projection = srs
             extent = gislib_utils.get_transformed_extent(
@@ -772,7 +771,7 @@ def get_response_for_getinfo(get_parameters):
                 target_projection=target_projection,
             )
         else:
-            logging.warning('No srs data available.')
+            logger.warning('No srs data available.')
             extent = netcdf_extent
 
         # Prepare response
@@ -846,11 +845,11 @@ def get_response_for_gettimeseries(get_parameters):
             quads, ms = get_data(container=quad_container, ma=True,
                                  **get_parameters_extra)
             quad = int(quads[0, 0])
-            logging.debug('Got quads in {} ms.'.format(ms))
+            logger.debug('Got quads in {} ms.'.format(ms))
 
         dps, ms = get_data(container=dps_container, ma=True,
                            **get_parameters_extra)
-        logging.debug('Got dps in {} ms.'.format(ms))
+        logger.debug('Got dps in {} ms.'.format(ms))
 
         bathymetry = -dps
         height = bathymetry[0, 0]  # not needed when absolute=true
@@ -860,19 +859,19 @@ def get_response_for_gettimeseries(get_parameters):
             quads, ms = get_data(container=static_data.monolith,
                                  ma=True, **get_parameters_extra)
             quad = int(quads[0, 0])
-            logging.debug('Got quads in {} ms.'.format(ms))
-        logging.debug('Quad = %r' % quad)
+            logger.debug('Got quads in {} ms.'.format(ms))
+        logger.debug('Quad = %r' % quad)
 
         bathymetry, ms = get_data(container=static_data.pyramid,
                                   ma=True, **get_parameters_extra)
-        logging.debug('Got bathymetry in {} ms.'.format(ms))
+        logger.debug('Got bathymetry in {} ms.'.format(ms))
 
         height = bathymetry[0, 0]
 
     if not height:
-        logging.debug('Got no height.')
+        logger.debug('Got no height.')
         height = 0
-    logging.debug('Got height {}.'.format(height))
+    logger.debug('Got height {}.'.format(height))
 
     # Read data from netcdf
     path = utils.get_netcdf_path(layer=get_parameters['layers'])
@@ -986,15 +985,15 @@ def get_response_for_getprofile(get_parameters):
     if use_messages:
         time_start = _time.time()
         dps_container = message_data.get('dps', **get_parameters_extra)
-        logging.debug(
+        logger.debug(
             'Got containers in {} s.'.format(_time.time() - time_start))
         dps, ms = get_data(container=dps_container, ma=True,
                            **get_parameters_extra)
-        logging.debug('Got dps in {} ms.'.format(ms))
+        logger.debug('Got dps in {} ms.'.format(ms))
 
         waterlevel_container = message_data.get("waterheight",
                                                 **get_parameters_extra)
-        logging.debug('Got waterlevel container.')
+        logger.debug('Got waterlevel container.')
         waterlevel, ms = get_data(
             waterlevel_container, ma=True, **get_parameters_extra)
 
@@ -1008,30 +1007,30 @@ def get_response_for_getprofile(get_parameters):
                                               **get_parameters_extra)
             quads, ms = get_data(container=quad_container, ma=True,
                                  **get_parameters_extra)
-            logging.debug('Got quads in {} ms.'.format(ms))
+            logger.debug('Got quads in {} ms.'.format(ms))
             groundwaterlevel = message_data.get_raw('sg')[quads]
         else:
             groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
 
         # bathymetry_delta = bathymetry - groundwaterlevel
 
-        logging.debug('Got depth.')
+        logger.debug('Got depth.')
     else:
         # Becoming obsolete
         time_start = _time.time()
         static_data = StaticData.get(layer=layer)
         quad_container = static_data.monolith
         bathy_container = static_data.pyramid
-        logging.debug(
+        logger.debug(
             'Got containers in {} s.'.format(_time.time() - time_start))
 
         quads, ms = get_data(container=quad_container, ma=True,
                              **get_parameters_extra)
-        logging.debug('Got quads in {} ms.'.format(ms))
+        logger.debug('Got quads in {} ms.'.format(ms))
 
         bathymetry, ms = get_data(container=bathy_container,
                                   ma=True, **get_parameters_extra)
-        logging.debug('Got bathymetry in {} ms.'.format(ms))
+        logger.debug('Got bathymetry in {} ms.'.format(ms))
 
         # Determine the waterlevel
         dynamic_data = DynamicData.get(
@@ -1220,7 +1219,7 @@ class StaticData(object):
 
     def __init__(self, layer, reload=False):
         """ Init pyramid and monolith, and order creation if necessary. """
-        logging.debug('Initializing StaticData for {}'.format(layer))
+        logger.debug('Initializing StaticData for {}'.format(layer))
         errors = []
         # Initialize pyramid for bathymetry
         pyramid_path = utils.get_pyramid_path(layer)
@@ -1267,7 +1266,7 @@ class DynamicData(object):
 
     def __init__(self, layer, time, variable='s1', netcdf_path=None):
         """ Load data from netcdf. """
-        # logging.debug('Loading dynamic data layer {}...'.format(layer))
+        # logger.debug('Loading dynamic data layer {}...'.format(layer))
         if netcdf_path is None:
             netcdf_path = utils.get_netcdf_path(layer)
         with Dataset(netcdf_path) as dataset:
