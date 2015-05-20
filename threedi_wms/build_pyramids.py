@@ -13,14 +13,13 @@ from gislib import rasters
 import os
 import logging
 
-
 logger = logging.getLogger(__name__)
-
 
 
 def main():
     """
-    Check and build pyramids for all missing cache entries for available 3Di models.
+    Check and build pyramids for all missing cache entries for available 3Di
+    models.
 
     layer is Directory name of model.
     """
@@ -31,7 +30,7 @@ def main():
 
         pyramid_path = utils.get_pyramid_path(layer)
         pyramid = rasters.Pyramid(path=pyramid_path,
-                                 compression='DEFLATE')
+                                  compression='DEFLATE')
         if not pyramid.has_data():
             logger.info('%s: No pyramid data, going to build.' % layer)
             tasks.make_pyramid.delay(layer)

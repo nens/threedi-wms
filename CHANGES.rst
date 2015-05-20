@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Add sentry logging handler.
+
 - Removed archiving Arrival times and Max depth (it is implemented in
   threedi-result now).
 
