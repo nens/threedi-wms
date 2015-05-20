@@ -300,6 +300,38 @@ def get_bathymetry_image(masked_array, limits):
     return rgba2image(rgba=rgba)
 
 
+def get_color_image(masked_array, color_a=None, color_b=None, vmin=0, vmax=1):
+    """ Return imagedata in a sort of rainbow. """
+    if color_a is None:
+        # default: magenta
+        color_a = (256, 50, 256)
+    if color_b is None:
+        # default: green
+        color_b = (50, 256, 50)
+    normalize = colors.Normalize(vmin=vmin, vmax=vmax)
+    normalized_arr = normalize(masked_array)
+    # Custom color map
+    cdict = {
+        'red': ((0.0, color_a[0] / 256., color_a[0] / 256.),
+                (0.5, 256. / 256., 256. / 256.),
+                (1.0, color_b[0] / 256., color_b[0] / 256.)),
+        'green': ((0.0, color_a[1] / 256, color_a[1] / 256),
+                  (0.5, 256. / 256, 256. / 256),
+                  (1.0, color_b[1] / 256, color_b[1] / 256)),
+        'blue': ((0.0, color_a[2] / 256, color_a[2] / 256),
+                 (0.5, 256. / 256, 256. / 256),
+                 (1.0, color_b[2] / 256, color_b[2] / 256)),
+        'alpha': ((0.0, 256. / 256, 256. / 256),
+                  (1.0, 256. / 256, 256. / 256)),
+    }
+    colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
+    # Apply scaling and colormap
+
+    rgba = colormap(normalized_arr, bytes=True)
+
+    return rgba2image(rgba=rgba)
+
+
 def get_grid_image(masked_array):
     """ Return imagedata. """
     a, b = -1, 8
@@ -667,12 +699,16 @@ def get_response_for_getmap(get_parameters):
         container = message_data.get("infiltration", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img = get_depth_image(masked_array=u, hmax=1000)
+        content, img = get_color_image(
+            masked_array=u, color_a=(256, 50, 256), color_b=(50, 256, 50),
+            vmin=0, vmax=500)
     elif mode == 'interception':
         container = message_data.get("interception", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
-        content, img = get_green_image(masked_array=u, hmax=.020)
+        content, img = get_color_image(
+            masked_array=u, color_a=(50, 256, 256), color_b=(256, 50, 50),
+            vmin=0, vmax=0.020)
     elif mode == 'soil':
         container = message_data.get("soil", **get_parameters)
         if container is None:
