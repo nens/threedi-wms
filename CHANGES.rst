@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Improve color scheme for infiltration and interception foreground layers.
+
 - Add sentry logging handler.
 
 - Removed archiving Arrival times and Max depth (it is implemented in
