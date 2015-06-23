@@ -6,8 +6,10 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 
-from server import config
 import os
+
+from server import config
+
 
 BLUEPRINT_NAME = 'rasterinfo'
 

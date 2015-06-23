@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 # (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
-
-# -*- coding: utf-8 -*-
-
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
@@ -17,6 +14,9 @@ from osgeo import gdal
 import numpy as np
 
 from threedi_wms.threedi import quads
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_parser():
@@ -36,17 +36,17 @@ def command(sourcepath, targetpath, timestep=None):
     quaddataset = quads.get_dataset(sourcepath)
     ascdriver = gdal.GetDriverByName(b'aaigrid')
     ascdriver.CreateCopy(b'arjen.asc', quaddataset)
-    
+
     quaddata = quaddataset.ReadAsArray()
 
     if timestep is None:
-        logging.debug('Calculating maximum flow velocity.')
+        logger.debug('Calculating maximum flow velocity.')
         with Dataset(sourcepath) as dataset:
             fvx = dataset.variables['ucx'][:].max(0)
             fvy = dataset.variables['ucy'][:].max(0)
     else:
         with Dataset(sourcepath) as dataset:
-            logging.debug('Calculating flow velocity for time = {}.'.format(
+            logger.debug('Calculating flow velocity for time = {}.'.format(
                 dataset.variables['time'][timestep],
             ))
             fvx = dataset.variables['ucx'][:][timestep]
@@ -85,9 +85,9 @@ def command(sourcepath, targetpath, timestep=None):
     )
 
     # Creating asciifile via vsimem to show capability
-    # Note that we need to 
+    # Note that we need to
     vsipath = '/vsimem/' + targetpath
-    from arjan.monitor import Monitor; mon = Monitor()  
+    from arjan.monitor import Monitor; mon = Monitor()
     for i in range(500):
         vsipath = '/vsimem/' + targetpath + str(i)
         asc_driver.CreateCopy(

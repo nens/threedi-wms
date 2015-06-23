@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
+
+import logging
 
 from gislib import rasters
 
@@ -13,7 +14,7 @@ from osgeo import gdal
 
 import numpy as np
 
-import logging
+logger = logging.getLogger(__name__)
 
 
 def get_dataset(path, projection=None):
@@ -70,7 +71,7 @@ def get_dataset(path, projection=None):
 
         # Construct and query a nearest-neighbour interpolator
         upper = np.sqrt(area) / 2
-        logging.debug('Adding quads of area {} to dataset.'.format(area))
+        logger.debug('Adding quads of area {} to dataset.'.format(area))
         data_index = spatial.cKDTree(centers[index]).query(
             gridpoints, p=np.inf, distance_upper_bound=upper,
         )[1]

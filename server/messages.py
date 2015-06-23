@@ -25,12 +25,10 @@ from status import StateReporter
 from threading import BoundedSemaphore
 from math import trunc
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-# global zmq context
-ctx = zmq.Context()
 
+logger = logging.getLogger(__name__)
+
+ctx = zmq.Context()
 
 UPDATE_INDICES_VARS = [
     'nod_type', 'imaxk', 'nodk', 'jmaxk', 'nodm', 'nodn',

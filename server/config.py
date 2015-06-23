@@ -30,8 +30,9 @@ CELERY_DB = os.path.join(CELERY_DIR, 'celerydb.sqlite')
 USE_CACHE = False  # redis
 CACHE_PREFIX = 'subgrid:10000'
 THREEDI_SUBGRID_ID = 'subgrid:10000'
+THREEDI_STANDALONE_SUBGRID_MACHINE = False
 
-# SENTRY_DSN = None  # TODO: fill
+SENTRY_DSN = None
 
 # redis settings for reporting threedi-wms status messages like busy, not busy,
 # and current timestep; override in generated local settings if needed
