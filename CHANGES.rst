@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Added KNOWN_VARS to getquantity; this way flow variables are ignored.
+
 - Improve color scheme for infiltration and interception foreground layers.
 
 - Add sentry logging handler.
