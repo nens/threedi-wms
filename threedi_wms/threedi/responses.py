@@ -49,6 +49,7 @@ rc_state = redis.Redis(host=redis_config.REDIS_HOST,
                        db=redis_config.REDIS_STATE_DB)
 
 PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
+KNOWN_VARS = ['pumps', 'weirs', 'orifices', 'culverts', 'unorm', 'q']
 
 
 def rgba2image(rgba):
@@ -1141,6 +1142,8 @@ def get_response_for_getquantity(get_parameters):
                 # TODO: link_number trick, but for objects.
                 data[quantity_key] = message_data.get_pandas(quantity_key)
                 continue
+            if quantity_key not in KNOWN_VARS:
+                continue  # skip unknown variables
             # Normal variables
             if link_numbers:
                 # to convert to np.uint64, link_numbers need to be converted to
