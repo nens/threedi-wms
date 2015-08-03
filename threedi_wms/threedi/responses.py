@@ -505,8 +505,6 @@ def get_response_for_getmap(get_parameters):
     if mode == 'maxdepth' or mode == 'arrival':
         use_messages = True  # Always use_messages = True
 
-    logger.info("Processing layer [%s]..." % layer)
-
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
@@ -566,7 +564,6 @@ def get_response_for_getmap(get_parameters):
                 'Objects not ready, start simulation first [%s not found]' %
                 utils.get_netcdf_path(layer=layer))
         try:
-            logger.info("StaticData for layer [%s]..." % layer)
             static_data = StaticData.get(layer=layer, reload=False)
         except ValueError:
             return 'Objects not ready, starting preparation.'
