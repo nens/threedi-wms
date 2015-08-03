@@ -505,6 +505,8 @@ def get_response_for_getmap(get_parameters):
     if mode == 'maxdepth' or mode == 'arrival':
         use_messages = True  # Always use_messages = True
 
+    logger.info("Processing layer [%s]..." % layer)
+
     hmax = get_parameters.get('hmax', 2.0)
     time = int(get_parameters.get('time', 0))
 
@@ -559,7 +561,12 @@ def get_response_for_getmap(get_parameters):
 
     # Pyramid + monolith, when not using messages
     if not use_messages:
+        if not os.path.exists(utils.get_netcdf_path(layer=layer)):
+            return (
+                'Objects not ready, start simulation first [%s not found]' %
+                utils.get_netcdf_path(layer=layer))
         try:
+            logger.info("StaticData for layer [%s]..." % layer)
             static_data = StaticData.get(layer=layer, reload=False)
         except ValueError:
             return 'Objects not ready, starting preparation.'
@@ -1234,7 +1241,7 @@ class StaticData(object):
         # TODO: this can be initiated multiple times, that's unnecessary
         if not monolith.has_data():
             tasks.make_monolith.delay(layer=layer)
-            errors.append('Pyramid not ready yet, task submitted.')
+            errors.append('Monolith not ready yet, task submitted.')
             # raise ValueError('Monolith not ready yet, task submitted.')
 
         if errors:
