@@ -36,8 +36,8 @@ def build_app(sub_port=5558, **kwargs):
     global message_data
     global cache
 
-    logger.info("starting threedi-wms...")
-    logger.info("subscription port: %d (server should publish on this port)" %
+    logger.info("Starting threedi-wms...")
+    logger.info("Subscription port: %d (server should publish on this port)." %
                 sub_port)
 
     app = flask.Flask(__name__)
@@ -54,7 +54,7 @@ def build_app(sub_port=5558, **kwargs):
     cache = Cache(app, config=cache_config)
 
     # reset state variables
-    logger.info("reset wms state variables in redis")
+    logger.info("Reset wms state variables in redis.")
     reporter.reset_all()
 
     # setup sentry
@@ -76,14 +76,14 @@ def build_app(sub_port=5558, **kwargs):
     # use the correct subgrid_id
     subgrid_id = utils.fetch_subgrid_id()
     while not subgrid_id:
-        msg = 'waiting for a subgrid_id from redis...'
+        msg = 'Waiting for a subgrid_id...'
         logger.debug(msg)
         time.sleep(1)
         subgrid_id = utils.fetch_subgrid_id()
     app.config['THREEDI_SUBGRID_ID'] = subgrid_id
-    logger.info("using subgrid_id: %s" % subgrid_id)
 
-    logger.info("ready to rock and roll!")
+    logger.info("Got subgrid_id: %s." % subgrid_id)
+    logger.info("Ready to rock and roll!")
 
     return app
 
