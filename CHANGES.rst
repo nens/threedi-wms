@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- When fetching the subgrid_id, look for it in an env var called `SUBGRID_ID` 
+  first.
+
 - Improve color scheme for infiltration and interception foreground layers.
 
 - Add sentry logging handler.
