@@ -49,6 +49,7 @@ rc_state = redis.Redis(host=redis_config.REDIS_HOST,
                        db=redis_config.REDIS_STATE_DB)
 
 PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
+KNOWN_VARS = ['pumps', 'weirs', 'orifices', 'culverts', 'unorm', 'q']
 
 
 def rgba2image(rgba):
@@ -558,6 +559,10 @@ def get_response_for_getmap(get_parameters):
 
     # Pyramid + monolith, when not using messages
     if not use_messages:
+        if not os.path.exists(utils.get_netcdf_path(layer=layer)):
+            return (
+                'Objects not ready, start simulation first [%s not found]' %
+                utils.get_netcdf_path(layer=layer))
         try:
             static_data = StaticData.get(layer=layer, reload=False)
         except ValueError:
@@ -1141,6 +1146,8 @@ def get_response_for_getquantity(get_parameters):
                 # TODO: link_number trick, but for objects.
                 data[quantity_key] = message_data.get_pandas(quantity_key)
                 continue
+            if quantity_key not in KNOWN_VARS:
+                continue  # skip unknown variables
             # Normal variables
             if link_numbers:
                 # to convert to np.uint64, link_numbers need to be converted to
@@ -1231,7 +1238,7 @@ class StaticData(object):
         # TODO: this can be initiated multiple times, that's unnecessary
         if not monolith.has_data():
             tasks.make_monolith.delay(layer=layer)
-            errors.append('Pyramid not ready yet, task submitted.')
+            errors.append('Monolith not ready yet, task submitted.')
             # raise ValueError('Monolith not ready yet, task submitted.')
 
         if errors:
