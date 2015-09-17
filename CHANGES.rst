@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Made the default settings suitable for docker containers. `REDIS_HOST` can
+  now be set with an environment variable.
+
 - When fetching the subgrid_id, look for it in an env var called `SUBGRID_ID` 
   first.
 
