@@ -55,7 +55,7 @@ CACHE_PREFIX = 'subgrid:10000'
 THREEDI_SUBGRID_ID = 'subgrid:10000'
 THREEDI_STANDALONE_SUBGRID_MACHINE = True
 
-SENTRY_DSN = None
+SENTRY_DSN = '' 
 
 # redis settings for reporting threedi-wms status messages like busy, not busy,
 # and current timestep
