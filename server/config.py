@@ -6,6 +6,29 @@ from __future__ import absolute_import
 from __future__ import division
 
 import os
+import ast
+
+
+class ImproperlyConfigured(Exception):
+    pass
+
+
+def env(key, default=None, required=False):
+    """
+    Retrieves environment variables and returns Python natives. The (optional)
+    default will be returned if the environment variable does not exist.
+    """
+    try:
+        value = os.environ[key]
+        return ast.literal_eval(value)
+    except (SyntaxError, ValueError):
+        return value
+    except KeyError:
+        if default or not required:
+            return default
+        raise ImproperlyConfigured(
+            "Missing required environment variable '%s'" % key)
+
 
 # Register your backends here
 BLUEPRINTS = [
@@ -27,16 +50,16 @@ LOG_DIR = os.path.join(BUILDOUT_DIR, 'var', 'log')
 CELERY_DB = os.path.join(CELERY_DIR, 'celerydb.sqlite')
 
 # default settings, overriden on server by local settings
-USE_CACHE = False  # redis
+USE_CACHE = True  # redis
 CACHE_PREFIX = 'subgrid:10000'
 THREEDI_SUBGRID_ID = 'subgrid:10000'
-THREEDI_STANDALONE_SUBGRID_MACHINE = False
+THREEDI_STANDALONE_SUBGRID_MACHINE = True
 
-SENTRY_DSN = None
+SENTRY_DSN = '' 
 
 # redis settings for reporting threedi-wms status messages like busy, not busy,
-# and current timestep; override in generated local settings if needed
-REDIS_HOST = 'localhost'
+# and current timestep
+REDIS_HOST = env('REDIS_HOST', default='localhost', required=True)
 REDIS_PORT = 6379
 REDIS_STATE_DB = 0
 REDIS_NODE_MAPPING_DB = 2
