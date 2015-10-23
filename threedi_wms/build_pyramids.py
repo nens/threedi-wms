@@ -13,7 +13,7 @@ from gislib import rasters
 import os
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 
 def main():

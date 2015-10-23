@@ -26,7 +26,7 @@ cache = Cache(_app, config={'CACHE_TYPE': 'null', })
 
 reporter = status.StateReporter()
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 
 def build_app(sub_port=5558, **kwargs):

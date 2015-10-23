@@ -34,7 +34,7 @@ app.conf.update(
 # set the SENTRY_DSN as environment variable; this is needed to use the
 # SentryHandler logging handler by celery tasks
 os.environ['SENTRY_DSN'] = config.SENTRY_DSN
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 
 @app.task

@@ -9,14 +9,14 @@ import argparse
 import logging
 
 from netCDF4 import Dataset
+import numpy as np
 from osgeo import gdal
 
-import numpy as np
 
 from threedi_wms.threedi import quads
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 
 def get_parser():
@@ -87,7 +87,10 @@ def command(sourcepath, targetpath, timestep=None):
     # Creating asciifile via vsimem to show capability
     # Note that we need to
     vsipath = '/vsimem/' + targetpath
-    from arjan.monitor import Monitor; mon = Monitor()
+
+    from arjan.monitor import Monitor
+    mon = Monitor()
+
     for i in range(500):
         vsipath = '/vsimem/' + targetpath + str(i)
         asc_driver.CreateCopy(

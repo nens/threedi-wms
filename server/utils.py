@@ -16,7 +16,7 @@ import flask
 
 from server import config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 
 def get_parameters():

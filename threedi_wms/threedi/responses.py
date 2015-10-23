@@ -38,7 +38,7 @@ from server import utils as server_utils
 
 ogr.UseExceptions()
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 rc_node = redis.Redis(host=redis_config.REDIS_HOST,
                       port=redis_config.REDIS_PORT,
@@ -551,7 +551,7 @@ def get_response_for_getmap(get_parameters):
             use_messages = False
 
     if (use_messages and not messaging_required and
-        not message_data.interpolation_ready):
+            not message_data.interpolation_ready):
 
         logger.debug('Interpolation not ready in message_data'
                      ', falling back to netcdf.')
@@ -623,8 +623,8 @@ def get_response_for_getmap(get_parameters):
         content, img = get_depth_image(masked_array=depth,
                                        hmax=hmax)
     elif mode == 'bathymetry':
-        logger.debug('bathymetry min, max %r %r' % (np.amin(bathymetry),
-                                                     np.amax(bathymetry)))
+        logger.debug('bathymetry min, max %r %r' % (
+            np.amin(bathymetry), np.amax(bathymetry)))
         limits = map(float, get_parameters['limits'].split(','))
         content, img = get_bathymetry_image(masked_array=bathymetry,
                                             limits=limits)
@@ -758,7 +758,7 @@ def get_response_for_getinfo(get_parameters):
             source_projection = utils.get_bathymetry_srs(bathy_path)
 
             logger.info('Source projection: %r' % source_projection)
-            #source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
+            # source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
             target_projection = srs
             extent = gislib_utils.get_transformed_extent(
                 extent=netcdf_extent,
@@ -810,7 +810,7 @@ def get_response_for_gettimeseries(get_parameters):
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
                          get_parameters['point'].split(','))).reshape(1, 2)
-    #bbox = ','.join(map(str, np.array(point + np.array([[-1], [1]])).ravel()))
+    # bbox = ','.join(map(str, np.array(point + np.array([[-1], [1]])).ravel()))
     # Make a fake bounding box. Beware: units depend on epsg (wgs84)
     bbox = ','.join(map(
         str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))

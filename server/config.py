@@ -55,7 +55,7 @@ CACHE_PREFIX = 'subgrid:10000'
 THREEDI_SUBGRID_ID = 'subgrid:10000'
 THREEDI_STANDALONE_SUBGRID_MACHINE = True
 
-SENTRY_DSN = '' 
+SENTRY_DSN = ''
 
 # redis settings for reporting threedi-wms status messages like busy, not busy,
 # and current timestep
@@ -68,7 +68,7 @@ WMS_BUSY_THRESHOLD = 2  # 2 seconds
 
 # import local settings
 try:
-    from server.localsettings import *
-    from server.localloggingsettings import *
+    from server.localsettings import *  # noqa
+    from server.localloggingsettings import *  # noqa
 except ImportError:
     pass
