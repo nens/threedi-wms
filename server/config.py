@@ -7,6 +7,7 @@ from __future__ import division
 
 import os
 import ast
+import logging.config
 
 
 class ImproperlyConfigured(Exception):
@@ -65,6 +66,31 @@ REDIS_STATE_DB = 0
 REDIS_NODE_MAPPING_DB = 2
 
 WMS_BUSY_THRESHOLD = 2  # 2 seconds
+
+# add default logging to stdout
+LOGGING = {
+    'disable_existing_loggers': False,
+    'version': 1,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        '': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        },
+    }
+}
+logging.config.dictConfig(LOGGING)
 
 # import local settings
 try:
