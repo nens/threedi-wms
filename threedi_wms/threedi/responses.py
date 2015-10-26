@@ -190,7 +190,7 @@ def get_crop_image(masked_array, hmin=0, hmax=7):
 
 
 def get_arrival_image(masked_array, hmin=0, hmax=7):
-    """ Return a png image from masked_array. """
+    """Return a png image from masked_array."""
     normalize = colors.Normalize(vmin=hmin, vmax=hmax)
     normalized_arr = normalize(masked_array)
     # Custom color map
@@ -215,7 +215,7 @@ def get_arrival_image(masked_array, hmin=0, hmax=7):
 
 
 def get_bathymetry_image(masked_array, limits):
-    """ Return imagedata. """
+    """Return imagedata."""
     normalize = colors.Normalize(vmin=limits[0], vmax=limits[1])
     normalized_arr = normalize(masked_array)
     # Custom color map
@@ -256,7 +256,7 @@ def get_bathymetry_image(masked_array, limits):
 
 
 def get_color_image(masked_array, color_a=None, color_b=None, vmin=0, vmax=1):
-    """ Return imagedata in a sort of rainbow. """
+    """Return imagedata in a sort of rainbow."""
     if color_a is None:
         # default: magenta
         color_a = (256, 50, 256)
@@ -288,7 +288,7 @@ def get_color_image(masked_array, color_a=None, color_b=None, vmin=0, vmax=1):
 
 
 def get_grid_image(masked_array):
-    """ Return imagedata. """
+    """Return imagedata."""
     a, b = -1, 8
     kernel = np.array([[a,  a, a],
                        [a,  b, a],
@@ -303,7 +303,7 @@ def get_grid_image(masked_array):
 
 
 def get_quad_grid_image(masked_array):
-    """ Return imagedata. """
+    """Return imagedata."""
     normalize = colors.Normalize()
     colormap = cm.Set2
     rgba = colormap(normalize(masked_array), bytes=True)
@@ -311,7 +311,7 @@ def get_quad_grid_image(masked_array):
 
 
 def get_velocity_image(masked_array, vmin=0, vmax=1.):
-    """ Return imagedata. """
+    """Return imagedata."""
     # Custom color map
     normalize = colors.Normalize(vmin=vmin, vmax=vmax)
     normalized_arr = normalize(masked_array)
@@ -333,7 +333,6 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
     }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
-    # colormap = cm.summer
     rgba = colormap(normalized_arr, bytes=True)
 
     cdict2 = {  # some versions of matplotlib do not have alpha
@@ -359,7 +358,7 @@ def get_velocity_image(masked_array, vmin=0, vmax=1.):
 
 
 def get_groundwater_image(masked_array, vmin=0, vmax=3.):
-    """ Return imagedata. """
+    """Return imagedata."""
     # Custom color map
     normalize = colors.Normalize(vmin=vmin, vmax=vmax)
     normalized_arr = normalize(masked_array)
@@ -380,23 +379,8 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
                  (0.85, 11. / 256, 11. / 256),
                  (1.0, 4. / 256, 4. / 256)),
     }
-    # cdict = {
-    #     'red': ((0.0, 54. / 256, 54. / 256),
-    #             (0.3, 64. / 256, 64. / 256),
-    #             (0.6, 28. / 256, 28. / 256),
-    #             (1.0, 124. / 256, 124. / 256)),
-    #     'green': ((0.0, 210. / 256, 210. / 256),
-    #               (0.3, 164. / 256, 164. / 256),
-    #               (0.6, 58. / 256, 58. / 256),
-    #               (1.0, 80. / 256, 80. / 256)),
-    #     'blue': ((0.0, 0. / 256, 0. / 256),
-    #              (0.3, 30. / 256, 30. / 256),
-    #              (0.6, 18. / 256, 18. / 256),
-    #              (1.0, 4. / 256, 4. / 256)),
-    # }
     colormap = colors.LinearSegmentedColormap('something', cdict, N=1024)
 
-    # colormap = cm.summer
     rgba = colormap(normalized_arr, bytes=True)
 
     cdict2 = {  # some versions of matplotlib do not have alpha
@@ -416,7 +400,6 @@ def get_groundwater_image(masked_array, vmin=0, vmax=3.):
     rgba[..., 3][np.ma.less_equal(masked_array, vmin)] = 0.
 
     rgba[..., 3][masked_array.mask == True] = 0.
-    # import pdb; pdb.set_trace()
 
     return rgba2image(rgba=rgba)
 
@@ -718,7 +701,7 @@ def get_response_for_getmap(get_parameters):
 
 
 def get_response_for_getinfo(get_parameters):
-    """ Return json with bounds and timesteps.
+    """Return json with bounds and timesteps.
 
     With attempt to make it work with "messages" as well.
     """
@@ -758,7 +741,6 @@ def get_response_for_getinfo(get_parameters):
             source_projection = utils.get_bathymetry_srs(bathy_path)
 
             logger.info('Source projection: %r' % source_projection)
-            # source_projection = 22234 if 'kaapstad' in path.lower() else rasters.RD
             target_projection = srs
             extent = gislib_utils.get_transformed_extent(
                 extent=netcdf_extent,
@@ -810,7 +792,6 @@ def get_response_for_gettimeseries(get_parameters):
     # This request features a point, but an bbox is needed for reprojection.
     point = np.array(map(float,
                          get_parameters['point'].split(','))).reshape(1, 2)
-    # bbox = ','.join(map(str, np.array(point + np.array([[-1], [1]])).ravel()))
     # Make a fake bounding box. Beware: units depend on epsg (wgs84)
     bbox = ','.join(map(
         str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))
@@ -882,7 +863,6 @@ def get_response_for_gettimeseries(get_parameters):
             else:
                 depth = v[mode][:, quad]
         else:
-            # depth = np.ma.maximum(v[mode][:, quad], 0).filled(0)
             if absolute == 'true':
                 # For unorm, q
                 depth = np.ma.abs(v[mode][:, quad])
@@ -1007,8 +987,6 @@ def get_response_for_getprofile(get_parameters):
         else:
             groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
 
-        # bathymetry_delta = bathymetry - groundwaterlevel
-
         logger.debug('Got depth.')
     else:
         # Becoming obsolete
@@ -1035,7 +1013,6 @@ def get_response_for_getprofile(get_parameters):
 
         # No support for groundwater
         groundwaterlevel = np.ones(depth.shape) * np.amin(bathymetry)
-        # bathymetry_delta = bathymetry
 
     # Sample the depth using the cellsize
     magicline = vector.MagicLine(np.array(geometry.GetPoints())[:, :2])
@@ -1057,9 +1034,6 @@ def get_response_for_getprofile(get_parameters):
     groundwaterlevel_sampled = np.ma.minimum(groundwaterlevel_sampled,
                                              bathymetry_sampled)
 
-    # bathymetry from 0 up
-    # bathymetry_minimum = min(np.ma.amin(bathymetry_sampled, 0), 0)
-    # bathymetry_sampled = bathymetry_sampled - bathymetry_minimum
     minimum_level = min(
         np.ma.amin(groundwaterlevel_sampled, 0),
         np.ma.amin(bathymetry_sampled, 0))
@@ -1074,7 +1048,6 @@ def get_response_for_getprofile(get_parameters):
 
     compressed_depths = depths.filled(0)
     compressed_distances = distances
-    # compressed_waterlevels = waterlevel_sampled.filled(0)
     compressed_bathymetry = bathymetry_delta_sampled.filled(0)
     compressed_groundwaterlevels = groundwaterlevel_delta_sampled.filled(0)
 
@@ -1110,7 +1083,6 @@ def get_response_for_getquantity(get_parameters):
 
     Option to return pumps, weirs and orifices: requires messages.
     """
-
     # Determine layer and time
     layer = get_parameters['layers']
     time = int(get_parameters.get('time', 0))
@@ -1215,7 +1187,7 @@ class StaticData(object):
         return value
 
     def __init__(self, layer, reload=False):
-        """ Init pyramid and monolith, and order creation if necessary. """
+        """Init pyramid and monolith, and order creation if necessary."""
         logger.debug('Initializing StaticData for {}'.format(layer))
         errors = []
         # Initialize pyramid for bathymetry
@@ -1226,7 +1198,6 @@ class StaticData(object):
         if not pyramid.has_data():
             tasks.make_pyramid.delay(layer)
             errors.append('Pyramid not ready yet, task submitted.')
-            # raise ValueError('Pyramid not ready yet, task submitted.')
         # If all ok, set pyramid attribute.
         self.pyramid = pyramid
 
@@ -1239,7 +1210,6 @@ class StaticData(object):
         if not monolith.has_data():
             tasks.make_monolith.delay(layer=layer)
             errors.append('Monolith not ready yet, task submitted.')
-            # raise ValueError('Monolith not ready yet, task submitted.')
 
         if errors:
             raise ValueError(' '.join(errors))
@@ -1263,7 +1233,6 @@ class DynamicData(object):
 
     def __init__(self, layer, time, variable='s1', netcdf_path=None):
         """ Load data from netcdf. """
-        # logger.debug('Loading dynamic data layer {}...'.format(layer))
         if netcdf_path is None:
             netcdf_path = utils.get_netcdf_path(layer)
         with Dataset(netcdf_path) as dataset:

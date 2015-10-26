@@ -1,4 +1,4 @@
-
+# (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
 from mmi import recv_array
 from gislib import rasters
 
@@ -11,7 +11,7 @@ import string
 import random
 from netCDF4 import Dataset
 
-import time  # stopwatch
+import time
 import osgeo.osr
 import bisect
 import sys
@@ -76,7 +76,6 @@ class NCDump(object):
         logger.debug('Dumping to netcdf...')
         self.ncfile = Dataset(output_filename, 'w', format='NETCDF3_CLASSIC')
 
-        # logger.debug(message_data.grid['y0p'].shape)
         x_dim = self.ncfile.createDimension(
             'x', self.message_data.grid['quad_grid'].shape[0])
         y_dim = self.ncfile.createDimension(
@@ -96,8 +95,8 @@ class NCDump(object):
             self.message_data.grid['nFlowElem2dBounds'])  # Apparently WITH boundary nodes
 
     def dump_nc(self, var_name, var_type, dimensions, unit, values=None):
-        """In some weird cases, this function can crash with a RuntimeError from NETCDF:
-        RuntimeError: NetCDF: Operation not allowed in define mode
+        """In some weird cases, this function can crash with a RuntimeError
+        from NETCDF: RuntimeError: NetCDF: Operation not allowed in define mode
 
         Thus it is preferred that the function runs in a try/except.
         """
@@ -110,12 +109,9 @@ class NCDump(object):
         if len(unit) == 0:
             self.v[:] = values
         elif len(unit) == 1:
-            # if isinstance(values, str):
-            #     self.v[:] = values.split()
-            # else:
             self.v[:] = values
         elif len(unit) == 2:
-            self.v[:, :] = values  #self.message_data.grid[var_name]
+            self.v[:, :] = values
 
         self.v.units = unit
         self.v.standard_name = var_name
@@ -132,7 +128,7 @@ class Listener(threading.Thread):
         self.socket = socket
         self.message_data = message_data
         threading.Thread.__init__(self, *args, **kwargs)
-        # A flag to notify the thread that it should finish up and exit
+        # a flag to notify the thread that it should finish up and exit
         self.kill_received = False
         self.reporter = StateReporter()
 
@@ -140,7 +136,6 @@ class Listener(threading.Thread):
         logger.debug(
             'Resetting grid data...',
             extra={'subgrid_id': self.reporter.redis_key})
-        #message_data.grid = {}
         for k in self.message_data.grid.keys():
             del self.message_data.grid[k]  # try to save memory
         self.message_data.interpolation_ready = False
@@ -204,8 +199,6 @@ class Listener(threading.Thread):
                         message_data.grid[metadata['name']][y0:y1, x0:x1] = arr
                     else:
                         # normal case
-                        # if metadata['name'] in message_data.grid:
-                        #     del message_data.grid[metadata['name']]  # saves memory?
                         message_data.grid[metadata['name']] = arr.copy()
 
                 # Receive one of the DEPTH_VARS and all DEPTH_VARS are complete
@@ -237,8 +230,6 @@ class Listener(threading.Thread):
                     logger.debug(
                         'Update indices finished.',
                         extra={'subgrid_id': self.reporter.redis_key})
-            # elif metadata['action'] == 'postprocess':
-            #     logger.debug('Post processing...')
             elif metadata['action'] == 'update-pandas':
                 logger.debug(
                     'Update pandas data [%s]...', metadata['name'],
@@ -339,17 +330,14 @@ class MessageData(object):
             grid = self.grid
 
         # twod_idx is a boolean array to filter out the 2D cells
-        twod_idx = grid['nod_type'] == 1  # TODO: get value out of wrapper
+        twod_idx = grid['nod_type'] == 1
         maxk_idx = grid['nodk'][twod_idx]-1
         imaxk = grid['imaxk'][maxk_idx]
         jmaxk = grid['jmaxk'][maxk_idx]
         m = (grid['nodm'][twod_idx] - 1)*imaxk
         n = (grid['nodn'][twod_idx] - 1)*jmaxk
 
-        # TODO: handle 1D stuff correctly
-        # m = (grid['nodm']-1)*grid['imaxk'][grid['nodk']-1]
-        # n = (grid['nodn']-1)*grid['jmaxk'][grid['nodk']-1]
-        size = imaxk  # grid['imaxk'][grid['nodk']-1]
+        size = imaxk
         mc = m + size/2.0
         nc = n + size/2.0
 
@@ -364,7 +352,6 @@ class MessageData(object):
             grid['y0p']:grid['y1p']:complex(0,grid['jmax']),
             grid['x0p']:grid['x1p']:complex(0,grid['imax'])
         ]
-        # self.x, self.y = np.ogrid[s]
         Y , X = np.mgrid[s]
         transform= (float(grid['x0p']),  # xmin
                     float(grid['dxp']),  # xmax
@@ -439,7 +426,6 @@ class MessageData(object):
 
         NOTE: maxdepth and arrival REQUIRE the from_disk method.
 
-        TODO: disk cache when using from_disk
         """
         def generate_hash(path, layer_slug):
             return '%r-%r-%r' % (
@@ -471,14 +457,8 @@ class MessageData(object):
                 nc = Dataset(grid_path, 'r', format='NETCDF3_CLASSIC')
                 grid = {}
                 grid['dsnop'] = nc.variables['dsnop'].getValue()[0]
-                # grid['quad_grid_dps_mask'] = nc.variables['quad_grid_dps_mask'][:]
-                # grid['quad_grid'] = np.ma.masked_array(
-                #     nc.variables['quad_grid'][:],
-                #     mask=grid['quad_grid_dps_mask'])
-                # grid['vol1'] = nc.variables['vol1'][:]
                 grid['wkt'] = ''.join(nc.variables['wkt'])
                 grid['dps'] = nc.variables['dps'][:].copy()
-                # grid['maxlevel'] = nc.variables['maxlevel'][:]
                 grid['maxdepth'] = nc.variables['maxdepth'][:].copy()
                 grid['arrival'] = nc.variables['arrival'][:].copy()
 
@@ -492,18 +472,6 @@ class MessageData(object):
                 grid['file-memory'] = generate_hash(grid_path, layer_slug)
                 grid['layer-slug'] = layer_slug  # needed for getcapabilities
                 self.grid = grid
-                # grid['imax'] = nc.variables['imax'][:]
-                # grid['jmax'] = nc.variables['jmax'][:]
-                # grid['imaxk'] = nc.variables['imaxk'][:]
-                # grid['jmaxk'] = nc.variables['jmaxk'][:]
-
-                # grid['nodm'] = nc.variables['nodm'][:]
-                # grid['nodn'] = nc.variables['nodn'][:]
-                # grid['nodk'] = nc.variables['nodk'][:]
-                # grid['nod_type'] = nc.variables['nod_type'][:]
-
-                # # testing
-                # grid['nt'] = nc.variables['nt'].getValue()[0]
                 nc.close()
 
         if grid is None:
@@ -532,11 +500,9 @@ class MessageData(object):
                 "slicing and dicing",
                 extra={'subgrid_id': self.subgrid_id})
 
-            # TODO rename dst/src to map, slice, grid
             src_srs = osgeo.osr.SpatialReference()
             src_srs.ImportFromEPSGA(int(srs.split(':')[1]))
             dst_srs = osgeo.osr.SpatialReference()
-            # logger.debug("wkt %r" % grid["wkt"])
             if 'wkt' in grid and grid['wkt']:
                 dst_srs.ImportFromWkt(grid["wkt"])
                 if dst_srs.GetAuthorityCode("PROJCS") == '28992' and not dst_srs.GetTOWGS84():
@@ -566,9 +532,6 @@ class MessageData(object):
             xmin_src, ymin_src = (grid['x0p'], grid['y0p'])
             xmax_src, ymax_src = (grid['x1p'], grid['y1p'])
             dx_src, dy_src = (grid['dxp'], grid['dyp'])
-            # logger.debug(xmin_src)
-            # logger.debug(xmax_src)
-            # logger.debug(dx_src)
             x_src = np.arange(xmin_src, xmax_src, dx_src)
             y_src = np.arange(ymin_src, ymax_src, dy_src)
             # Lookup indices of plotted grid
@@ -590,7 +553,7 @@ class MessageData(object):
                  num_pixels),
                 extra={'subgrid_id': self.subgrid_id})
             S = np.s_[y_start:y_end:y_step, x_start:x_end:x_step]
-            # S = np.s_[:,:]
+
             # Compute transform for sliced grid
             transform = (
                 grid["x0p"] + dx_src*x_start,
@@ -607,7 +570,6 @@ class MessageData(object):
                 extra={'subgrid_id': self.subgrid_id})
             S = np.s_[:,:]
             transform = self.transform
-        # logger.debug('transform: %s' % str(transform))
 
         if layer == 'waterlevel' or layer == 'waterheight':
             nodatavalue = 1e10
@@ -630,11 +592,6 @@ class MessageData(object):
                         "Interpolation data not available",
                         extra={'subgrid_id': self.subgrid_id})
                 X, Y = self.X[S], self.Y[S]
-                # L = scipy.interpolate.LinearNDInterpolator(self.points, s1)
-                # scipy interpolate does not deal with masked arrays
-                # so we set waterlevels to nan where volume is 0
-                # s1[vol1 == 0] = np.nan
-                # s1 = np.where(vol1 == 0, -self.grid['dmax'], s1)
                 try:
                     # Kaapstad gives IndexError
                     volmask = (vol1 == 0)[quad_grid]
@@ -827,21 +784,17 @@ class MessageData(object):
         return self.pandas.get(key, None)
 
     def __init__(self, sub_port=5558):
-        # self.req_port = req_port
         self.sub_port = sub_port
         # When updating, let 'get' function wait
         self.is_updating = BoundedSemaphore(1)
 
         self.transform = None
         # continuously fill data
-        # self.data = {}
         self.loaded_model = None
         self.grid = {}
         # define an interpolation function
         # use update indices to update these variables
         self.L = None
-        # self.x = None
-        # self.y = None
         self.X = None
         self.Y = None
         self.interpolation_ready = False

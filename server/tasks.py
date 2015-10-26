@@ -34,7 +34,6 @@ except OSError:
 app = celery.Celery()
 app.conf.update(
     BROKER_URL='sqla+sqlite:///{}'.format(config.CELERY_DB),
-    # CELERYD_HIJACK_ROOT_LOGGER=False,
 )
 
 # Import the blueprints, any tasks in them get registered with celery.
