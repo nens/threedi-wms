@@ -82,6 +82,4 @@ def get_profile(wktline, src_srs=900913, rastersize=512):
                     linestring.length / len(values))
     profile_data = [list(a) for a in zip(distances, values)]
 
-    mem_ds = None
-
     return profile_data

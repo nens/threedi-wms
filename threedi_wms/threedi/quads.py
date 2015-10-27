@@ -14,7 +14,7 @@ from osgeo import gdal
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 
 def get_dataset(path, projection=None):

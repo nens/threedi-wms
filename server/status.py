@@ -15,7 +15,7 @@ from server import config
 from server import utils
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 
 def to_timestamp(dt, epoch=datetime(1970, 1, 1)):

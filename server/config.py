@@ -7,6 +7,7 @@ from __future__ import division
 
 import os
 import ast
+import logging.config
 
 
 class ImproperlyConfigured(Exception):
@@ -55,7 +56,7 @@ CACHE_PREFIX = 'subgrid:10000'
 THREEDI_SUBGRID_ID = 'subgrid:10000'
 THREEDI_STANDALONE_SUBGRID_MACHINE = True
 
-SENTRY_DSN = '' 
+SENTRY_DSN = ''
 
 # redis settings for reporting threedi-wms status messages like busy, not busy,
 # and current timestep
@@ -66,9 +67,34 @@ REDIS_NODE_MAPPING_DB = 2
 
 WMS_BUSY_THRESHOLD = 2  # 2 seconds
 
+# add default logging to stdout
+LOGGING = {
+    'disable_existing_loggers': False,
+    'version': 1,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        '': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        },
+    }
+}
+logging.config.dictConfig(LOGGING)
+
 # import local settings
 try:
-    from server.localsettings import *
-    from server.localloggingsettings import *
+    from server.localsettings import *  # noqa
+    from server.localloggingsettings import *  # noqa
 except ImportError:
     pass

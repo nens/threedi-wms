@@ -26,7 +26,7 @@ cache = Cache(_app, config={'CACHE_TYPE': 'null', })
 
 reporter = status.StateReporter()
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('')
 
 
 def build_app(sub_port=5558, **kwargs):
@@ -65,8 +65,6 @@ def build_app(sub_port=5558, **kwargs):
     # this one is global because we only have one event loop that receives
     # messages
     message_data = MessageData(sub_port=sub_port)
-    # stop listening when we tear down the app
-    # flask.appcontext_tearing_down.connect?
 
     # register the blueprints
     for blueprint in blueprints.get_blueprints():
@@ -82,8 +80,9 @@ def build_app(sub_port=5558, **kwargs):
         subgrid_id = utils.fetch_subgrid_id()
     app.config['THREEDI_SUBGRID_ID'] = subgrid_id
 
-    logger.info("Got subgrid_id: %s." % subgrid_id)
-    logger.info("Ready to rock and roll!")
+    logger.info(
+        "Got subgrid_id: %s." % subgrid_id, extra={'subgrid_id': subgrid_id})
+    logger.info("Ready to rock and roll!", extra={'subgrid_id': subgrid_id})
 
     return app
 

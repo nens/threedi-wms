@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
-
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
@@ -10,22 +9,21 @@ import os
 
 import flask
 import numpy as np
-import sys
 
-from server import blueprints
-from server import utils
+from server import blueprints, utils
 
-from threedi_wms.threedi import responses
-from threedi_wms.threedi import config
+from threedi_wms.threedi import responses, config
 
 blueprint = blueprints.Blueprint(name=config.BLUEPRINT_NAME,
                                  import_name=__name__,
                                  static_folder='static',
                                  template_folder='templates')
 
+
 @blueprint.route('/hello')
 def hello():
     return 'hello'
+
 
 @blueprint.route('/wms')
 def wms():
@@ -39,9 +37,10 @@ def wms():
     )
     return request_handlers[request](get_parameters=get_parameters)
 
+
 @blueprint.route('/data')
 def data():
-    """ 
+    """
     Return data according to request:
     getprofile, gettimeseries, get
     """
@@ -55,6 +54,7 @@ def data():
         getcontours=responses.get_response_for_getcontours,
     )
     return request_handlers[request](get_parameters=get_parameters)
+
 
 @blueprint.route('/demo')
 def demo():
@@ -72,7 +72,7 @@ def leaflet():
 
 @blueprint.route('/tms/<int:zoom>/<int:x>/<int:y>.png')
 def tms(x, y, zoom):
-    # Determe bbox from tile indices and zoomlevel
+    # Determine bbox from tile indices and zoomlevel
     # Could use tms option for leaflet to inverse y-axis!
     limit = 2 * np.pi * 6378137
     step = limit / 2 ** zoom
@@ -83,7 +83,7 @@ def tms(x, y, zoom):
     srs = 'EPSG:3857'
     bbox = ','.join(map(str, [left, bottom, right, top]))
     width, height = '256', '256'  # Standard tile size always?
-    #request = 'GetMap'
+    # request = 'GetMap'
 
     get_parameters = utils.get_parameters()
     get_parameters.update(srs=srs,
