@@ -1101,10 +1101,8 @@ def get_response_for_getquantity(get_parameters):
 
     # get the flow link numbers from redis; N.B. link numbers are returned
     # as strings from redis
-    loaded_model = utils.get_loaded_model()
-    redis_key = server_utils.fetch_subgrid_id()
-    link_numbers = rc_node.smembers(
-        '%s:%s:link_numbers' % (redis_key, loaded_model))
+    model_slug = utils.get_loaded_model()
+    link_numbers = rc_node.smembers('models:%s:link_numbers' % model_slug)
 
     # Load quantity from netcdf
     netcdf_path = utils.get_netcdf_path(layer)
