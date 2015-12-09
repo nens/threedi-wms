@@ -825,7 +825,7 @@ def get_response_for_gettimeseries(get_parameters):
     # Either a provided name (objects), or the coordinates of the clicked
     # location (2d)
     output_filename_displayname = get_parameters.get(
-        'display_name', None)
+        'display_name', quad)  # quad is either an int, or None
     # only for csv output
     object_type = get_parameters.get('object_type', '-')
 
