@@ -826,14 +826,17 @@ def get_response_for_gettimeseries(get_parameters):
     # location (2d)
     output_filename_displayname = get_parameters.get(
         'display_name', quad)  # quad is either an int, or None
+    if output_filename_displayname is None:
+        output_filename_displayname = ''
     # only for csv output
     object_type = get_parameters.get('object_type', '-')
 
     # Fallback doesn't work: netcdf not present yet.
 
     # This request features a point, but an bbox is needed for reprojection.
+    points = get_parameters.get('point', '10,10')
     point = np.array(map(float,
-                         get_parameters['point'].split(','))).reshape(1, 2)
+                         points.split(','))).reshape(1, 2)
     # Make a fake bounding box. Beware: units depend on epsg (wgs84)
     bbox = ','.join(map(
         str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))
@@ -943,10 +946,10 @@ def get_response_for_gettimeseries(get_parameters):
         content = json.dumps(content_dict)
         header['content-type'] = 'application/json'
     elif output_format == 'csv':
-        if output_filename_displayname is None:
+        # 10, 10 is a virtual coordinate
+        if points is not None and points != '10,10':
             # we have to create a part of the filename by using the coordinates
-            param_point = get_parameters.get('point')
-            coords = [float(x) for x in param_point.split(',')]
+            coords = [float(x) for x in points.split(',')]
             # there is no good way in threedi-wms to retrieve model srs.
             # since it's only for the filename, let's look at the result rd coordinates.
             # if it is sensible, use that, else use the original coordinates.
@@ -954,11 +957,13 @@ def get_response_for_gettimeseries(get_parameters):
             if (
                 coords_rd[0] > 0 and coords_rd[0] < 300000 and
                 coords_rd[1] > 300000 and coords_rd[1] < 600000):
-                output_filename_displayname = ','.join(
+                add_displayname = ','.join(
                     [str(int(c)) for c in coords_rd])
             else:
-                output_filename_displayname = ','.join(
+                add_displayname = ','.join(
                     [str(c) for c in coords])
+            output_filename_displayname = '_'.join([
+                output_filename_displayname, add_displayname])
 
         # full length data
         delimiter = ','
