@@ -801,7 +801,11 @@ def get_response_for_gettimeseries(get_parameters):
     messages=true/false -> for height
     maxpoints=500 -> throw away points if # > maxpoints
 
+    csv output:
     format=csv -> defaults to 'nvd3json', option is 'csv'
+    display_name=PumpXYZ  -> used as part for suggested output filename
+    object_type=pumpstation -> used as part for suggested output filename
+    if display_name is omitted, the name is composed of the given coordinates
     """
     # No global import, celery doesn't want this.
     from server.app import message_data
