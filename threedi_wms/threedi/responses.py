@@ -31,6 +31,7 @@ import logging
 import math
 import os
 import time as _time  # stop watch
+import osr
 
 from server.app import cache
 from server import config as redis_config
@@ -761,6 +762,32 @@ def get_response_for_getinfo(get_parameters):
         'Access-Control-Allow-Methods': 'GET'}
 
 
+def wgs_to_rd(lon, lat):
+    """
+    Transform coordinates in lon/lat to x, y in rd.
+    """
+    # Spatial Reference System
+    inputEPSG = 4326
+    outputEPSG = 28992
+
+    # create a geometry from coordinates
+    point = ogr.Geometry(ogr.wkbPoint)
+    point.AddPoint(lon, lat)
+
+    # create coordinate transformation
+    inSpatialRef = osr.SpatialReference()
+    inSpatialRef.ImportFromEPSG(inputEPSG)
+
+    outSpatialRef = osr.SpatialReference()
+    outSpatialRef.ImportFromEPSG(outputEPSG)
+
+    coordTransform = osr.CoordinateTransformation(inSpatialRef, outSpatialRef)
+
+    # transform point
+    point.Transform(coordTransform)
+    return point.GetX(), point.GetY()
+
+
 def get_response_for_gettimeseries(get_parameters):
     """ Return json with timeseries.
 
@@ -773,6 +800,8 @@ def get_response_for_gettimeseries(get_parameters):
     absolute=true (default false): do not subtract height from s1
     messages=true/false -> for height
     maxpoints=500 -> throw away points if # > maxpoints
+
+    format=csv -> defaults to 'nvd3json', option is 'csv'
     """
     # No global import, celery doesn't want this.
     from server.app import message_data
@@ -786,6 +815,15 @@ def get_response_for_gettimeseries(get_parameters):
     quad = get_parameters.get('quad', None)
     if quad is not None:
         quad = int(quad)
+
+    # Option for output format
+    output_format = get_parameters.get('format', 'nvd3json')
+    # Either a provided name (objects), or the coordinates of the clicked
+    # location (2d)
+    output_filename_displayname = get_parameters.get(
+        'display_name', None)
+    # only for csv output
+    object_type = get_parameters.get('object_type', '-')
 
     # Fallback doesn't work: netcdf not present yet.
 
@@ -885,20 +923,54 @@ def get_response_for_gettimeseries(get_parameters):
         time_list = []
     depth_list = compressed_depth.round(3).tolist()
 
-    while len(depth_list) > maxpoints:
-        # Never throw away the last item.
-        depth_list = depth_list[:-1:2] + depth_list[-1:]
-        time_list = time_list[:-1:2] + time_list[-1:]
-
-    content_dict = dict(
-        timeseries=zip(time_list, depth_list),
-        height=float(height),
-        units=var_units)
-    content = json.dumps(content_dict)
-    return content, 200, {
-        'content-type': 'application/json',
+    header = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET'}
+
+    if output_format == 'nvd3json':
+        while len(depth_list) > maxpoints:
+            # Never throw away the last item.
+            depth_list = depth_list[:-1:2] + depth_list[-1:]
+            time_list = time_list[:-1:2] + time_list[-1:]
+        content_dict = dict(
+            timeseries=zip(time_list, depth_list),
+            height=float(height),
+            units=var_units)
+        content = json.dumps(content_dict)
+        header['content-type'] = 'application/json'
+    elif output_format == 'csv':
+        if output_filename_displayname is None:
+            # we have to create a part of the filename by using the coordinates
+            param_point = get_parameters.get('point')
+            coords = [float(x) for x in param_point.split(',')]
+            # there is no good way in threedi-wms to retrieve model srs.
+            # since it's only for the filename, let's look at the result rd coordinates.
+            # if it is sensible, use that, else use the original coordinates.
+            coords_rd = wgs_to_rd(*coords)
+            if (
+                coords_rd[0] > 0 and coords_rd[0] < 300000 and
+                coords_rd[1] > 300000 and coords_rd[1] < 600000):
+                output_filename_displayname = ','.join(
+                    [str(int(c)) for c in coords_rd])
+            else:
+                output_filename_displayname = ','.join(
+                    [str(c) for c in coords])
+
+        # full length data
+        delimiter = ','
+        content_ = [['datetime', 'value', 'unit', 'object_id', 'object_type'], ]
+        for datetime_, value in zip(time_list, depth_list):
+            new_row = [datetime_, str(value), var_units, str(quad), object_type]
+            content_.append(new_row)
+        content = '\n'.join([delimiter.join(r) for r in content_])
+        csv_filename = 'timeseries_%s_%s' % (output_filename_displayname, mode)
+        header['content-type'] = 'text/csv'  # after testing: 'test/csv'
+        header['content-disposition'] = 'attachment;filename="%s.csv"' % csv_filename
+    else:
+        content = 'unknown format'
+        header['content-type'] = 'text'
+
+    return content, 200, header
 
 
 def get_response_for_getprofile(get_parameters):
