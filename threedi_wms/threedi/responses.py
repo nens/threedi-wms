@@ -52,6 +52,8 @@ rc_state = redis.Redis(host=redis_config.REDIS_HOST,
 PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
 KNOWN_VARS = ['pumps', 'weirs', 'orifices', 'culverts', 'unorm', 'q']
 
+CSV_HEADER = ['datetime', 'value', 'unit', 'object_id', 'object_type']
+
 
 def rgba2image(rgba):
     """ return imagedata. """
@@ -899,24 +901,32 @@ def get_response_for_gettimeseries(get_parameters):
 
     # Read data from netcdf
     path = utils.get_netcdf_path(layer=get_parameters['layers'])
-    with Dataset(path) as dataset:
-        v = dataset.variables
-        units = v['time'].getncattr('units')
-        time = v['time'][:]
-        # Depth values can be negative or non existent.
-        # Note: all variables can be looked up here, so 'depth' is misleading.
-        if mode == 's1':
-            if absolute == 'false':
-                depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
+    if os.path.exists(path):
+        with Dataset(path) as dataset:
+            v = dataset.variables
+            units = v['time'].getncattr('units')
+            time = v['time'][:]
+            # Depth values can be negative or non existent.
+            # Note: all variables can be looked up here, so 'depth' is misleading.
+            if mode == 's1':
+                if absolute == 'false':
+                    depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
+                else:
+                    depth = v[mode][:, quad]
             else:
-                depth = v[mode][:, quad]
-        else:
-            if absolute == 'true':
-                # For unorm, q
-                depth = np.ma.abs(v[mode][:, quad])
-            else:
-                depth = v[mode][:, quad]
-        var_units = v[mode].getncattr('units')
+                if absolute == 'true':
+                    # For unorm, q
+                    depth = np.ma.abs(v[mode][:, quad])
+                else:
+                    depth = v[mode][:, quad]
+            var_units = v[mode].getncattr('units')
+    else:
+        # dummy to prevent crashing
+        logger.warning('NetCDF at [%s] does not exist (yet).' % path)
+        units = 'seconds since 2015-01-01'
+        time = np.array([0, 1])
+        depth = np.array([0, 0])
+        var_units = 'no unit'
 
     compressed_time = time
     compressed_depth = depth
@@ -933,6 +943,7 @@ def get_response_for_gettimeseries(get_parameters):
         time_list = []
     depth_list = compressed_depth.round(3).tolist()
 
+    # prepare header
     header = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET'}
@@ -970,7 +981,7 @@ def get_response_for_gettimeseries(get_parameters):
 
         # full length data
         delimiter = ','
-        content_ = [['datetime', 'value', 'unit', 'object_id', 'object_type'], ]
+        content_ = [CSV_HEADER]
         for datetime_, value in zip(time_list, depth_list):
             new_row = [datetime_, str(value), var_units, str(quad), object_type]
             content_.append(new_row)
