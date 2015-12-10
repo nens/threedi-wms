@@ -832,7 +832,7 @@ def get_response_for_gettimeseries(get_parameters):
         output_filename_displayname = ''
     if quad is not None:  # quad is either an int, or None
         output_filename_displayname = '_'.join(
-            [output_filename_displayname, str(quad)])
+            [output_filename_displayname, str(quad + 1)])  # fortran idx
     # only for csv output
     object_type = get_parameters.get('object_type', '-')
 
@@ -983,7 +983,9 @@ def get_response_for_gettimeseries(get_parameters):
         delimiter = ','
         content_ = [CSV_HEADER]
         for datetime_, value in zip(time_list, depth_list):
-            new_row = [datetime_, str(value), var_units, str(quad), object_type]
+            # note: quad is fortran indexing, which differs 1 from 0-based
+            # netcdf indexing
+            new_row = [datetime_, str(value), var_units, str(quad + 1), object_type]
             content_.append(new_row)
         content = '\n'.join([delimiter.join(r) for r in content_])
         csv_filename = 'timeseries_%s_%s' % (output_filename_displayname, mode)
