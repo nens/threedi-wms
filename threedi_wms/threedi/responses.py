@@ -31,6 +31,7 @@ import logging
 import math
 import os
 import time as _time  # stop watch
+import osr
 
 from server.app import cache
 from server import config as redis_config
@@ -50,6 +51,8 @@ rc_state = redis.Redis(host=redis_config.REDIS_HOST,
 
 PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
 KNOWN_VARS = ['pumps', 'weirs', 'orifices', 'culverts', 'unorm', 'q']
+
+CSV_HEADER = ['datetime', 'value', 'unit', 'object_id', 'object_type']
 
 
 def rgba2image(rgba):
@@ -761,6 +764,32 @@ def get_response_for_getinfo(get_parameters):
         'Access-Control-Allow-Methods': 'GET'}
 
 
+def wgs_to_rd(lon, lat):
+    """
+    Transform coordinates in lon/lat to x, y in rd.
+    """
+    # Spatial Reference System
+    inputEPSG = 4326
+    outputEPSG = 28992
+
+    # create a geometry from coordinates
+    point = ogr.Geometry(ogr.wkbPoint)
+    point.AddPoint(lon, lat)
+
+    # create coordinate transformation
+    inSpatialRef = osr.SpatialReference()
+    inSpatialRef.ImportFromEPSG(inputEPSG)
+
+    outSpatialRef = osr.SpatialReference()
+    outSpatialRef.ImportFromEPSG(outputEPSG)
+
+    coordTransform = osr.CoordinateTransformation(inSpatialRef, outSpatialRef)
+
+    # transform point
+    point.Transform(coordTransform)
+    return point.GetX(), point.GetY()
+
+
 def get_response_for_gettimeseries(get_parameters):
     """ Return json with timeseries.
 
@@ -773,6 +802,12 @@ def get_response_for_gettimeseries(get_parameters):
     absolute=true (default false): do not subtract height from s1
     messages=true/false -> for height
     maxpoints=500 -> throw away points if # > maxpoints
+
+    csv output:
+    format=csv -> defaults to 'nvd3json', option is 'csv'
+    display_name=PumpXYZ  -> used as part for suggested output filename
+    object_type=pumpstation -> used as part for suggested output filename
+    if display_name is omitted, the name is composed of the given coordinates
     """
     # No global import, celery doesn't want this.
     from server.app import message_data
@@ -787,11 +822,26 @@ def get_response_for_gettimeseries(get_parameters):
     if quad is not None:
         quad = int(quad)
 
+    # Option for output format
+    output_format = get_parameters.get('format', 'nvd3json')
+    # Either a provided name (objects), or the coordinates of the clicked
+    # location (2d)
+    output_filename_displayname = get_parameters.get(
+        'display_name', None)
+    if output_filename_displayname is None:
+        output_filename_displayname = ''
+    if quad is not None:  # quad is either an int, or None
+        output_filename_displayname = '_'.join(
+            [output_filename_displayname, str(quad + 1)])  # fortran idx
+    # only for csv output
+    object_type = get_parameters.get('object_type', '-')
+
     # Fallback doesn't work: netcdf not present yet.
 
     # This request features a point, but an bbox is needed for reprojection.
+    points = get_parameters.get('point', '10,10')
     point = np.array(map(float,
-                         get_parameters['point'].split(','))).reshape(1, 2)
+                         points.split(','))).reshape(1, 2)
     # Make a fake bounding box. Beware: units depend on epsg (wgs84)
     bbox = ','.join(map(
         str, np.array(point + np.array([[-0.0000001], [0.0000001]])).ravel()))
@@ -851,24 +901,32 @@ def get_response_for_gettimeseries(get_parameters):
 
     # Read data from netcdf
     path = utils.get_netcdf_path(layer=get_parameters['layers'])
-    with Dataset(path) as dataset:
-        v = dataset.variables
-        units = v['time'].getncattr('units')
-        time = v['time'][:]
-        # Depth values can be negative or non existent.
-        # Note: all variables can be looked up here, so 'depth' is misleading.
-        if mode == 's1':
-            if absolute == 'false':
-                depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
+    if os.path.exists(path):
+        with Dataset(path) as dataset:
+            v = dataset.variables
+            units = v['time'].getncattr('units')
+            time = v['time'][:]
+            # Depth values can be negative or non existent.
+            # Note: all variables can be looked up here, so 'depth' is misleading.
+            if mode == 's1':
+                if absolute == 'false':
+                    depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
+                else:
+                    depth = v[mode][:, quad]
             else:
-                depth = v[mode][:, quad]
-        else:
-            if absolute == 'true':
-                # For unorm, q
-                depth = np.ma.abs(v[mode][:, quad])
-            else:
-                depth = v[mode][:, quad]
-        var_units = v[mode].getncattr('units')
+                if absolute == 'true':
+                    # For unorm, q
+                    depth = np.ma.abs(v[mode][:, quad])
+                else:
+                    depth = v[mode][:, quad]
+            var_units = v[mode].getncattr('units')
+    else:
+        # dummy to prevent crashing
+        logger.warning('NetCDF at [%s] does not exist (yet).' % path)
+        units = 'seconds since 2015-01-01'
+        time = np.array([0, 1])
+        depth = np.array([0, 0])
+        var_units = 'no unit'
 
     compressed_time = time
     compressed_depth = depth
@@ -885,20 +943,59 @@ def get_response_for_gettimeseries(get_parameters):
         time_list = []
     depth_list = compressed_depth.round(3).tolist()
 
-    while len(depth_list) > maxpoints:
-        # Never throw away the last item.
-        depth_list = depth_list[:-1:2] + depth_list[-1:]
-        time_list = time_list[:-1:2] + time_list[-1:]
-
-    content_dict = dict(
-        timeseries=zip(time_list, depth_list),
-        height=float(height),
-        units=var_units)
-    content = json.dumps(content_dict)
-    return content, 200, {
-        'content-type': 'application/json',
+    # prepare header
+    header = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET'}
+
+    if output_format == 'nvd3json':
+        while len(depth_list) > maxpoints:
+            # Never throw away the last item.
+            depth_list = depth_list[:-1:2] + depth_list[-1:]
+            time_list = time_list[:-1:2] + time_list[-1:]
+        content_dict = dict(
+            timeseries=zip(time_list, depth_list),
+            height=float(height),
+            units=var_units)
+        content = json.dumps(content_dict)
+        header['content-type'] = 'application/json'
+    elif output_format == 'csv':
+        # 10, 10 is a virtual coordinate
+        if points is not None and points != '10,10':
+            # we have to create a part of the filename by using the coordinates
+            coords = [float(x) for x in points.split(',')]
+            # there is no good way in threedi-wms to retrieve model srs.
+            # since it's only for the filename, let's look at the result rd coordinates.
+            # if it is sensible, use that, else use the original coordinates.
+            coords_rd = wgs_to_rd(*coords)
+            if (
+                coords_rd[0] > 0 and coords_rd[0] < 300000 and
+                coords_rd[1] > 300000 and coords_rd[1] < 600000):
+                add_displayname = ','.join(
+                    [str(int(c)) for c in coords_rd])
+            else:
+                add_displayname = ','.join(
+                    [str(c) for c in coords])
+            output_filename_displayname = '_'.join([
+                output_filename_displayname, add_displayname])
+
+        # full length data
+        delimiter = ','
+        content_ = [CSV_HEADER]
+        for datetime_, value in zip(time_list, depth_list):
+            # note: quad is fortran indexing, which differs 1 from 0-based
+            # netcdf indexing
+            new_row = [datetime_, str(value), var_units, str(quad + 1), object_type]
+            content_.append(new_row)
+        content = '\n'.join([delimiter.join(r) for r in content_])
+        csv_filename = 'timeseries_%s_%s' % (output_filename_displayname, mode)
+        header['content-type'] = 'text/csv'  # after testing: 'test/csv'
+        header['content-disposition'] = 'attachment;filename="%s.csv"' % csv_filename
+    else:
+        content = 'unknown format'
+        header['content-type'] = 'text'
+
+    return content, 200, header
 
 
 def get_response_for_getprofile(get_parameters):

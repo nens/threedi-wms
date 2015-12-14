@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Added csv output format for gettimeseries (see docstring).
+
 - Change the link numbers redis key.
 
 - Where possible, add ``SUBGRID_ID`` to logging statements.
