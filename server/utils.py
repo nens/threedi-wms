@@ -10,9 +10,9 @@ import logging
 import socket
 import struct
 
-import redis
-
+import numpy as np
 import flask
+import redis
 
 from server import config
 
@@ -65,3 +65,18 @@ def fetch_subgrid_id():
     else:
         # not standalone; return the default subgrid id
         return config.THREEDI_SUBGRID_ID
+
+
+def logical_or_reduce(arrays):
+    """Apply np.logical_or to one or more arrays.
+
+    This is similar to np.logical_or.reduce, but much faster for some reason
+    (possibly because logical_or.reduce initializes arrays every time).
+
+    Args:
+        arrays: a list of arrays
+    """
+    result = arrays[0]
+    for arr in arrays[1:]:
+        result = np.logical_or(result, arr)
+    return result
