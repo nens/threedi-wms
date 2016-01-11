@@ -5,6 +5,11 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- PEP8
+
+- Replace np.logical_or.reduce by a simple looping variant that is much
+  faster.
+
 - Added csv output format for gettimeseries (see docstring).
 
 - Change the link numbers redis key.
