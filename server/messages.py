@@ -524,8 +524,8 @@ class MessageData(object):
                         "Check WKT for TOWGS84 string! Je weet tog ;-)")
             else:
                 logger.warning(
-                    'Something is probably wrong with the wkt (%r), taking '
-                    'default 28992.' % grid['wkt'],
+                    'Something is probably wrong with the wkt, taking '
+                    'default 28992.',
                     extra={'subgrid_id': self.subgrid_id})
                 dst_srs.ImportFromEPSGA(28992)
 

@@ -5,7 +5,9 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
-- PEP8
+- Fix KeyError bug in log message.
+
+- PEP8.
 
 - Replace np.logical_or.reduce by a simple looping variant that is much
   faster.
