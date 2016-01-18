@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Pin mmi to 0.1.9.
+
 - Fix KeyError bug in log message.
 
 - PEP8.
