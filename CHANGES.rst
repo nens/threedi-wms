@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Add missing link for mmi 0.1.9 in buildout.cfg. Also, fix index url and kgs
+  url in buildout.cfg.
+
 - Pin mmi to 0.1.9.
 
 - Fix KeyError bug in log message.
@@ -23,7 +26,7 @@ Changelog of threedi-wms
 - Made the default settings suitable for docker containers. ``REDIS_HOST`` can
   now be set with an environment variable.
 
-- When fetching the subgrid_id, look for it in an env var called ``SUBGRID_ID`` 
+- When fetching the subgrid_id, look for it in an env var called ``SUBGRID_ID``
   first.
 
 - Better logging for GetMap.
@@ -39,7 +42,7 @@ Changelog of threedi-wms
 
 - Add logstash logging handler.
 
-- Better colors for infiltration and interception, range of infiltration to 
+- Better colors for infiltration and interception, range of infiltration to
   0-500.
 
 - Fix tests by reverting bootstrap.py to an older version and using our own
