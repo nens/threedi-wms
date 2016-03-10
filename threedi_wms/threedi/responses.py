@@ -623,12 +623,14 @@ def get_response_for_getmap(get_parameters):
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img = get_velocity_image(masked_array=u)
-    elif mode == 'sg':  # ground water, only with use_messages
+    elif mode == 'sg' or mode == 'ground_water_depth':
+        # ground water, only with use_messages
         container = message_data.get("sg", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
 
         content, img = get_groundwater_image(masked_array=u)
-    elif mode == 'sg_abs':  # ground water, only with use_messages
+    elif mode == 'sg_abs' or mode == 'ground_water_level':
+        # ground water, only with use_messages
         container = message_data.get("sg_abs", **get_parameters)
         u, ms = get_data(container, ma=True, **get_parameters)
         # we use u for visualization only. we want get_groundwater_image

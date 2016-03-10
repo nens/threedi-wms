@@ -5,6 +5,10 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Apparently the names of ground water level/depth layers have changed in the
+  front end. Old names as well as new names are supported: sg /
+  ground_water_depth and sg_abs / ground_water_level.
+
 - Add missing link for mmi 0.1.9 in buildout.cfg. Also, fix index url and kgs
   url in buildout.cfg.
 
