@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Simplify ``fetch_subgrid_id``.
+
 - Apparently the names of ground water level/depth layers have changed in the
   front end. Old names as well as new names are supported: sg /
   ground_water_depth and sg_abs / ground_water_level.
