@@ -81,5 +81,5 @@ def get_bathymetry_srs(filename):
 
 def get_loaded_model():
     """Return the loaded_model (slug) from redis)."""
-    threedi_subgrid_id = server_utils.fetch_subgrid_id()
-    return rc.get('%s:loaded_model' % threedi_subgrid_id)
+    subgrid_id = server_utils.fetch_subgrid_id()
+    return rc.get('%s:loaded_model' % subgrid_id)
