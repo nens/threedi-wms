@@ -60,7 +60,7 @@ SENTRY_DSN = ''
 
 # redis settings for reporting threedi-wms status messages like busy, not busy,
 # and current timestep
-REDIS_HOST = env('REDIS_HOST', default='localhost', required=True)
+REDIS_HOST = env('REDIS_HOST_STATE', default='localhost', required=True)
 REDIS_PORT = 6379
 REDIS_STATE_DB = 0
 REDIS_NODE_MAPPING_DB = 2

@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Use new ``REDIS_HOST_STATE`` env var instead of obsolete ``REDIS_HOST``.
+
 - Simplify ``fetch_subgrid_id()``.
 
 - Apparently the names of ground water level/depth layers have changed in the
