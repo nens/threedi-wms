@@ -60,10 +60,17 @@ SENTRY_DSN = ''
 
 # redis settings for reporting threedi-wms status messages like busy, not busy,
 # and current timestep
-REDIS_HOST = env('REDIS_HOST', default='localhost', required=True)
+REDIS_HOST_STATE = env('REDIS_HOST_STATE', default='localhost', required=True)
+REDIS_HOST_MODEL_DATA = env('REDIS_HOST_MODEL_DATA', default='localhost',
+                            required=True)
+# we use the same redis server that stores the tilestache cache for the
+# threedi-wms cache
+REDIS_HOST_CACHE = env('REDIS_HOST_TILESTACHE', default='localhost',
+                       required=True)
 REDIS_PORT = 6379
-REDIS_STATE_DB = 0
-REDIS_NODE_MAPPING_DB = 2
+REDIS_DB_STATE = 0
+REDIS_DB_MODEL_DATA = 2
+REDIS_DB_THREEDI_WMS_CACHE = 5
 
 WMS_BUSY_THRESHOLD = 2  # 2 seconds
 

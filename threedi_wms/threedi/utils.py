@@ -25,8 +25,8 @@ from threedi_wms.threedi import config
 logger = logging.getLogger('')
 
 rc = redis.Redis(
-    host=server_config.REDIS_HOST, port=server_config.REDIS_PORT,
-    db=server_config.REDIS_STATE_DB)
+    host=server_config.REDIS_HOST_STATE, port=server_config.REDIS_PORT,
+    db=server_config.REDIS_DB_STATE)
 
 
 def get_netcdf_path(layer):
