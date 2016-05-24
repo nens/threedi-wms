@@ -39,8 +39,8 @@ class StateReporter(object):
     def __init__(self):
         """Initialise a redis client connection to the state database."""
         self.rc = redis.Redis(
-            host=config.REDIS_HOST, port=config.REDIS_PORT,
-            db=config.REDIS_STATE_DB)
+            host=config.REDIS_HOST_STATE, port=config.REDIS_PORT,
+            db=config.REDIS_DB_STATE)
         # get the correct subgrid id
         subgrid_id = utils.fetch_subgrid_id()
         while not subgrid_id:

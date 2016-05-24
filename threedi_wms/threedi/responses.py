@@ -41,13 +41,13 @@ ogr.UseExceptions()
 
 logger = logging.getLogger('')
 
-rc_node = redis.Redis(host=redis_config.REDIS_HOST,
+rc_node = redis.Redis(host=redis_config.REDIS_HOST_MODEL_DATA,
                       port=redis_config.REDIS_PORT,
-                      db=redis_config.REDIS_NODE_MAPPING_DB)
+                      db=redis_config.REDIS_DB_MODEL_DATA)
 
-rc_state = redis.Redis(host=redis_config.REDIS_HOST,
+rc_state = redis.Redis(host=redis_config.REDIS_HOST_STATE,
                        port=redis_config.REDIS_PORT,
-                       db=redis_config.REDIS_STATE_DB)
+                       db=redis_config.REDIS_DB_STATE)
 
 PANDAS_VARS = ['pumps', 'weirs', 'orifices', 'culverts']
 KNOWN_VARS = ['pumps', 'weirs', 'orifices', 'culverts', 'unorm', 'q']

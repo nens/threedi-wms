@@ -45,9 +45,9 @@ def build_app(sub_port=5558, **kwargs):
         cache_config = {
             'CACHE_TYPE': 'redis',
             'CACHE_KEY_PREFIX': config.CACHE_PREFIX,
-            'CACHE_REDIS_HOST': config.REDIS_HOST,
+            'CACHE_REDIS_HOST': config.REDIS_HOST_CACHE,
             'CACHE_REDIS_PORT': config.REDIS_PORT,
-            'CACHE_REDIS_DB': 3,
+            'CACHE_REDIS_DB': config.REDIS_DB_THREEDI_WMS_CACHE,
         }
     else:
         cache_config = {'CACHE_TYPE': 'null', }

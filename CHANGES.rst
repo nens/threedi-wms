@@ -5,7 +5,7 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
-- Use new ``REDIS_HOST_STATE`` env var instead of obsolete ``REDIS_HOST``.
+- Use the new ``REDIS_[HOST|DB]_*`` variables.
 
 - Simplify ``fetch_subgrid_id()``.
 
