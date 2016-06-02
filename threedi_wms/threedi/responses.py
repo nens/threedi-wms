@@ -454,7 +454,7 @@ def show_error_img():
 
 
 # Responses for various requests
-@cache.memoize(timeout=5)
+@cache.memoize(timeout=45)
 def get_response_for_getmap(get_parameters):
     """ Return png image.
 
