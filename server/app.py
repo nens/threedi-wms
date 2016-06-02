@@ -40,11 +40,16 @@ def build_app(sub_port=5558, **kwargs):
     logger.info("Subscription port: %d (server should publish on this port)." %
                 sub_port)
 
+    # use the correct subgrid_id
+    subgrid_id = utils.fetch_subgrid_id()
+    logger.info(
+        "Got subgrid_id: %s." % subgrid_id, extra={'subgrid_id': subgrid_id})
+
     app = flask.Flask(__name__)
     if config.USE_CACHE:
         cache_config = {
             'CACHE_TYPE': 'redis',
-            'CACHE_KEY_PREFIX': config.CACHE_PREFIX,
+            'CACHE_KEY_PREFIX': subgrid_id,
             'CACHE_REDIS_HOST': config.REDIS_HOST_CACHE,
             'CACHE_REDIS_PORT': config.REDIS_PORT,
             'CACHE_REDIS_DB': config.REDIS_DB_THREEDI_WMS_CACHE,
@@ -62,6 +67,8 @@ def build_app(sub_port=5558, **kwargs):
         app.config['SENTRY_DSN'] = config.SENTRY_DSN
         Sentry(app, dsn=config.SENTRY_DSN, logging=True, level=logging.ERROR)
 
+    app.config['THREEDI_SUBGRID_ID'] = subgrid_id
+
     # this one is global because we only have one event loop that receives
     # messages
     message_data = MessageData(sub_port=sub_port)
@@ -71,19 +78,7 @@ def build_app(sub_port=5558, **kwargs):
         url_prefix = '/' + blueprint.name
         app.register_blueprint(blueprint, url_prefix=url_prefix)
 
-    # use the correct subgrid_id
-    subgrid_id = utils.fetch_subgrid_id()
-    while not subgrid_id:
-        msg = 'Waiting for a subgrid_id...'
-        logger.debug(msg)
-        time.sleep(1)
-        subgrid_id = utils.fetch_subgrid_id()
-    app.config['THREEDI_SUBGRID_ID'] = subgrid_id
-
-    logger.info(
-        "Got subgrid_id: %s." % subgrid_id, extra={'subgrid_id': subgrid_id})
     logger.info("Ready to rock and roll!", extra={'subgrid_id': subgrid_id})
-
     return app
 
 

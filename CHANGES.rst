@@ -5,6 +5,11 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Uses the actual subgrid_id as a CACHE_KEY_PREFIX now.
+
+- The ``get_response_for_getmap()``-method caches png's now for 45 seconds
+  instead of 5 seconds.
+
 - Use the new ``REDIS_[HOST|DB]_*`` variables.
 
 - Simplify ``fetch_subgrid_id()``.
