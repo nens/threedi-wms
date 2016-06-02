@@ -52,9 +52,6 @@ CELERY_DB = os.path.join(CELERY_DIR, 'celerydb.sqlite')
 
 # default settings, overriden on server by local settings
 USE_CACHE = True  # redis
-CACHE_PREFIX = 'subgrid:10000'
-THREEDI_SUBGRID_ID = 'subgrid:10000'
-THREEDI_STANDALONE_SUBGRID_MACHINE = True
 
 SENTRY_DSN = ''
 
