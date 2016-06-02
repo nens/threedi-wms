@@ -67,8 +67,6 @@ def build_app(sub_port=5558, **kwargs):
         app.config['SENTRY_DSN'] = config.SENTRY_DSN
         Sentry(app, dsn=config.SENTRY_DSN, logging=True, level=logging.ERROR)
 
-    app.config['THREEDI_SUBGRID_ID'] = subgrid_id
-
     # this one is global because we only have one event loop that receives
     # messages
     message_data = MessageData(sub_port=sub_port)
