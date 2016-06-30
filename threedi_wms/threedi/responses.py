@@ -903,6 +903,7 @@ def get_response_for_gettimeseries(get_parameters):
 
     # Read data from netcdf
     path = utils.get_netcdf_path(layer=get_parameters['layers'])
+    var_units = None
     if os.path.exists(path):
         with Dataset(path) as dataset:
             v = dataset.variables
@@ -915,13 +916,19 @@ def get_response_for_gettimeseries(get_parameters):
                     depth = np.ma.maximum(v[mode][:, quad] - height, 0).filled(0)
                 else:
                     depth = v[mode][:, quad]
+                # N.B. actually the unit is meter above mean sea level.
+                # This can not be corrected in the calculationcore
+                # (Deltares isn't actively maintaining it anymore),
+                # so the fix has been done here
+                var_units = 'm MSL'
             else:
                 if absolute == 'true':
                     # For unorm, q
                     depth = np.ma.abs(v[mode][:, quad])
                 else:
                     depth = v[mode][:, quad]
-            var_units = v[mode].getncattr('units')
+            if var_units is None:
+                var_units = v[mode].getncattr('units')
     else:
         # dummy to prevent crashing
         logger.warning('NetCDF at [%s] does not exist (yet).' % path)
