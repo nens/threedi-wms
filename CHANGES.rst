@@ -5,6 +5,9 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- The unit read from te subgrid netcdf for s1 should be "m MSL". This is
+  what will be returned in the ``get_response_for_gettimeseries()`` method.
+
 - Uses the actual subgrid_id as a CACHE_KEY_PREFIX now.
 
 - The ``get_response_for_getmap()``-method caches png's now for 45 seconds
