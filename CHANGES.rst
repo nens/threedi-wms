@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Fix gislib, matplotlib and Pillow pins for trusty.
+
 - The unit read from te subgrid netcdf for s1 should be "m MSL". This is
   what will be returned in the ``get_response_for_gettimeseries()`` method.
 
