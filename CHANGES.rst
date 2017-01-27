@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Upgrade netCDF4 to 1.0.8.
+
 - Base calculation docker image on trusty (14.04) instead of precise (12.04).
 
 - The unit read from te subgrid netcdf for s1 should be "m MSL". This is
