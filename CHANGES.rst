@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Pin docopt(s) to 0.6.1.
+
 - Update bmi to 0.1.3.nens.
 
 - Update mmi to 0.1.9.3.nens.
