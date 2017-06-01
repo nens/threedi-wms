@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Update setuptools to 33.1.1.
+
 - Update zc.buildout to 2.9.3.
 
 - Upgrade netCDF4 to 1.0.8.
