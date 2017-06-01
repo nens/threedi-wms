@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Update zc.buildout to 2.9.3.
+
 - Upgrade netCDF4 to 1.0.8.
 
 - Base calculation docker image on trusty (14.04) instead of precise (12.04).
