@@ -5,6 +5,8 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Update nose to 1.3.1.
+
 - Update setuptools to 33.1.1.
 
 - Update zc.buildout to 2.9.3.
