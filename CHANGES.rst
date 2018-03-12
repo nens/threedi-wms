@@ -5,6 +5,12 @@ Changelog of threedi-wms
 0.11 (unreleased)
 -----------------
 
+- Updated: 
+      setuptools = 38.5.1
+      zc.buildout = 2.11.1
+
+- Added tornadio = 4.1
+
 - Pin docopt(s) to 0.6.1.
 
 - Update bmi to 0.1.3.nens.

@@ -29,7 +29,7 @@ install_requires = [
     'flask-cache',
     'redis',
     'GDAL',
-    'numpy',
+    'numpy==1.13.0',
     ],
 
 tests_require = [
