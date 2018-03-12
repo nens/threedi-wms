@@ -19,9 +19,9 @@ Changelog of threedi-wms
 
 - Update nose to 1.3.1.
 
-- Update setuptools to 33.1.1.
+- Update setuptools to 38.5.1.
 
-- Update zc.buildout to 2.9.3.
+- Update zc.buildout to 2.11.0.
 
 - Upgrade netCDF4 to 1.0.8.
 
